@@ -59,3 +59,5 @@ html[data-theme=dark] .fa-presets .active,html[data-theme=dark] .fa-badge.availa
 @media(max-width:600px){.es-option-overlay{align-items:flex-end;padding:8px}.es-option-dialog{max-height:85dvh;padding:14px}}
 
 .es-export-options{display:grid;gap:12px;margin:20px 0}.es-export-options .btn{display:block;text-align:left;padding:15px;white-space:normal}.es-export-options small{display:block;font-weight:400;margin-top:6px;color:var(--muted)}
+
+.rep-dismiss,.rep-restore{display:block;margin-top:7px;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--muted);font:12px system-ui;cursor:pointer}
