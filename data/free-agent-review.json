@@ -1425,11 +1425,19 @@
       "born": 1991,
       "status": "departed",
       "club": "",
-      "date": "2026-07-13",
-      "url": "https://ewe-baskets.de/news/kaderuebersicht-2627.html?changelang=1",
-      "source": "Club roster update",
+      "date": "2026-06-10",
+      "url": "https://www.bblprofis.de/index.php/2026/06/10/zehn-spieler-verlassen-die-ewe-baskets-oldenburg/",
+      "source": "www.bblprofis.de",
+      "note": "Departure reported. An old player page carries a new season heading; it does not establish a new contract.",
       "checkedAt": "2026-09-07",
-      "note": "Listed as departing Oldenburg; no next club confirmed in this review."
+      "history": [
+        {
+          "status": "departed",
+          "club": "",
+          "url": "https://ewe-baskets.de/news/kaderuebersicht-2627.html?changelang=1",
+          "date": "2026-07-13"
+        }
+      ]
     },
     {
       "name": "Silvio De Sousa",
@@ -4522,6 +4530,93 @@
       "date": "2026-08-20",
       "checkedAt": "2026-09-07",
       "note": "Returned for the new season."
+    },
+    {
+      "name": "Q.J. Peterson",
+      "ids": [
+        "cba-2"
+      ],
+      "born": 1994,
+      "status": "signed",
+      "club": "Pizza Bulls Bandırma Bordo",
+      "date": "2026-06-29",
+      "url": "https://www.marmarayasam.com/spor/bordo-bk-qj-peterson-ile-anlasti-548129",
+      "source": "www.marmarayasam.com",
+      "note": "Club announcement reported; Bordo BK is Bandırma Bordo.",
+      "checkedAt": "2026-09-07"
+    },
+    {
+      "name": "Wesley Person Jr.",
+      "ids": [
+        "enbl-274"
+      ],
+      "born": null,
+      "status": "signed",
+      "club": "Brussels Basketball",
+      "date": "2026-07-16",
+      "url": "https://slansportsmanagement.com/player/wesley-person/",
+      "source": "slansportsmanagement.com",
+      "note": "Agent lists Brussels for 2026/27 and marks him unavailable.",
+      "checkedAt": "2026-09-07"
+    },
+    {
+      "name": "Jaylen Nowell",
+      "ids": [
+        "bsn-1",
+        "cba-40"
+      ],
+      "born": null,
+      "status": "signed",
+      "club": "Besiktas Istanbul",
+      "date": "2026-07-12",
+      "url": "https://bjk.com.tr/en/news/94715/welcome-to-besiktas-jaylen-nowell.html",
+      "source": "bjk.com.tr",
+      "note": "Official 2026/27 signing announcement.",
+      "checkedAt": "2026-09-07"
+    },
+    {
+      "name": "Javante McCoy",
+      "ids": [
+        "il-25922"
+      ],
+      "born": 1998,
+      "status": "signed",
+      "club": "Balkan Botevgrad",
+      "date": "2026-08-19",
+      "url": "https://www.bgbasket.com/115832-realizator-shte-zashtitava-cvetovete-na-balkan",
+      "source": "www.bgbasket.com",
+      "note": "Club signing announcement reported.",
+      "checkedAt": "2026-09-07"
+    },
+    {
+      "name": "Trevelin Queen",
+      "ids": [
+        "cba-11"
+      ],
+      "born": 1997,
+      "status": "signed",
+      "club": "Lokomotiv Kuban",
+      "date": "2026-07-31",
+      "url": "https://lokobasket.com/en/news/363053/",
+      "source": "lokobasket.com",
+      "note": "Official club signing announcement.",
+      "checkedAt": "2026-09-07"
+    },
+    {
+      "name": "Bryant Crawford",
+      "ids": [
+        "bbl-2003130",
+        "bcl-0096",
+        "bsl-0060"
+      ],
+      "born": 1997,
+      "status": "unknown",
+      "club": "",
+      "date": "",
+      "url": "https://www.basketball-loewen.de/vom-loewen-schreck-zum-hoffnungstraeger-bryant-crawford-wechselt-nach-braunschweig/",
+      "source": "www.basketball-loewen.de",
+      "note": "The located Braunschweig signing is from March 2026. No new 2026/27 destination confirmed.",
+      "checkedAt": "2026-09-07"
     }
   ],
   "coverage": {

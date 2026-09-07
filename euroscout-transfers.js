@@ -1,0 +1,25 @@
+(function(){
+const checked='2026-09-07';
+const checks=[
+{name:'Q.J. Peterson',aliases:['QJ Peterson'],club:'Pizza Bulls Bandırma Bordo',date:'2026-06-29',url:'https://www.marmarayasam.com/spor/bordo-bk-qj-peterson-ile-anlasti-548129',note:'Club announcement reported; Bordo BK is Bandırma Bordo.'},
+{name:'Wesley Person Jr.',aliases:['Wesley Person Jr'],club:'Brussels Basketball',date:'2026-07-16',url:'https://slansportsmanagement.com/player/wesley-person/',note:'Agent lists Brussels for 2026/27 and marks him unavailable.'},
+{name:'Jaylen Nowell',club:'Besiktas Istanbul',date:'2026-07-12',url:'https://bjk.com.tr/en/news/94715/welcome-to-besiktas-jaylen-nowell.html',note:'Official 2026/27 signing announcement.'},
+{name:'Javante McCoy',club:'Balkan Botevgrad',date:'2026-08-19',url:'https://www.bgbasket.com/115832-realizator-shte-zashtitava-cvetovete-na-balkan',note:'Club signing announcement reported.'},
+{name:'Trevelin Queen',club:'Lokomotiv Kuban',date:'2026-07-31',url:'https://lokobasket.com/en/news/363053/',note:'Official club signing announcement.'},
+{name:'Jalen Hampton',club:'Kangoeroes Basket Mechelen',date:'2026-07-03',url:'https://www.kangoeroesbasket.be/',note:'Listed on the official current team roster; signing corroborated by July reporting.'},
+{name:'Bryant Crawford',status:'unknown',club:'',url:'https://www.basketball-loewen.de/vom-loewen-schreck-zum-hoffnungstraeger-bryant-crawford-wechselt-nach-braunschweig/',note:'The located Braunschweig signing is from March 2026. No new 2026/27 destination confirmed.'},
+{name:'Michale Kyser',status:'departed',club:'',date:'2026-06-10',url:'https://www.bblprofis.de/index.php/2026/06/10/zehn-spieler-verlassen-die-ewe-baskets-oldenburg/',note:'Departure reported. An old player page carries a new season heading; it does not establish a new contract.'}
+];
+const key=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const aliases=[['Pizza Bulls Bandırma Bordo','Bordo BK','Bordo Sportif Balikesir','Bandırma Bordo Basketbol'],['Kangoeroes Basket Mechelen','Kangoeroes Mechelen'],['Besiktas Istanbul','Beşiktaş GAIN','Besiktas','Besiktas Icrypex'],['Balkan Botevgrad','BC Balkan','BK Balkan'],['Brussels Basketball','Circus Brussels Basketball'],['Lokomotiv Kuban','Lokomotiv-Kuban','PBC Lokomotiv Kuban']];
+const originalTeam=dbTeamForClub;
+dbTeamForClub=function(name){if(!name||/^(\?|unknown|free agent)$/i.test(name.trim()))return null;const group=aliases.find(a=>a.some(x=>key(x)===key(name)));if(group){const t=allDbTeams().find(t=>key(t.name)===key(group[0]));if(t)return t;}const exact=allDbTeams().filter(t=>key(t.name)===key(name));if(exact.length)return exact[0];
+// A sponsor variation may only resolve when all matching entries belong to the same club.
+const q=normClub(name),possible=allDbTeams().filter(t=>{const n=normClub(t.name);return Math.min(n.length,q.length)>=5&&(n.includes(q)||q.includes(n));});const clubs=new Set(possible.map(t=>clubForTeamKey(t.key)?.key||t.key));return clubs.size===1?possible[0]:null;};
+const basePending=pendingTransfers;
+pendingTransfers=function(){return basePending().map(x=>{const direct=checks.find(c=>[c.name,...(c.aliases||[])].some(n=>key(n)===key(x.tr.player))),a=(window.EUROSCOUT_MARKET_REVIEW?.items||[]).find(a=>a.ids.some(id=>[x.p.id,gid(x.p),...(x.p._grp||[]).map(p=>p.id)].includes(id))),review=direct||(a?{...a}:null);
+if(!review||x.tr.date>checked)return {...x,review:null};const status=review.status||'signed',tr={...x.tr};if(status==='signed'&&review.club)tr.to=review.club;return {...x,tr,team:status==='signed'?dbTeamForClub(tr.to):null,review:{...review,status,checked}};});};
+const row=trRow;
+trRow=function(x){let html=row(x);const r=x.review;if(r){const state=r.status==='signed'?'Verified signing / roster':r.status==='departed'?'Departure only — destination unconfirmed':'Unverified for 2026/27';html=html.replace('</span>\n    <span class="trActs">','</span>\n    <span class="trActs">');html=html.replace('<span class="trMove">','<span class="trMove">');const note='<div class="trResearch"><strong>'+esc(state)+'</strong> · '+checked+'<br>'+esc(r.note||'Current-season source reviewed.')+' '+(r.url?'<a href="'+escAttr(r.url)+'" target="_blank" rel="noopener noreferrer">Source ↗</a>':'')+'</div>';html=html.replace(/\s*<\/div>\s*$/,note+'</div>');if(r.status!=='signed')html=html.replace('>Signed</span>','>Needs review</span>').replace(/<button class="trBtn ok"[^>]*>Approve<\/button>/,'<span class="hint">No confirmed destination</span>');}else if(!x.tr.to||/^(\?|unknown|free agent)$/i.test(x.tr.to)){html=html.replace('>Signed</span>','>Needs review</span>').replace(/<button class="trBtn ok"[^>]*>Approve<\/button>/,'<span class="hint">Destination missing</span>');}return html;};
+window.EuroScoutTransferReview={checks,aliases};
+})();

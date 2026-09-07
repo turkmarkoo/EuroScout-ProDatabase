@@ -1729,7 +1729,7 @@ body.drawer-lock{overflow:hidden}
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260906-6">
-<link rel="stylesheet" href="euroscout-market.css?v=20260907"></head>
+<link rel="stylesheet" href="euroscout-market.css?v=20260907-3"></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -1761,6 +1761,7 @@ body.drawer-lock{overflow:hidden}
 <div id="toast" class="toast"></div>
 <div id="authgate" class="authgate hidden"><div class="agbox" id="agBox"></div></div>
 
+<script src="euroscout-countries.js?v=20260907-3"></script>
 <script src="config.js"></script>
 <script src="overrides.js"></script>
 <script src="data/data.js"></script>
@@ -2406,7 +2407,7 @@ let OVR={links:[],bio:{},ext:{}};
 function ovrSaveLocal(patch){
   if(!Store.canEdit())return;
   const l=ovrLocal();
-  if(patch.bio)Object.keys(patch.bio).forEach(id=>{const clean={};Object.keys(patch.bio[id]).forEach(k=>{const v=patch.bio[id][k];if(v!=null&&(v!==""||k==="projLevel"))clean[k]=v;});l.bio[id]={...(l.bio[id]||{}),...clean};});
+  if(patch.bio)Object.keys(patch.bio).forEach(id=>{const clean={};Object.keys(patch.bio[id]).forEach(k=>{const v=patch.bio[id][k];if(v!=null&&(v!==""||k==="projLevel"||k==="country"))clean[k]=k==='country'?EuroScoutCountries.canonical(v):v;});l.bio[id]={...(l.bio[id]||{}),...clean};});
   if(patch.ext)Object.keys(patch.ext).forEach(id=>{if(patch.ext[id])l.ext[id]=patch.ext[id];else delete l.ext[id];});
   if(patch.links)patch.links.forEach(pr=>{if(!l.links.some(x=>(x[0]===pr[0]&&x[1]===pr[1])||(x[0]===pr[1]&&x[1]===pr[0])))l.links.push(pr);});
   localStorage.setItem(OVR_KEY,JSON.stringify(l));
@@ -2427,10 +2428,11 @@ function applyOverrides(){
     const b=bioFor(p);
     p.hand=null;p.license=null;p.agent=null;p.agency=null;p.agentUrl=null;p._rgm=null;p.projLevel=null;
     if(b){ if(b.height!=null&&b.height!=="")p.height=Number(b.height); if(b.weight!=null&&b.weight!=="")p.weight=Number(b.weight);
-      if(b.country)p.country=b.country; if(b.pos)p.pos=b.pos; if(b.role){const _r=(b.role==="Wing"?"Forward":b.role);p.role=_r;p.pos=_r;} if(b.born!=null&&b.born!=="")p.born=Number(b.born); if(b.name)p.name=b.name;
+      if(Object.prototype.hasOwnProperty.call(b,'country'))p.country=b.country; if(b.pos)p.pos=b.pos; if(b.role){const _r=(b.role==="Wing"?"Forward":b.role);p.role=_r;p.pos=_r;} if(b.born!=null&&b.born!=="")p.born=Number(b.born); if(b.name)p.name=b.name;
       if(b.hand)p.hand=b.hand; if(b.license)p.license=b.license;
       if(b.agent)p.agent=b.agent; if(b.agency)p.agency=normAgency(b.agency); if(b.agentUrl)p.agentUrl=b.agentUrl; if(b.rgm)p._rgm=b.rgm;
       if(b.projLevel!=null&&b.projLevel!=="")p.projLevel=Number(b.projLevel); }
+    p.country=EuroScoutCountries.canonical(p.country);
     p._ext=extFor(p)||null;
   }));
 }
@@ -4388,13 +4390,10 @@ function openLeaguePlayers(lgid){const L=STATE.data.leagues.find(l=>l.meta.id===
   $$("#tabs button").forEach((x,i)=>x.classList.toggle("active",i===0));
   renderPlayers();try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){}}
 /* ---------- Profile hero helpers (flag, level barometer, position, summary) ---------- */
-const CTRY_ISO={"USA":"US","United States":"US","United Kingdom":"GB","England":"GB","Bosnia and Herzegovina":"BA","Turkiye":"TR","Turkey":"TR","Ivory Coast":"CI","Cape Verde":"CV","Czechia":"CZ","Czech Republic":"CZ","Dominican Republic":"DO","North Macedonia":"MK","South Sudan":"SS","DR Congo":"CD","Republic of the Congo":"CG",
-  "France":"FR","Spain":"ES","Germany":"DE","Italy":"IT","Greece":"GR","Serbia":"RS","Croatia":"HR","Slovenia":"SI","Lithuania":"LT","Latvia":"LV","Estonia":"EE","Poland":"PL","Israel":"IL","Georgia":"GE","Ukraine":"UA","Russia":"RU","Montenegro":"ME","Belgium":"BE","Netherlands":"NL","Finland":"FI","Sweden":"SE","Norway":"NO","Denmark":"DK","Iceland":"IS","Ireland":"IE","Portugal":"PT","Switzerland":"CH","Austria":"AT","Hungary":"HU","Romania":"RO","Bulgaria":"BG","Slovakia":"SK","Canada":"CA","Cyprus":"CY","Belarus":"BY","Brazil":"BR","Argentina":"AR","Chile":"CL","Cuba":"CU","Mexico":"MX","Australia":"AU","Nigeria":"NG","Senegal":"SN","Mali":"ML","Angola":"AO","Cameroon":"CM","Guinea":"GN","Gabon":"GA","Ghana":"GH","Egypt":"EG","Tunisia":"TN","Morocco":"MA","Japan":"JP","China":"CN","Philippines":"PH","New Zealand":"NZ","Bahamas":"BS","Jamaica":"JM","Puerto Rico":"PR","Malta":"MT","Luxembourg":"LU"};
-function isoOf(country){ if(!country)return null; return CTRY_ISO[country]||null; }
-const COUNTRY_LIST=(()=>{const seen=new Set(),out=[];
-  Object.keys(CTRY_ISO).forEach(name=>{const iso=CTRY_ISO[name];if(seen.has(iso))return;seen.add(iso);out.push(name);});
-  return out.sort((a,b)=>a.localeCompare(b));})();
-function flagEmoji(country){ const iso=isoOf(country); if(!iso)return ""; return iso.replace(/./g,ch=>String.fromCodePoint(127397+ch.charCodeAt(0))); }
+function isoOf(country){return EuroScoutCountries.iso(country)||null;}
+const COUNTRY_LIST=EuroScoutCountries.names;
+function flagEmoji(country){return EuroScoutCountries.flag(country);}
+function countryLabel(country){return EuroScoutCountries.label(country);}
 // Level barometer: where the player projects, from the tier-adjusted board grade.
 // Bands mirror a scout's mental ladder. Returns {i (0=bottom..3=top), label, bands[]}.
 const LEVEL_BANDS=["Low-Level","Mid-Level","Top Level","EuroCup","EuroLeague"];
@@ -4668,7 +4667,7 @@ const RBHEAD=`<tr><th>Player</th><th>Pos</th><th>Nat</th><th class="num">Ht</th>
 function rbRow(p,acts){const g=statGradeOverall(p);
   return `<tr data-pid="${p.id}">
     <td class="agp"><span class="agpInner">${rbPhoto(p)}<span class="agpName">${p.name}</span></span></td>
-    <td>${posLabel(p)}</td><td class="rbNat" title="${escAttr(p.country||"")}">${p.country||"\u2014"}</td>
+    <td>${posLabel(p)}</td><td class="rbNat" title="${escAttr(p.country||"")}">${countryLabel(p.country)||"\u2014"}</td>
     <td class="num">${p.height?p.height+"cm":"\u2014"}</td><td class="num">${p.age!=null?p.age:"\u2014"}</td>
     <td class="num">${p.ppg!=null?p.ppg.toFixed(1):"\u2014"}</td><td class="num">${p.rpg!=null?p.rpg.toFixed(1):"\u2014"}</td><td class="num">${p.apg!=null?p.apg.toFixed(1):"\u2014"}</td>
     <td class="num"><b class="agscore">${g!=null?g.toFixed(1):"\u2014"}</b></td>
@@ -4906,7 +4905,7 @@ function renderFreeAgents(){
   const rows=capped.map(p=>{const g=statGradeOverall(p);
     return `<tr data-pid="${p.id}">
       <td class="agp"><span class="agpInner">${ph(p)}<span class="agpName">${p.name}</span></span></td>
-      <td>${posLabel(p)}</td><td class="rbNat">${p.country||"\u2014"}</td>
+      <td>${posLabel(p)}</td><td class="rbNat">${countryLabel(p.country)||"\u2014"}</td>
       <td class="num">${p.height?p.height+"cm":"\u2014"}</td><td class="num">${p.age!=null?p.age:"\u2014"}</td>
       <td class="rbNat">${esc(p.teamName||"\u2014")}</td>
       <td class="num">${p.ppg!=null?p.ppg.toFixed(1):"\u2014"}</td><td class="num">${p.rpg!=null?p.rpg.toFixed(1):"\u2014"}</td>
@@ -5081,7 +5080,7 @@ function renderAgencyRoster(){
           <tbody>${players.map(p=>{const L=lineOf(p);const g=statGradeOverall(p);const ph=photoOf(p);
             return `<tr class="st-${L.st}" data-id="${p.id}">
               <td class="agTblP"><span class="agTblInner"><span class="agpPhoto${ph?"":" noimg"}">${ph?`<img src="${ph}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name)}</span><span class="agpName">${esc(p.name)}</span></span></td>
-              <td>${posLabel(p)}</td><td>${esc(p.country||"\u2014")}</td>
+              <td>${posLabel(p)}</td><td>${esc(countryLabel(p.country)||"\u2014")}</td>
               <td>${p.height?p.height+"cm":"\u2014"}</td><td>${p.age!=null?p.age:"\u2014"}</td>
               <td class="agTblClub">${esc(L.club)}<span>${esc(L.lg)}</span></td>
               <td>${p.ppg!=null?p.ppg.toFixed(1):"\u2013"}</td><td>${p.rpg!=null?p.rpg.toFixed(1):"\u2013"}</td><td>${p.apg!=null?p.apg.toFixed(1):"\u2013"}</td>
@@ -5650,7 +5649,7 @@ function chartFiltersHTML(c){
   if(c.fLeague&&c.fLeague!=="all"){const L=leagues.find(l=>l.meta.id===c.fLeague);
     if(L)teamOpts+=L.teams.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(t=>`<option value="${t.code}"${c.fTeam===t.code?" selected":""}>${escAttr(t.name)}</option>`).join("");}
   const countries=[...new Set((c.fLeague&&c.fLeague!=="all"?(leagues.find(l=>l.meta.id===c.fLeague)||{players:[]}).players:allPlayersFlat()).filter(p=>p.qualified&&p.country).map(p=>p.country))].sort();
-  const ctOpts=`<option value="">All countries</option>`+countries.map(ct=>`<option value="${escAttr(ct)}"${c.fCountry===ct?" selected":""}>${escAttr(ct)}</option>`).join("");
+  const ctOpts=`<option value="">All countries</option>`+countries.map(ct=>`<option value="${escAttr(ct)}"${c.fCountry===ct?" selected":""}>${esc(countryLabel(ct))}</option>`).join("");
   const roleOpts=`<option value="">All positions</option>`+["Guard","Forward","Big"].map(r=>`<option value="${r}"${c.fRole===r?" selected":""}>${r}</option>`).join("");
   return `<div class="chartfilters">
     <label class="chlab">League <select id="fLeague">${lgOpts}</select></label>
@@ -5998,7 +5997,7 @@ function renderExhib(){
   const rows=shown.map(p=>{const g=statGradeOverall(p);const ph=photoOf(p);const em=p._euMatch;
     return `<tr data-id="${p.id}">
       <td class="opN"><span class="opInner"><span class="agpPhoto${ph?"":" noimg"}">${ph?`<img src="${ph}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name)}</span><span class="opName">${esc(p.name)}${em?`<span class="opEu" title="Also in your European database">EU</span>`:""}</span></span></td>
-      <td class="opPos">${posLabel(p)}</td><td class="opNat">${esc(p.country||"\u2014")}</td>
+      <td class="opPos">${posLabel(p)}</td><td class="opNat">${esc(countryLabel(p.country)||"\u2014")}</td>
       <td class="num">${p.height?p.height:"\u2014"}</td><td class="num">${p.age!=null?p.age:"\u2014"}</td>
       <td class="opTeam">${esc(p.teamName||"\u2014")}</td>
       ${COLS.map(([k])=>`<td class="num">${p[k]!=null?(typeof p[k]==="number"&&!Number.isInteger(p[k])?p[k].toFixed(1):p[k]):"\u2013"}</td>`).join("")}
@@ -6017,7 +6016,7 @@ function renderExhib(){
     <div class="controls">
       <input type="text" id="opQ" placeholder="Search player" value="${escAttr(st.q)}" style="min-width:190px"/>
       <select class="f" id="opRole"><option value="">All positions</option>${["Guard","Forward","Big"].map(r=>`<option value="${r}"${st.role===r?" selected":""}>${r}s</option>`).join("")}</select>
-      <select class="f" id="opNat"><option value="">All countries</option>${countries.map(c=>`<option value="${escAttr(c)}"${st.country===c?" selected":""}>${esc(c)}</option>`).join("")}</select>
+      <select class="f" id="opNat"><option value="">All countries</option>${countries.map(c=>`<option value="${escAttr(c)}"${st.country===c?" selected":""}>${esc(countryLabel(c)||c)}</option>`).join("")}</select>
       <div class="seg opMode"><button data-m="pg"${st.mode==="pg"?' class="on"':""}>Per game</button><button data-m="adv"${st.mode==="adv"?' class="on"':""}>Advanced</button></div>
       <button class="fchip${st.euOnly?" on":""}" id="opEuOnly">In EU database${euCount?" ("+euCount+")":""}</button>
       ${(st.q||st.role||st.country||st.euOnly)?`<button class="fchip clearall" id="opClear">Clear</button>`:""}
@@ -6971,7 +6970,7 @@ function renderCurClubRoster(club){
   const rows=roster.map(p=>{const g=statGradeOverall(p);
     return `<tr data-pid="${p.id}">
       <td class="agp"><span class="agpInner">${ph(p)}<span class="agpName">${p.name}</span></span></td>
-      <td>${posLabel(p)}</td><td class="rbNat">${p.country||"\u2014"}</td>
+      <td>${posLabel(p)}</td><td class="rbNat">${countryLabel(p.country)||"\u2014"}</td>
       <td class="num">${p.height?p.height+"cm":"\u2014"}</td><td class="num">${p.age!=null?p.age:"\u2014"}</td>
       <td>${esc((STATE.data.leagues.find(L=>L.meta.id===p.league)||{meta:{}}).meta.name||p.league)}</td>
       <td class="num">${p.g!=null?p.g:"\u2014"}</td>
@@ -6997,7 +6996,7 @@ function renderCurRoster(lgId,code){
   const rows=roster.map(p=>{const g=statGradeOverall(p);
     return `<tr data-pid="${p.id}">
       <td class="agp"><span class="agpInner">${ph(p)}<span class="agpName">${p.name}</span></span></td>
-      <td>${posLabel(p)}</td><td class="rbNat">${p.country||"\u2014"}</td>
+      <td>${posLabel(p)}</td><td class="rbNat">${countryLabel(p.country)||"\u2014"}</td>
       <td class="num">${p.height?p.height+"cm":"\u2014"}</td><td class="num">${p.age!=null?p.age:"\u2014"}</td>
       <td class="num">${p.g!=null?p.g:"\u2014"}</td>
       <td class="num">${p.ppg!=null?p.ppg.toFixed(1):"\u2014"}</td><td class="num">${p.rpg!=null?p.rpg.toFixed(1):"\u2014"}</td>
@@ -7256,10 +7255,11 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260906-6"></script>
+<script src="euroscout-ui.js?v=20260907-3"></script>
 <script src="euroscout-workflow.js?v=20260906-6"></script>
-<script src="data/free-agent-review.js?v=20260907"></script>
-<script src="euroscout-market.js?v=20260907"></script>
+<script src="data/free-agent-review.js?v=20260907-3"></script>
+<script src="euroscout-market.js?v=20260907-3"></script>
+<script src="euroscout-transfers.js?v=20260907-3"></script>
 <script>esSetup();boot();</script>
 </body>
 </html>
