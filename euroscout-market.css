@@ -47,3 +47,15 @@ html[data-theme=dark] .fa-presets .active,html[data-theme=dark] .fa-badge.availa
 .client-info{display:grid;gap:3px;min-width:0}.client-info strong{font-size:14px}.client-info small,.client-info>span{color:var(--muted);font-size:11px}
 .client-score{text-align:right;display:grid;gap:2px}.client-score small{font-size:9px;color:var(--muted);letter-spacing:.05em}.client-score b{color:var(--accent);font-size:19px}.client-score>span{color:#bd8e36;font-size:10px}
 @media(max-width:520px){.agCards{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}.arost .client-row{gap:8px;padding:10px;grid-template-columns:40px minmax(0,1fr) 42px 8px}.client-photo{width:40px;height:48px}}
+.es-option-overlay{position:fixed;inset:0;z-index:120000;background:#14282080;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+.es-option-dialog{background:var(--panel,#fff);color:var(--txt,#22352d);width:min(540px,100%);max-height:85dvh;border:1px solid var(--line,#cad5cf);border-radius:15px;padding:18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 12px 50px #0003;font:14px/1.4 system-ui}
+.es-option-dialog header{position:static;display:flex;justify-content:space-between;align-items:center;background:none;color:inherit;padding:0;box-shadow:none;min-height:0}
+.es-option-dialog header button{border:0;background:transparent;color:inherit;font-size:24px;width:40px;height:40px;cursor:pointer}
+.es-option-dialog input{width:100%;box-sizing:border-box;min-height:44px;border:1px solid var(--line,#cad5cf);border-radius:8px;padding:10px 12px;background:var(--panel2,#f4f7f5);color:inherit;font:inherit}
+.es-option-dialog small{color:var(--muted,#62746a)}.es-option-results{overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:5px;min-height:0}
+.es-option-results button{flex-shrink:0;min-height:44px;padding:10px 12px;border:1px solid transparent;border-radius:8px;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer}
+.es-option-results button:hover,.es-option-results button:focus-visible{background:var(--panel2,#eef5f0);outline:2px solid var(--accent,#25745b);outline-offset:-2px}.es-option-results button[aria-pressed=true]{background:var(--accent-soft,#e5f1eb);font-weight:600}
+.fa-card-actions a{display:inline-flex;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;color:var(--txt);text-decoration:none;background:var(--panel)}
+@media(max-width:600px){.es-option-overlay{align-items:flex-end;padding:8px}.es-option-dialog{max-height:85dvh;padding:14px}}
+
+.es-export-options{display:grid;gap:12px;margin:20px 0}.es-export-options .btn{display:block;text-align:left;padding:15px;white-space:normal}.es-export-options small{display:block;font-weight:400;margin-top:6px;color:var(--muted)}
