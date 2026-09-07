@@ -1729,7 +1729,7 @@ body.drawer-lock{overflow:hidden}
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260906-6">
-</head>
+<link rel="stylesheet" href="euroscout-market.css?v=20260907"></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -4342,7 +4342,7 @@ function simQuickFiltersHTML(s){
     <span class="simquickLab">Recruit filters</span>
     <select id="simAgeMax" class="simqSel" title="Only players at or below this age">${ageOpts}</select>
     <select id="simLevelMin" class="simqSel" title="Only players projected at this level or higher">${lvlOpts}</select>
-    <button id="simFreeOnly" class="simqChip ${s.simFreeOnly?"on":""}" title="Only players without a 2026/27 club">Free agents 26/27</button>
+    <button id="simFreeOnly" class="simqChip ${s.simFreeOnly?"on":""}" title="Candidates without a confirmed 2026/27 signing; verify availability">Free agents 26/27</button>
     ${(s.simAgeMax||s.simLevelMin!=null&&s.simLevelMin!==""||s.simFreeOnly)?`<button class="simqClear" onclick="simClearRecruit()">reset</button>`:""}
   </div>`;
 }
@@ -5025,7 +5025,7 @@ function renderAgencyRoster(){
 
   const used=new Set((f.filters||[]).map(x=>x.key));
   const addOpts=FILTER_STATS.filter(x=>!used.has(x.key)).map(x=>`<option value="${x.key}">${esc(x.label)}</option>`).join("");
-  const seg=[["","All",all.length],["available","Available",counts.available],["signed","Signed",counts.signed],["retired","Retired",counts.retired]]
+  const seg=[["","All",all.length],["available","Candidates",counts.available],["signed","Signed",counts.signed],["retired","Retired",counts.retired]]
     .map(([k,l,n])=>`<button class="agStBtn ${f.st===k?"on":""} ${k||"all"}" data-st="${k}">${l}<span>${n}</span></button>`).join("");
 
   // a signed player is shown with his 2026/27 club and that club's 26/27 competitions,
@@ -5731,7 +5731,7 @@ function fitScore(p,f){
   if(f.ageMax&&!(p.age!=null&&p.age<=+f.ageMax))return null;
   if(f.levelMin!==""&&f.levelMin!=null){const b=levelBand(p);if(!(b&&b.i>=+f.levelMin))return null;}
   if(f.contract==="free"){const mm=next26Get(),mb=(typeof next26bGet==="function"?next26bGet():{});
-    if(effective26keys(p,mm,mb).length>0||isStatus(effective26(p,mm)))return null;}
+    if(!marketCandidate(p,mm,mb))return null;}
   const og=statGradeOverall(p,{raw:true}); if(f.minGrade&&(og==null||og<+f.minGrade))return null;
   // weighted components
   const w=fitWeights(f);
@@ -5755,14 +5755,14 @@ function renderFitFinder(){
   const archOpts=`<option value="">Any style</option>`+fitArchList().map(a=>`<option value="${a.key}" ${f.arch===a.key?"selected":""}>${a.label}</option>`).join("");
   const ageOpts=[["","Any age"],[21,"U21"],[23,"U23"],[25,"U25"],[28,"U28"]].map(([v,l])=>`<option value="${v}" ${String(f.ageMax)===String(v)?"selected":""}>${l}</option>`).join("");
   const lvlOpts=[["","Any level"],[4,"EuroLeague"],[3,"EuroCup+"],[2,"Top level+"],[1,"Mid-level+"]].map(([v,l])=>`<option value="${v}" ${String(f.levelMin)===String(v)?"selected":""}>${l}</option>`).join("");
-  const conOpts=[["","Any status"],["free","Free agents 26/27 only"]].map(([v,l])=>`<option value="${v}" ${f.contract===v?"selected":""}>${l}</option>`).join("");
+  const conOpts=[["","Any status"],["free","Free-agent candidates 26/27"]].map(([v,l])=>`<option value="${v}" ${f.contract===v?"selected":""}>${l}</option>`).join("");
   // score the pool
   let pool=scoutPool().filter(p=>p.qualified);
   const scored=pool.map(p=>({p,s:fitScore(p,f)})).filter(x=>x.s!=null).sort((a,b)=>b.s-a.s).slice(0,60);
   const rows=scored.map(({p,s})=>{
     const L=leagueOf(p),og=statGradeOverall(p),b=levelBand(p);
     const mm=next26Get(),mb=(typeof next26bGet==="function"?next26bGet():{});
-    const assigned=effective26keys(p,mm,mb).length>0||isStatus(effective26(p,mm));
+    const assigned=!marketCandidate(p,mm,mb);
     const photo=p.img?`<img src="${p.img}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name);
     const styleLab=(topArch(p,1)[0]||{}).lab||"";
     return `<button class="fitrow" data-id="${p.id}">
@@ -6248,7 +6248,7 @@ function renderScout(){
   if(s.ratingMin!=null){pool=pool.filter(p=>{const r=effRating(p);return s.ratingMin==="u"?r===0:r>=s.ratingMin;});}
   if(s.level!=null)  pool=pool.filter(p=>{const b=levelBand(p);return b&&b.i===s.level;});
   if(s.next26){const mm=next26Get(),mb=(typeof next26bGet==="function"?next26bGet():{});
-    pool=pool.filter(p=>{const assigned=effective26keys(p,mm,mb).length>0||isStatus(effective26(p,mm));return s.next26==="free"?!assigned:assigned;});}
+    pool=pool.filter(p=>{const assigned=!marketCandidate(p,mm,mb);return s.next26==="free"?!assigned:assigned;});}
   if(s.arch){const parts=s.arch.split(":");const ai=+parts[0];const A=ARCHETYPES[ai];
     // the chip's label (e.g. "Interior Scorer") — match any player who both expresses this
     // archetype meaningfully AND whose role-appropriate label for it equals the chip label.
@@ -6271,7 +6271,7 @@ function renderScout(){
     if(s.simAgeMax) pool=pool.filter(p=>p.age!=null&&p.age<=+s.simAgeMax);
     if(s.simLevelMin!=null&&s.simLevelMin!=="") pool=pool.filter(p=>{const b=levelBand(p);return b&&b.i>=+s.simLevelMin;});
     if(s.simFreeOnly){const mm=next26Get(),mb=(typeof next26bGet==="function"?next26bGet():{});
-      pool=pool.filter(p=>!(effective26keys(p,mm,mb).length>0||isStatus(effective26(p,mm))));}
+      pool=pool.filter(p=>marketCandidate(p,mm,mb));}
     pool.forEach(p=>p._sim=simMatch(simP,p)); pool=pool.filter(p=>p._sim!=null); pool.sort((a,b)=>b._sim-a._sim); }
   else if(s.arch){const ai=+s.arch.split(":")[0]; pool.sort((a,b)=>(b.arch?b.arch[ai]:0)-(a.arch?a.arch[ai]:0));}
   else if(s.sort==="grade")      pool.sort((a,b)=>(statGradeOverall(b)??-1)-(statGradeOverall(a)??-1));
@@ -7258,6 +7258,8 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
 <script src="euroscout-ui.js?v=20260906-6"></script>
 <script src="euroscout-workflow.js?v=20260906-6"></script>
+<script src="data/free-agent-review.js?v=20260907"></script>
+<script src="euroscout-market.js?v=20260907"></script>
 <script>esSetup();boot();</script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3740c8e7e8ec0d0',t:'MTc4ODc2NjY1NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
