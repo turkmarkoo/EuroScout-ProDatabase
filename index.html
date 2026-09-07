@@ -2,6 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<script>(function(){
+'use strict';
+var key='mts:theme:v1', root=document.documentElement, mq=matchMedia('(prefers-color-scheme: dark)'), origins=['https://dragonshub.mtscouting.com','https://nextgendb.mtscouting.com','https://euroscout.mtscouting.com','https://kzs.mtscouting.com'];
+function valid(v){return ['system','light','dark'].indexOf(v)>=0;}
+function read(){try{var c=document.cookie.match(/(?:^|; )mts_theme=(system|light|dark)(?:;|$)/);if(c)return c[1];var p=localStorage.getItem(key);return valid(p)?p:null;}catch(e){return null;}}
+var pref=new URLSearchParams(location.search).get('hubTheme');var saved=read();if(valid(saved))pref=saved;if(!valid(pref))pref='system';
+function apply(){var value=pref==='system'?(mq.matches?'dark':'light'):pref;if(root.dataset.theme!==value)root.dataset.theme=value;root.style.colorScheme=value;root.dataset.themePreference=pref;}
+function broadcast(){document.querySelectorAll('iframe').forEach(function(f){try{var o=new URL(f.src).origin;if(origins.includes(o))f.contentWindow.postMessage({type:'mts:theme',preference:pref},o);}catch(e){}});}
+function set(v){if(!valid(v))return;pref=v;try{localStorage.setItem(key,v);document.cookie='mts_theme='+v+'; Path=/; Max-Age=31536000; SameSite=Lax; Secure'+(/(^|\.)mtscouting\.com$/.test(location.hostname)?'; Domain=mtscouting.com':'');}catch(e){}apply();broadcast();window.dispatchEvent(new CustomEvent('mts:themechange',{detail:pref}));}
+window.MTSTheme={get:function(){return pref;},set:set,apply:apply,broadcast:broadcast};set(pref);
+new MutationObserver(apply).observe(root,{attributes:true,attributeFilter:['data-theme']});
+if(mq.addEventListener)mq.addEventListener('change',apply);else mq.addListener(apply);
+window.addEventListener('message',function(e){if(!origins.includes(e.origin)||!e.data)return;if(e.data.type==='mts:theme'&&e.source===parent)set(e.data.preference);});
+function check(){var v=read();if(valid(v)&&v!==pref){pref=v;apply();broadcast();window.dispatchEvent(new CustomEvent('mts:themechange',{detail:pref}));}}
+window.addEventListener('storage',check);document.addEventListener('visibilitychange',function(){if(!document.hidden)check();});setInterval(function(){if(!document.hidden)check();},2000);
+document.addEventListener('click',function(e){var b=e.target.closest('#esTheme,#btnTheme,#themeBtn');if(!b||location.hostname==='dragonshub.mtscouting.com'||document.getElementById('hubThemeSelect'))return;e.preventDefault();e.stopImmediatePropagation();set(['system','light','dark'][(['system','light','dark'].indexOf(pref)+1)%3]);b.title='Theme: '+pref;},true);
+})();
+</script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>EuroScout · European Basketball Scouting</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -1711,7 +1730,7 @@ body.drawer-lock{overflow:hidden}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260906-6">
 </head>
-<body>
+<body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
     <div class="logo" id="homeLogo" title="Back to players" role="button" tabindex="0"><span class="mark"><svg viewBox="0 0 112 112" width="100%" height="100%" style="display:block" aria-hidden="true"><rect width="112" height="112" fill="#0F2C45"/><circle cx="56" cy="56" r="30" fill="none" stroke="#7FA8C9" stroke-width="5"/><g stroke="#7FA8C9" stroke-width="5" stroke-linecap="round"><line x1="56" y1="9" x2="56" y2="29"/><line x1="56" y1="83" x2="56" y2="103"/><line x1="9" y1="56" x2="29" y2="56"/><line x1="83" y1="56" x2="103" y2="56"/></g><circle cx="56" cy="56" r="16" fill="#EE7A3C"/><g fill="none" stroke="#0F2C45" stroke-width="3.2" stroke-linecap="round"><path d="M40 56H72"/><path d="M56 40V72"/><path d="M45 46q11 10 22 0"/><path d="M45 66q11 -10 22 0"/></g></svg></span><span class="logotext">Euro<b>Scout</b></span></div>
@@ -7240,5 +7259,5 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-ui.js?v=20260906-6"></script>
 <script src="euroscout-workflow.js?v=20260906-6"></script>
 <script>esSetup();boot();</script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3740c8e7e8ec0d0',t:'MTc4ODc2NjY1NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
