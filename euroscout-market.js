@@ -49,14 +49,19 @@ function marketPool(){
 }
 function leagueGroup(p){return p.league==='nba'?['nba','NBA']:p.league==='gleague'?['gleague','G League']:['eu','Europe'];}
 function srcBadge(p){const g=leagueGroup(p);return '<span class="fa-src fa-src-'+g[0]+'">'+g[1]+'</span>';}
-function filterRows(){const m=next26Get(),mb=next26bGet();let rows=marketPool().map(p=>({p,e:evidence(p,m,mb)}));
- rows=rows.filter(({p,e})=>{if(f.status==='candidates'&&['signed','retired'].includes(e.status))return false;if(f.status!=='candidates'&&f.status!=='all'&&e.status!==f.status)return false;
- if(f.position==='C'&&!center(p)&&!(f.broad&&broadBig(p)))return false;if(['Guard','Forward','Big'].includes(f.position)&&p.role!==f.position)return false;
- if(f.q&&!norm([p.name,p.teamName,p.agent,p.agency].join(' ')).includes(norm(f.q)))return false;if(f.league.length&&![p,...(p._grp||[])].some(x=>f.league.includes(x.league)))return false;
- if(f.country.length&&!f.country.includes(p.country||''))return false;if(f.level.length&&!f.level.includes(String(levelBand(p)?.i)))return false;
- const ranges=[['age',f.ageMin,f.ageMax],['height',f.heightMin,f.heightMax],['g',f.gamesMin,''],['mpg',f.minutesMin,''],...(f.filters||[]).map(x=>[x.key,x.min,x.max])];
- if(ranges.some(([k,lo,hi])=>{if(lo===''&&hi==='')return false;const v=value(p,k);return v==null||!Number.isFinite(+v)||(lo!==''&&v<+lo)||(hi!==''&&v>+hi);}))return false;
- if(f.arch.length&&!f.arch.some(key=>{const [ai,band]=key.split(':').map(Number);return p.arch&&p.arch[ai]!=null&&p.arch[ai]>=+f.archMin&&!(band!=null&&ARCHETYPES[ai]?.roleBands&&p.role!==ROLE_ORDER[band]);}))return false;return true;});
+function filterRows(){const m=next26Get(),mb=next26bGet();
+ // Cheap, evidence-free filters first — so we only compute availability for players that already match.
+ const passesCheap=p=>{
+  if(f.position==='C'&&!center(p)&&!(f.broad&&broadBig(p)))return false;if(['Guard','Forward','Big'].includes(f.position)&&p.role!==f.position)return false;
+  if(f.q&&!norm([p.name,p.teamName,p.agent,p.agency].join(' ')).includes(norm(f.q)))return false;if(f.league.length&&![p,...(p._grp||[])].some(x=>f.league.includes(x.league)))return false;
+  if(f.country.length&&!f.country.includes(p.country||''))return false;if(f.level.length&&!f.level.includes(String(levelBand(p)?.i)))return false;
+  const ranges=[['age',f.ageMin,f.ageMax],['height',f.heightMin,f.heightMax],['g',f.gamesMin,''],['mpg',f.minutesMin,''],...(f.filters||[]).map(x=>[x.key,x.min,x.max])];
+  if(ranges.some(([k,lo,hi])=>{if(lo===''&&hi==='')return false;const v=value(p,k);return v==null||!Number.isFinite(+v)||(lo!==''&&v<+lo)||(hi!==''&&v>+hi);}))return false;
+  if(f.arch.length&&!f.arch.some(key=>{const [ai,band]=key.split(':').map(Number);return p.arch&&p.arch[ai]!=null&&p.arch[ai]>=+f.archMin&&!(band!=null&&ARCHETYPES[ai]?.roleBands&&p.role!==ROLE_ORDER[band]);}))return false;
+  return true;
+ };
+ let rows=marketPool().filter(passesCheap).map(p=>({p,e:evidence(p,m,mb)}));
+ rows=rows.filter(({e})=>{if(f.status==='candidates'&&['signed','retired'].includes(e.status))return false;if(f.status!=='candidates'&&f.status!=='all'&&e.status!==f.status)return false;return true;});
  rows.sort((a,b)=>{if(f.sort==='name')return a.p.name.localeCompare(b.p.name);if(f.sort==='checked')return String(b.e.checked||'').localeCompare(String(a.e.checked||''))||a.p.name.localeCompare(b.p.name);const k=f.sort==='young'?'age':f.sort,va=value(a.p,k),vb=value(b.p,k);if(va==null)return vb==null?0:1;if(vb==null)return -1;return (f.sort==='young'?va-vb:vb-va)||a.p.name.localeCompare(b.p.name);});return rows;
 }
 function options(list,current){return list.map(([v,l])=>`<option value="${escAttr(String(v))}"${String(v)===String(current)?' selected':''}>${esc(l)}</option>`).join('');}
