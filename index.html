@@ -1729,7 +1729,7 @@ body.drawer-lock{overflow:hidden}
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260906-6">
-<link rel="stylesheet" href="euroscout-market.css?v=20260907-4"></head>
+<link rel="stylesheet" href="euroscout-market.css?v=20260907-5"></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -1761,9 +1761,9 @@ body.drawer-lock{overflow:hidden}
 <div id="toast" class="toast"></div>
 <div id="authgate" class="authgate hidden"><div class="agbox" id="agBox"></div></div>
 
-<script src="data/club-directory.js?v=20260907-4"></script>
-<script src="euroscout-clubs.js?v=20260907-4"></script>
-<script src="euroscout-countries.js?v=20260907-4"></script>
+<script src="data/club-directory.js?v=20260907-5"></script>
+<script src="euroscout-clubs.js?v=20260907-5"></script>
+<script src="euroscout-countries.js?v=20260907-5"></script>
 <script src="config.js"></script>
 <script src="overrides.js"></script>
 <script src="data/data.js"></script>
@@ -2401,18 +2401,19 @@ const Store = (()=>{
 /* ---------------------------- boot ---------------------------- */
 /* ---------- manual overrides: links, bio, external URLs ---------- */
 const OVR_KEY="euroscout:overrides";
-function ovrBase(){const b=window.EUROSCOUT_OVERRIDES||{};return{links:b.links||[],bio:b.bio||{},ext:b.ext||{}};}
-function ovrLocal(){try{const o=JSON.parse(localStorage.getItem(OVR_KEY));return o&&typeof o==="object"?{links:o.links||[],bio:o.bio||{},ext:o.ext||{}}:{links:[],bio:{},ext:{}};}catch(e){return{links:[],bio:{},ext:{}};}}
+function ovrBase(){const b=window.EUROSCOUT_OVERRIDES||{};return{links:b.links||[],bio:b.bio||{},ext:b.ext||{},clubs:b.clubs||{}};}
+function ovrLocal(){try{const o=JSON.parse(localStorage.getItem(OVR_KEY));return o&&typeof o==="object"?{links:o.links||[],bio:o.bio||{},ext:o.ext||{},clubs:o.clubs||{}}:{links:[],bio:{},ext:{},clubs:{}};}catch(e){return{links:[],bio:{},ext:{}};}}
 function ovrMerged(){const b=ovrBase(),l=ovrLocal();
   const links=[...b.links,...l.links];
   const bio={}; Object.keys(b.bio).forEach(k=>bio[k]={...b.bio[k]}); Object.keys(l.bio).forEach(k=>bio[k]={...(bio[k]||{}),...l.bio[k]});
   const ext={...b.ext,...l.ext};
-  return{links,bio,ext};}
+  return{links,bio,ext,clubs:{...(b.clubs||{}),...(l.clubs||{})}};}
 let OVR={links:[],bio:{},ext:{}};
 function ovrSaveLocal(patch){
   if(!Store.canEdit())return;
   const l=ovrLocal();
-  if(patch.bio)Object.keys(patch.bio).forEach(id=>{const clean={};Object.keys(patch.bio[id]).forEach(k=>{const v=patch.bio[id][k];if(v!=null&&(v!==""||k==="projLevel"||k==="country"))clean[k]=k==='country'?EuroScoutCountries.canonical(v):v;});l.bio[id]={...(l.bio[id]||{}),...clean};});
+  if(patch.bio)Object.keys(patch.bio).forEach(id=>{const clean={};Object.keys(patch.bio[id]).forEach(k=>{const v=patch.bio[id][k];if(v!=null&&(v!==""||k==="projLevel"||k==="country"||k==="agent"||k==="agency"||k==="agentUrl"))clean[k]=k==='country'?EuroScoutCountries.canonical(v):v;});l.bio[id]={...(l.bio[id]||{}),...clean};});
+  if(patch.clubs)l.clubs={...(l.clubs||{}),...patch.clubs};
   if(patch.ext)Object.keys(patch.ext).forEach(id=>{if(patch.ext[id])l.ext[id]=patch.ext[id];else delete l.ext[id];});
   if(patch.links)patch.links.forEach(pr=>{if(!l.links.some(x=>(x[0]===pr[0]&&x[1]===pr[1])||(x[0]===pr[1]&&x[1]===pr[0])))l.links.push(pr);});
   localStorage.setItem(OVR_KEY,JSON.stringify(l));
@@ -2421,6 +2422,8 @@ function ovrSaveLocal(patch){
   OVR=ovrMerged(); rebuildLinks(); applyOverrides(); STATE._tagg=null;
 }
 function applyOverrides(){
+  EuroScoutClubs.refresh();
+  window.EuroScoutAgencyResearch?.prepare();
   // bio/ext overrides are keyed per-person (shared across all their competitions), so look up
   // by ANY id in the merged group — editing one league's entry propagates to the others.
   const bioFor=p=>{const ids=(p._grp&&p._grp.length?p._grp:[p]).map(x=>x.id);
@@ -2437,6 +2440,7 @@ function applyOverrides(){
       if(b.hand)p.hand=b.hand; if(b.license)p.license=b.license;
       if(b.agent)p.agent=b.agent; if(b.agency)p.agency=normAgency(b.agency); if(b.agentUrl)p.agentUrl=b.agentUrl; if(b.rgm)p._rgm=b.rgm;
       if(b.projLevel!=null&&b.projLevel!=="")p.projLevel=Number(b.projLevel); }
+    window.EuroScoutAgencyResearch?.apply(p,b);
     p.country=EuroScoutCountries.canonical(p.country);
     p._ext=extFor(p)||null;
   }));
@@ -2531,7 +2535,7 @@ function ovrExportBlob(){ const body="window.EUROSCOUT_OVERRIDES="+JSON.stringif
   toast("Downloaded overrides.js"); }
 function ovrImportFile(file){ const r=new FileReader(); r.onload=()=>{ try{ const txt=String(r.result);
     const m=txt.match(/EUROSCOUT_OVERRIDES\s*=\s*([\s\S]*?);?\s*$/); const o=JSON.parse(m?m[1]:txt);
-    localStorage.setItem(OVR_KEY,JSON.stringify({links:o.links||[],bio:o.bio||{},ext:o.ext||{}}));
+    localStorage.setItem(OVR_KEY,JSON.stringify({links:o.links||[],bio:o.bio||{},ext:o.ext||{},clubs:o.clubs||{}}));
     OVR=ovrMerged(); applyOverrides(); rebuildLinks(); toast("Overrides imported"); hideModal(); if(CURRENT)renderProfile();
   }catch(e){ toast("Import failed: "+e.message); } }; r.readAsText(file); }
 function efld(lab,id,val){return '<div class="efld"><label>'+lab+'</label><input type="text" id="'+id+'" value="'+esc(val)+'"/></div>';}
@@ -3352,7 +3356,7 @@ function render(){if(typeof scheduleSticky==="function")scheduleSticky();
   updateTransferBadge();
   if(typeof paintCompareBar==="function")paintCompareBar();
 }
-function goView(v){STATE.view=v;render();}
+function goView(v){if(v==="teams"&&STATE.teamsMode==="fa")STATE.teamsMode="next";STATE.view=v;render();}
 function statsSubNav(active){
   return `<div class="subnav">${[["players","Stats"],["compare","Compare"],["charts","Charts"],["fit","Fit Finder"]].map(([v,l])=>`<button class="subnavbtn ${active===v?"on":""}" onclick="goView('${v}')">${l}</button>`).join("")}</div>`;
 }
@@ -4618,7 +4622,7 @@ function backToAgencies(){STATE.agencyView=null;renderAgencies();}
 function teamsModeToggle(){const md=STATE.teamsMode||"current";
   const b=(k,l)=>`<button class="subnavbtn ${md===k?"on":""}" data-tmode="${k}">${l}</button>`;
   return `<div class="subnav" style="margin-bottom:16px">${b("current","Teams 2025/26")}${b("next","Teams 2026/27")}${b("fa","Free agents 26/27")}</div>`;}
-function wireTeamsToggle(){$$("[data-tmode]").forEach(b=>b.onclick=()=>{STATE.teamsMode=b.dataset.tmode;STATE.curTeam=null;renderTeams();});}
+function wireTeamsToggle(){$$("[data-tmode]").forEach(b=>b.onclick=()=>{STATE.teamsMode=b.dataset.tmode;STATE.curTeam=null;if(b.dataset.tmode==="fa")renderFreeAgents();else renderTeams();});}
 function reRenderTeams(){(STATE.teamsMode==="fa"?renderFreeAgents:renderTeamsNext)();}
 function openTeamPicker(pid,onDone){const p=player(pid);if(!p)return;
   const teams=allClubs().slice().sort((a,b)=>a.name.localeCompare(b.name));
@@ -4627,8 +4631,9 @@ function openTeamPicker(pid,onDone){const p=player(pid);if(!p)return;
   const ov=document.createElement("div");ov.className="tpOverlay";ov.id="tpOverlay";
   ov.innerHTML=`<div class="tpModal"><div class="tpHead"><span>Sign <b>${esc(p.name)}</b> to\u2026</span><button class="tpClose" id="tpClose" aria-label="Close">\u2715</button></div>
     <input class="tpSearch" id="tpSearch" placeholder="Search club or league\u2026" autocomplete="off"/>
-    <div class="tpList" id="tpList"></div></div>`;
+    <button class="tpItem" id="tpAddClub" type="button">+ Add missing club</button><div class="tpList" id="tpList"></div></div>`;
   document.body.appendChild(ov);
+  ov.querySelector("#tpAddClub").onclick=()=>EuroScoutClubs.addForm(key=>{set26(pid,key);closeTeamPicker();if(onDone)onDone(key);else reRenderTeams();});
   const listEl=ov.querySelector("#tpList");
   // Two-way support: if this person's primary club is NBA or G League, a second (counterpart-league)
   // club can be attached. `mode` toggles which slot the picker is assigning.
@@ -4722,7 +4727,7 @@ function renderTransfers(){
   const CAP=200;
   $("#app").innerHTML=`<div class="view">
     <h1 class="title">Transfers</h1>
-    <div class="sub" style="margin-bottom:14px">Approve a move to place the player on their 2026/27 roster. <b id="trCount">${total}</b> waiting${handled?` \u00b7 ${handled} already handled`:""}.</div>
+    <div class="sub" style="margin-bottom:14px">Approve a move to place the player on their 2026/27 roster. Players without a confirmed destination stay in Free agents and do not need transfer approval. <b id="trCount">${total}</b> waiting${handled?` \u00b7 ${handled} already handled`:""}.</div>
     <div class="rbFilters">
       <select id="trLgSel"><option value="">All leagues (${total})</option>${lgs.map(l=>`<option value="${escAttr(l.key)}"${l.key===f.lg?" selected":""}>${esc(l.name)} (${l.n})</option>`).join("")}</select>
       <select id="trClubSel"><option value="">All clubs</option>${clubs.map(c=>`<option value="${escAttr(c.key)}"${c.key===f.club?" selected":""}>${esc(c.name)} (${c.n})</option>`).join("")}</select>
@@ -6927,7 +6932,7 @@ function openTeamBoard(k,label,hi){
 }
 function renderTeams(){
   if(STATE.teamsMode==="next")return renderTeamsNext();
-  if(STATE.teamsMode==="fa")return renderFreeAgents();
+  if(STATE.teamsMode==="fa"){STATE.teamsMode="next";return renderTeamsNext();}
   return renderTeamsCurrent();
 }
 function renderTeamsCurrent(){
@@ -7260,12 +7265,14 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260907-4"></script>
+<script src="euroscout-ui.js?v=20260907-5"></script>
 <script src="euroscout-workflow.js?v=20260906-6"></script>
-<script src="data/free-agent-review.js?v=20260907-4"></script>
-<script src="euroscout-market.js?v=20260907-4"></script>
-<script src="euroscout-transfers.js?v=20260907-4"></script>
-<script src="euroscout-roster-edit.js?v=20260907-4"></script>
+<script src="data/free-agent-review.js?v=20260907-5"></script>
+<script src="euroscout-market.js?v=20260907-5"></script>
+<script src="euroscout-transfers.js?v=20260907-5"></script>
+<script src="euroscout-roster-edit.js?v=20260907-5"></script>
+<script src="data/agency-research.js?v=20260907-5"></script>
+<script src="euroscout-agency-research.js?v=20260907-5"></script>
 <script>esSetup();boot();</script>
 </body>
 </html>

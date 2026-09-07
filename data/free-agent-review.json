@@ -2242,22 +2242,6 @@
       "history": []
     },
     {
-      "name": "Novak Manojlović",
-      "ids": [
-        "aba-5304",
-        "fec-554"
-      ],
-      "born": 2007,
-      "status": "departed",
-      "club": "",
-      "url": "https://www.aba-liga.com/news/55002/admiralbet-aba-league-transfers-%7C-summer-2026/",
-      "source": "Official ABA transfer table",
-      "date": "",
-      "checkedAt": "2026-09-07",
-      "note": "2026/27 departure; current availability unconfirmed.",
-      "history": []
-    },
-    {
       "name": "Krišs Helmanis",
       "ids": [
         "aba-5457",
@@ -4632,6 +4616,33 @@
       "url": "",
       "club": "",
       "note": "Marked without a club for 2026/27 by Marko Turk on 7 September 2026. The Bayern entry belongs to the previous statistical season."
+    },
+    {
+      "ids": [
+        "aba-2096"
+      ],
+      "name": "Žiga Dimec",
+      "born": 1993,
+      "club": "KK Leone Ajdovščina",
+      "url": "https://www.lokalne-ajdovscina.si/novice/2026051814235092/prva-kanta-je-doma-bo-kmalu-tudi-druga/",
+      "note": "Leone player; club promoted to 2. SKL. 2026/27 club confirmed by database owner.",
+      "status": "signed",
+      "date": "2026-09-07",
+      "checkedAt": "2026-09-07"
+    },
+    {
+      "ids": [
+        "aba-5304",
+        "fec-554"
+      ],
+      "name": "Novak Manojlović",
+      "born": 2007,
+      "club": "Manhattan Jaspers",
+      "url": "https://gojaspers.com/news/2026/7/22/mens-basketball-mens-basketball-adds-bosnian-native-novak-manojlovic-for-2026-27.aspx",
+      "note": "Official Manhattan University announcement for 2026/27, 22 July 2026.",
+      "status": "signed",
+      "date": "2026-09-07",
+      "checkedAt": "2026-09-07"
     }
   ],
   "coverage": {

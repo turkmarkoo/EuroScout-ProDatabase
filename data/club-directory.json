@@ -1194,7 +1194,9 @@
     "league": "Slovakia · Extraliga",
     "source": "https://basketball.realgm.com/international/league/29/Slovakian-Extraliga/team/2686/Nitra-Blue-Wings/rosters",
     "checked": "2026-09-07",
-    "aliases": [],
+    "aliases": [
+      "Nitra"
+    ],
     "directoryOnly": true,
     "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
   },
@@ -1327,5 +1329,30 @@
     "aliases": [],
     "directoryOnly": true,
     "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "slovenia-leone-ajdovscina",
+    "name": "KK Leone Ajdovščina",
+    "country": "Slovenia",
+    "league": "Slovenia · 2. SKL",
+    "aliases": [
+      "Leone Ajdovščina",
+      "Leone Ajdovscina",
+      "KK Ajdovščina"
+    ],
+    "source": "https://www.lokalne-ajdovscina.si/novice/2026051814235092/prva-kanta-je-doma-bo-kmalu-tudi-druga/",
+    "checked": "2026-09-07"
+  },
+  {
+    "id": "usa-manhattan-jaspers",
+    "name": "Manhattan Jaspers",
+    "country": "United States",
+    "league": "USA · NCAA Division I",
+    "aliases": [
+      "Manhattan University",
+      "Manhattan"
+    ],
+    "source": "https://gojaspers.com/news/2026/7/22/mens-basketball-mens-basketball-adds-bosnian-native-novak-manojlovic-for-2026-27.aspx",
+    "checked": "2026-09-07"
   }
 ]
