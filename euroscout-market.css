@@ -61,3 +61,12 @@ html[data-theme=dark] .fa-presets .active,html[data-theme=dark] .fa-badge.availa
 .es-export-options{display:grid;gap:12px;margin:20px 0}.es-export-options .btn{display:block;text-align:left;padding:15px;white-space:normal}.es-export-options small{display:block;font-weight:400;margin-top:6px;color:var(--muted)}
 
 .rep-dismiss,.rep-restore{display:block;margin-top:7px;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--muted);font:12px system-ui;cursor:pointer}
+
+
+/* Market source group toggle + badges (Phase 1) */
+.fa-nbatoggle{display:inline-flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap;cursor:pointer;color:var(--txt)}
+.fa-nbatoggle input{width:auto;margin:0}
+.fa-src{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.02em;padding:1px 6px;border-radius:6px;margin-right:6px;vertical-align:middle}
+.fa-src-eu{background:#e7eef4;color:#3a6a8a}
+.fa-src-nba{background:#f4e2d2;color:#a96a38}
+.fa-src-gleague{background:#e9e3f2;color:#6a4fa0}
