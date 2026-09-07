@@ -1729,7 +1729,7 @@ body.drawer-lock{overflow:hidden}
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260906-6">
-<link rel="stylesheet" href="euroscout-market.css?v=20260907-3"></head>
+<link rel="stylesheet" href="euroscout-market.css?v=20260907-4"></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -1761,7 +1761,9 @@ body.drawer-lock{overflow:hidden}
 <div id="toast" class="toast"></div>
 <div id="authgate" class="authgate hidden"><div class="agbox" id="agBox"></div></div>
 
-<script src="euroscout-countries.js?v=20260907-3"></script>
+<script src="data/club-directory.js?v=20260907-4"></script>
+<script src="euroscout-clubs.js?v=20260907-4"></script>
+<script src="euroscout-countries.js?v=20260907-4"></script>
 <script src="config.js"></script>
 <script src="overrides.js"></script>
 <script src="data/data.js"></script>
@@ -1858,7 +1860,8 @@ const NEXT26_KEY="euroscout:next26:v1";
 /* the 26/27 map normally holds club keys. Reserved values record a career status
    instead, so a retiring player leaves the free-agent pool without being signed anywhere. */
 const STATUS_RETIRED="__retired";
-const STATUSES={[STATUS_RETIRED]:{label:"Retired",short:"Retired",cls:"stRet"}};
+const STATUS_FREE="__free_agent";
+const STATUSES={[STATUS_FREE]:{label:"Free agent",short:"Free agent",cls:"stFa"},[STATUS_RETIRED]:{label:"Retired",short:"Retired",cls:"stRet"}};
 function isStatus(k){return !!(k&&STATUSES[k]);}
 function statusOf(p,m){const k=effective26(p,m);return isStatus(k)?k:null;}
 function statusLabel(k){return (STATUSES[k]||{}).label||"";}
@@ -1919,7 +1922,8 @@ function showsTeams(m){return !!(m&&!m.exhibition&&(
   || (m.teamsOnly&&ENTRANT_LEAGUES.has(m.id))));}                        // next-season entrants
 // stat-scope leagues: the ones that belong in stats filters/percentiles (never the browse-only ones)
 function isStatLeague(m){return !!(m&&!isOtherLeague(m)&&!m.teamsOnly);}
-function allDbTeams(){if(DBTEAM_LIST)return DBTEAM_LIST;const out=[];(STATE.data.leagues||[]).forEach(L=>{if(!showsTeams(L.meta))return;(L.teams||[]).forEach(t=>out.push({key:L.meta.id+"|"+t.code,name:t.name,city:t.city||"",country:t.country||"",lg:L.meta.id,lgName:L.meta.name,conf:t.conference||null,code:t.code,logo:t.logo||null}));});DBTEAM_LIST=out;DBTEAM_BYKEY=new Map(out.map(t=>[t.key,t]));buildClubs();return out;}
+function allDbTeams(){if(DBTEAM_LIST)return DBTEAM_LIST;const out=[];(STATE.data.leagues||[]).forEach(L=>{if(!showsTeams(L.meta))return;(L.teams||[]).forEach(t=>out.push({key:L.meta.id+"|"+t.code,name:t.name,city:t.city||"",country:t.country||"",lg:L.meta.id,lgName:L.meta.name,conf:t.conference||null,code:t.code,logo:t.logo||null}));});EuroScoutClubs.extend(out);
+  DBTEAM_LIST=out;DBTEAM_BYKEY=new Map(out.map(t=>[t.key,t]));buildClubs();EuroScoutClubs.linkAliases(DBTEAM_BYKEY,CLUB_BY_TEAMKEY);return out;}
 
 /* ---------- clubs: one entry per real club, tagged with every competition it plays ---------- */
 let CLUBS=null, CLUB_BY_TEAMKEY=null;
@@ -1930,6 +1934,7 @@ function tokEq(a,b){if(a===b)return true;const m=Math.min(a.length,b.length);ret
 const CLUB_ALIAS={"barca":"fc barcelona","partizan mozzart bet":"partizan belgrade","buducnost voli":"buducnost podgorica","kids us manresa":"baxi manresa","besiktas gain":"besiktas istanbul","bahcesehir koleji":"bahcesehir college","aek bc":"aek athens","petrolina aek":"petrolina aek larnaca"};
 function clubCanon(n){return CLUB_ALIAS[n]||n;}
 function sameClub(a,b){
+  if(a.directoryOnly||b.directoryOnly)return false;
   if(a.lg===b.lg)return false;                       // never merge inside one competition
   const na=clubCanon(normClub(a.name)), nb=clubCanon(normClub(b.name));
   if(!na||!nb)return false;
@@ -2051,7 +2056,7 @@ function canonKey(k){if(isStatus(k))return k;const c=clubForTeamKey(k);return c?
 function dbTeamByKey(k){if(!DBTEAM_BYKEY)allDbTeams();return DBTEAM_BYKEY.get(k)||null;}
 function openTeamPickerProfile(pid){openTeamPicker(pid,()=>{if(typeof openProfile==="function")openProfile(pid);});}
 function next26CellHTML(p){const k=effective26(p);
-  if(isStatus(k))return `<b class="stRet">${esc(statusLabel(k))}</b><div class="bisub">not seeking a club for 2026/27</div><span class="bioadd n26edit" onclick="event.stopPropagation();openTeamPickerProfile('${p.id}')" title="Change 26/27 status"><span class="bioaddhint">change</span></span>`;
+  if(isStatus(k))return `<b class="stRet">${esc(statusLabel(k))}</b><div class="bisub">${k===STATUS_FREE?"No club for 2026/27 · manually recorded":"not seeking a club for 2026/27"}</div><span class="bioadd n26edit" onclick="event.stopPropagation();openTeamPickerProfile('${p.id}')" title="Change 26/27 status"><span class="bioaddhint">change</span></span>`;
   const c=k?clubByKey(k):null;
   const bk=effective26b(p);const bc=bk?clubByKey(bk):null;
   const twoWayLine=bc?`<div class="bisub biTwoway">\u21c4 Two-way \u00b7 ${esc(bc.name)}</div>`:"";
@@ -3653,7 +3658,7 @@ function fullDate(dt){if(!dt||dt.length<10)return dt||"\u2014";
   return d+" "+(MONTHS[m-1]||"")+" "+y;}
 function openTeamRoster(leagueId,code){openTeamIn(leagueId,code);
   requestAnimationFrame(()=>{const el=$("#rosterPanel");if(el)el.scrollIntoView({behavior:"smooth",block:"start"});});}
-function openTeamIn(leagueId,code){const L=STATE.data.leagues.find(x=>x.meta.id===leagueId);
+function openTeamIn(leagueId,code){if(EuroScoutClubs.open(leagueId+"|"+code))return;const L=STATE.data.leagues.find(x=>x.meta.id===leagueId);
   if(L){STATE.allLeagues=false;STATE.league=L;const sel=$("#leagueSel");if(sel)sel.value=leagueId;updateScopeLabel();}
   openTeam(code);}
 // open a team roster from a player profile: resolve the team by code, else by teamName
@@ -4646,9 +4651,9 @@ function openTeamPicker(pid,onDone){const p=player(pid);if(!p)return;
         set26b(pid,v);closeTeamPicker();if(onDone)onDone(effective26(p));else reRenderTeams();});
       return;
     }
-    const filt=qn?teams.filter(t=>normClub(t.name).includes(qn)||t.teams.some(x=>normClub(x.city).includes(qn))||t.leagues.some(l=>normClub(l.name).includes(qn))):teams;
-    listEl.innerHTML=(cur?`<button class="tpItem tpFa" data-tk="">\u2190 Unassign (free agent)</button>`:"")+
-      `<button class="tpItem tpRet${cur===STATUS_RETIRED?" cur":""}" data-tk="${STATUS_RETIRED}">\u23f9 Mark as retired</button>`+
+    const filt=qn?teams.filter(t=>normClub(t.name+" "+t.teams.flatMap(x=>x.searchAliases||[]).join(" ")).includes(qn)||t.teams.some(x=>normClub(x.city).includes(qn))||t.leagues.some(l=>normClub(l.name).includes(qn))):teams;
+    listEl.innerHTML=(cur?`<button class="tpItem tpFa" data-tk="">\u2190 Clear assignment (unknown)</button>`:"")+
+      `<button class="tpItem tpFa" data-tk="${STATUS_FREE}">Mark as free agent</button><button class="tpItem tpRet${cur===STATUS_RETIRED?" cur":""}" data-tk="${STATUS_RETIRED}">\u23f9 Mark as retired</button>`+
       (twoWayEligible()?`<button class="tpItem tpTwoway" data-tw="open">${curB?`\u21c4 Two-way: ${esc((clubByKey(curB)||{}).name||"")} \u2014 change`:`\u21c4 Add two-way club (${twoWayWant()==="nba"?"NBA":"G League"})`}</button>`:"")+
       (filt.length?filt.slice(0,300).map(t=>`<button class="tpItem${cur===t.key?" cur":""}" data-tk="${escAttr(t.key)}">${clubBadge(t,18)}<span class="tpName">${esc(t.name)}</span><span class="tpLg">${t.leagues.map(l=>esc(l.name)).join(" \u00b7 ")}${(t.teams&&t.teams[0]&&t.teams[0].conf)?" \u00b7 "+esc(t.teams[0].conf):""}</span>${nextCompBadges(t)}</button>`).join(""):`<div class="tpNone">No club matches "${esc(q)}".</div>`);
     listEl.querySelectorAll("[data-tk]").forEach(b=>b.onclick=()=>{set26(pid,b.dataset.tk);closeTeamPicker();if(onDone)onDone(b.dataset.tk);else reRenderTeams();});
@@ -7044,12 +7049,12 @@ function renderTeam(){
       <td class="l" style="color:${win?"var(--good)":"var(--bad)"};font-weight:700">${win?"W":"L"}</td>
       <td style="font-family:var(--mono)">${ts}\u2013${os}</td></tr>`;}).join("");
   const myGroup=t.group||"";
-  const stTeams=L.teams.filter(x=>(x.group||"")===myGroup).sort((a,b)=>a.rank-b.rank);
-  let strows="";
-  if(myGroup)strows+=`<tr class="stgrouprow"><td colspan="8">Group ${myGroup}</td></tr>`;
+  const stTeams=t.newFor2627?[]:L.teams.filter(x=>!x.newFor2627&&(x.group||"")===myGroup).sort((a,b)=>(a.rank??999)-(b.rank??999));
+  let strows=stTeams.length?"":`<tr><td colspan="8">No standings for this club in ${esc(L.meta.season||"the recorded season")}. Future entrants are listed separately from results.</td></tr>`;
+  if(myGroup&&stTeams.length)strows+=`<tr class="stgrouprow"><td colspan="8">Group ${myGroup}</td></tr>`;
   stTeams.forEach(x=>{
     strows+=`<tr class="${x.code===t.code?"me":""}" data-tc="${x.code}">
-      <td class="rk">${x.rank}</td><td class="l">${x.name}</td>
+      <td class="rk">${x.rank??"—"}</td><td class="l">${x.name}</td>
       <td>${x.w}</td><td>${x.l}</td><td class="pfpa">${x.pf!=null?x.pf:"–"}</td><td class="pfpa">${x.pa!=null?x.pa:"–"}</td>
       <td style="color:${x.net>0?"var(--good)":x.net<0?"var(--bad)":"var(--muted)"}">${x.net>0?"+":""}${fmt(x.net)}</td></tr>`;});
   $("#app").innerHTML=`<div class="view">
@@ -7088,7 +7093,7 @@ function renderTeam(){
     </div>
     ${teamNeedsHTML(roster)}
     <div class="twocol" style="margin-top:16px">
-      <div class="panel"><h3>Standings \u00b7 ${L.meta.name}${t.group?" \u00b7 Group "+t.group:""}</h3>
+      <div class="panel"><h3>Standings \u00b7 ${L.meta.name} · ${esc(L.meta.season||"Recorded season")}${t.group?" \u00b7 Group "+t.group:""}</h3>
         <div class="tablewrap stwrap"><table class="sttbl">
           <thead><tr><th class="rk">#</th><th class="l">TEAM</th><th>W</th><th>L</th><th title="Points for">PF</th><th title="Points against">PA</th><th>NET</th></tr></thead>
           <tbody>${strows}</tbody></table></div>
@@ -7255,11 +7260,12 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260907-3"></script>
+<script src="euroscout-ui.js?v=20260907-4"></script>
 <script src="euroscout-workflow.js?v=20260906-6"></script>
-<script src="data/free-agent-review.js?v=20260907-3"></script>
-<script src="euroscout-market.js?v=20260907-3"></script>
-<script src="euroscout-transfers.js?v=20260907-3"></script>
+<script src="data/free-agent-review.js?v=20260907-4"></script>
+<script src="euroscout-market.js?v=20260907-4"></script>
+<script src="euroscout-transfers.js?v=20260907-4"></script>
+<script src="euroscout-roster-edit.js?v=20260907-4"></script>
 <script>esSetup();boot();</script>
 </body>
 </html>

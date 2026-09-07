@@ -1,0 +1,1331 @@
+[
+  {
+    "id": "saudi-arabia-al-ula",
+    "name": "Al-Ula",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Premier League",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-al-ahli-saudi-arabia",
+    "name": "Al Ahli (Saudi Arabia)",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Premier League",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Al Ahli Jeddah",
+      "Al-Ahli Saudi Arabia"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-al-ittihad-jeddah",
+    "name": "Al Ittihad (Jeddah)",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Premier League",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Al Ittihad Jeddah"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-al-nasr-riyadh",
+    "name": "Al Nasr (Riyadh)",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Premier League",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Al Nassr",
+      "Al-Nassr Riyadh"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-al-salam",
+    "name": "Al Salam",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Premier League",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-al-fateh",
+    "name": "Al Fateh",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Premier League",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-mudhar",
+    "name": "Mudhar",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Premier League",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-al-khewaildia",
+    "name": "Al Khewaildia",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Premier League",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-al-khaleej",
+    "name": "Al Khaleej",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Premier League",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-ohod",
+    "name": "Ohod",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Premier League",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-al-adalah",
+    "name": "Al Adalah",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Division 1",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-al-trgee",
+    "name": "Al-Trgee",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Division 1",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-al-ansar",
+    "name": "Al Ansar",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Division 1",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-hajer",
+    "name": "Hajer",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Division 1",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-abha",
+    "name": "Abha",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Division 1",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-al-noor",
+    "name": "Al Noor",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Division 1",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "saudi-arabia-al-nahda",
+    "name": "Al Nahda",
+    "country": "Saudi Arabia",
+    "league": "Saudi Arabia · Division 1",
+    "source": "https://www.asia-basket.com/Saudi-Arabia/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "bahrain-al-muharraq",
+    "name": "Al-Muharraq",
+    "country": "Bahrain",
+    "league": "Bahrain · Premier League",
+    "source": "https://www.asia-basket.com/Bahrain/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "bahrain-al-manama",
+    "name": "Al-Manama",
+    "country": "Bahrain",
+    "league": "Bahrain · Premier League",
+    "source": "https://www.asia-basket.com/Bahrain/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "bahrain-al-najma-bahrain",
+    "name": "Al-Najma (Bahrain)",
+    "country": "Bahrain",
+    "league": "Bahrain · Premier League",
+    "source": "https://www.asia-basket.com/Bahrain/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "bahrain-al-ahli-bahrain",
+    "name": "Al-Ahli (Bahrain)",
+    "country": "Bahrain",
+    "league": "Bahrain · Premier League",
+    "source": "https://www.asia-basket.com/Bahrain/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Al Ahli Manama"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "bahrain-al-hala",
+    "name": "Al-Hala",
+    "country": "Bahrain",
+    "league": "Bahrain · Premier League",
+    "source": "https://www.asia-basket.com/Bahrain/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "bahrain-nuwaidrat",
+    "name": "Nuwaidrat",
+    "country": "Bahrain",
+    "league": "Bahrain · Premier League",
+    "source": "https://www.asia-basket.com/Bahrain/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "bahrain-al-ittihad-bahrain",
+    "name": "Al-Ittihad (Bahrain)",
+    "country": "Bahrain",
+    "league": "Bahrain · Premier League",
+    "source": "https://www.asia-basket.com/Bahrain/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Al Ittihad Bahrain"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "bahrain-sitra",
+    "name": "Sitra",
+    "country": "Bahrain",
+    "league": "Bahrain · Premier League",
+    "source": "https://www.asia-basket.com/Bahrain/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "bahrain-samaheej",
+    "name": "Samaheej",
+    "country": "Bahrain",
+    "league": "Bahrain · Premier League",
+    "source": "https://www.asia-basket.com/Bahrain/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "bahrain-bahrain-club",
+    "name": "Bahrain Club",
+    "country": "Bahrain",
+    "league": "Bahrain · Premier League",
+    "source": "https://www.asia-basket.com/Bahrain/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "bahrain-issa-town",
+    "name": "Issa Town",
+    "country": "Bahrain",
+    "league": "Bahrain · Premier League",
+    "source": "https://www.asia-basket.com/Bahrain/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-al-ittihad-alexandria",
+    "name": "Al Ittihad Alexandria",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-al-ahly-cairo",
+    "name": "Al Ahly Cairo",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-we-sporting",
+    "name": "WE Sporting",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Telecom Egypt"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-zamalek",
+    "name": "Zamalek",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-al-gezira",
+    "name": "Al Gezira",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-smouha",
+    "name": "Smouha",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-sporting-alexandria",
+    "name": "Sporting Alexandria",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-petrojet",
+    "name": "Petrojet",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-canal",
+    "name": "Canal",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-al-geish",
+    "name": "Al Geish",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-heliopolis",
+    "name": "Heliopolis",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-al-zohour",
+    "name": "Al Zohour",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-olympic-alexandria",
+    "name": "Olympic Alexandria",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-al-shams",
+    "name": "Al Shams",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-damanhour",
+    "name": "Damanhour",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "egypt-aviation",
+    "name": "Aviation",
+    "country": "Egypt",
+    "league": "Egypt · Superleague",
+    "source": "https://www.afrobasket.com/Egypt/basketball.aspx",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-artland-dragons",
+    "name": "Artland Dragons",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-bbc-bayreuth",
+    "name": "BBC Bayreuth",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-bg-gottingen",
+    "name": "BG Göttingen",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-kirchheim-knights",
+    "name": "Kirchheim Knights",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Bozic Estriche Knights Kirchheim",
+      "Bozic Estriche Kirchheim Knights"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-eisbaren-bremerhaven",
+    "name": "Eisbären Bremerhaven",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-epg-guardians-koblenz",
+    "name": "EPG Guardians Koblenz",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-etb-miners-essen",
+    "name": "ETB Miners Essen",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-paderborn-baskets",
+    "name": "Paderborn Baskets",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Gartenzaun24 Baskets Paderborn"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-giessen-46ers",
+    "name": "Giessen 46ers",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Gießen 46ers",
+      "GIESSEN 46ers"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-hakro-merlins-crailsheim",
+    "name": "HAKRO Merlins Crailsheim",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [
+      "HARKO Merlins Crailsheim",
+      "Crailsheim Merlins"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-mlp-academics-heidelberg",
+    "name": "MLP Academics Heidelberg",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-nurnberg-falcons-bc",
+    "name": "Nürnberg Falcons BC",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-orange-academy",
+    "name": "Orange Academy",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Orange Academy Ratiopharm"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-ps-karlsruhe-lions",
+    "name": "PS Karlsruhe Lions",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-rheinstars-koln",
+    "name": "RheinStars Köln",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-sbb-baskets-wolmirstedt",
+    "name": "SBB Baskets Wolmirstedt",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-vfl-sparkassenstars-bochum",
+    "name": "VfL SparkassenStars Bochum",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-tigers-tubingen",
+    "name": "Tigers Tübingen",
+    "country": "Germany",
+    "league": "Germany · ProA",
+    "source": "https://basketball.realgm.com/international/league/94/German-Pro-A/teams",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Walter Tigers Tubingen"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-bis-baskets-speyer",
+    "name": "BIS Baskets Speyer",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Ahorn Camp BIS Baskets Speyer"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-art-giants-dusseldorf",
+    "name": "ART Giants Düsseldorf",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-baskets-juniors-tsg-westerstede",
+    "name": "Baskets Juniors TSG Westerstede",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-bayer-giants-leverkusen",
+    "name": "Bayer Giants Leverkusen",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-bbc-coburg",
+    "name": "BBC Coburg",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-bg-hagen",
+    "name": "BG Hagen",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-bg-leitershofen",
+    "name": "BG Leitershofen",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [
+      "BG Hessing Leitershofen"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-bsw-sixers",
+    "name": "BSW Sixers",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-basketball-lowen-erfurt",
+    "name": "Basketball Löwen Erfurt",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [
+      "CATL Basketball Lowen"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-culture-city-weimar",
+    "name": "Culture City Weimar",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-dragons-rhondorf",
+    "name": "Dragons Rhöndorf",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-dresden-titans",
+    "name": "Dresden Titans",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-druff-baskets-braunschweig",
+    "name": "DRUFF! Baskets Braunschweig",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-en-baskets-schwelm",
+    "name": "EN Baskets Schwelm",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-fc-bayern-munchen-ii",
+    "name": "FC Bayern München II",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-skyliners-juniors",
+    "name": "Skyliners Juniors",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Fraport Skyliners Juniors"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-hertener-lowen",
+    "name": "Hertener Löwen",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-iserlohn-kangaroos",
+    "name": "Iserlohn Kangaroos",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-porsche-bba",
+    "name": "Porsche BBA",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-itzehoe-eagles",
+    "name": "Itzehoe Eagles",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-sc-rist-wedel",
+    "name": "SC Rist Wedel",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-seawolves-academy",
+    "name": "Seawolves Academy",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-ssv-lok-bernau",
+    "name": "SSV Lok Bernau",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [
+      "SSV lok Bernau Alba"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-sv-fellbach",
+    "name": "SV Fellbach",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-reutlingen-ravens",
+    "name": "Reutlingen Ravens",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [
+      "TSG Reutlingen Ravens"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-tsv-neustadt-temps-shooters",
+    "name": "TSV Neustadt temps Shooters",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-tsv-oberhaching-tropics",
+    "name": "TSV Oberhaching Tropics",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-tv-langen",
+    "name": "TV Langen",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "germany-wwu-baskets-munster",
+    "name": "WWU Baskets Münster",
+    "country": "Germany",
+    "league": "Germany · ProB",
+    "source": "https://basketball.realgm.com/international/league/101/German-Pro-B/teams",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-libertas-livorno",
+    "name": "Libertas Livorno",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-victoria-libertas-pesaro",
+    "name": "Victoria Libertas Pesaro",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Carpegna Prosciutto Basket Pesaro",
+      "VL Pesaro"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-ruvo-di-puglia",
+    "name": "Ruvo di Puglia",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-new-basket-brindisi",
+    "name": "New Basket Brindisi",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-juvi-cremona",
+    "name": "Juvi Cremona",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-fortitudo-bologna",
+    "name": "Fortitudo Bologna",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-basket-mestre",
+    "name": "Basket Mestre",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-pistoia-basket",
+    "name": "Pistoia Basket",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-scafati-basket",
+    "name": "Scafati Basket",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-reale-mutua-torino",
+    "name": "Reale Mutua Torino",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-rinascita-basket-rimini",
+    "name": "Rinascita Basket Rimini",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-benedetto-xiv-cento",
+    "name": "Benedetto XIV Cento",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-ueb-cividale",
+    "name": "UEB Cividale",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketball.realgm.com/international/league/54/Italian-Legadue-Gold",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "slovakia-nitra-blue-wings",
+    "name": "Nitra Blue Wings",
+    "country": "Slovakia",
+    "league": "Slovakia · Extraliga",
+    "source": "https://basketball.realgm.com/international/league/29/Slovakian-Extraliga/team/2686/Nitra-Blue-Wings/rosters",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "spain-coviran-granada",
+    "name": "Coviran Granada",
+    "country": "Spain",
+    "league": "Spain · ACB",
+    "source": "https://www.acb.com/es/liga/tabla-mercado/2026-27",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "poland-astoria-bydgoszcz",
+    "name": "Astoria Bydgoszcz",
+    "country": "Poland",
+    "league": "Poland",
+    "source": "https://plk.pl/druzyny/4162/enea-laciate-astoria-bydgoszcz",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "japan-shinshu-brave-warriors",
+    "name": "Shinshu Brave Warriors",
+    "country": "Japan",
+    "league": "Japan",
+    "source": "https://league.nbl.com.au/news/nbl27-roster-tracker-every-signing-extension-and-departure",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "united-states-university-of-charleston-golden-eagles",
+    "name": "University of Charleston Golden Eagles",
+    "country": "United States",
+    "league": "USA · NCAA Division II",
+    "source": "https://bamberg-meine-stadt.de/bamberg/finn-doentgens-wagt-den-naechsten-schritt-in-den-usa/",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Charleston Golden Eagles"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "belgium-cb-liege",
+    "name": "CB Liège",
+    "country": "Belgium",
+    "league": "Belgium",
+    "source": "https://www.liege-and-basketball.be/actualites/2026/07/25/un-joueur-parfaitement-dans-lidentite-du-projet-liegeois/",
+    "checked": "2026-09-07",
+    "aliases": [
+      "CB Liege Mailleux",
+      "Liège Basket"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "france-denain-voltaire",
+    "name": "Denain Voltaire",
+    "country": "France",
+    "league": "France · Élite 2",
+    "source": "https://www.denainvoltairehainaut-basket.fr/wp2016/2026/06/",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-urania-milano",
+    "name": "Urania Milano",
+    "country": "Italy",
+    "league": "Italy · Serie A2",
+    "source": "https://basketmagazine.net/urania-milano-un-altro-gentile-agli-ordini-di-coach-sacripanti-dopo-alessandro-ufficiale-laccordo-anche-con-stefano/",
+    "checked": "2026-09-07",
+    "aliases": [
+      "Urania Milan"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "united-kingdom-sheffield-sharks",
+    "name": "Sheffield Sharks",
+    "country": "United Kingdom",
+    "league": "United Kingdom",
+    "source": "https://sheffieldsharks.co.uk/sean-signs-in-sheffield",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "italy-pallacanestro-montecatini",
+    "name": "Pallacanestro Montecatini",
+    "country": "Italy",
+    "league": "Italy · Serie B",
+    "source": "https://www.basketmarche.it/2026/07/13/serie-nazionale-girone/ufficiale-pallacanestro-montecatini-inaugura-mercato-firma-lungo-francesco-pellegrino/143747",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "spain-cbz-club-baloncesto-zaragoza",
+    "name": "CBZ Club Baloncesto Zaragoza",
+    "country": "Spain",
+    "league": "Spain · lower divisions",
+    "source": "https://gijonbasket.com/en/2026/08/16/aitor-etxeguren-del-monbus-obradoiro-al-c-b-zaragoza/",
+    "checked": "2026-09-07",
+    "aliases": [
+      "CBZ Zaragoza"
+    ],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  },
+  {
+    "id": "japan-tachikawa-dice",
+    "name": "Tachikawa Dice",
+    "country": "Japan",
+    "league": "Japan · B3",
+    "source": "https://www.basketball.com.au/news/ultimate-guide-to-the-japanese-b-league",
+    "checked": "2026-09-07",
+    "aliases": [],
+    "directoryOnly": true,
+    "seasonNote": "Club directory reference; league label does not certify 2026/27 membership."
+  }
+]

@@ -4617,6 +4617,21 @@
       "source": "www.basketball-loewen.de",
       "note": "The located Braunschweig signing is from March 2026. No new 2026/27 destination confirmed.",
       "checkedAt": "2026-09-07"
+    },
+    {
+      "ids": [
+        "euroleague-013386",
+        "bbl-2002239"
+      ],
+      "name": "David McCormack",
+      "born": 1999,
+      "status": "available",
+      "date": "2026-09-07",
+      "checkedAt": "2026-09-07",
+      "source": "Owner correction",
+      "url": "",
+      "club": "",
+      "note": "Marked without a club for 2026/27 by Marko Turk on 7 September 2026. The Bayern entry belongs to the previous statistical season."
     }
   ],
   "coverage": {
