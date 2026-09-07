@@ -11,3 +11,7 @@ html[data-theme=dark] .fa-presets .active,html[data-theme=dark] .fa-badge.availa
 .fa-filter-search{width:100%;min-height:40px;position:sticky;top:0;z-index:1;background:var(--panel,#fff)}.fa-multi-menu label[hidden],.fa-no-matches[hidden]{display:none!important}.fa-no-matches{padding:8px;color:var(--muted)}
 
 #clubCreateOverlay form{background:var(--panel)!important;color:var(--txt)!important;box-sizing:border-box}#clubCreateOverlay label{display:block;margin:12px 0;font-size:12px;color:var(--muted)}#clubCreateOverlay input{box-sizing:border-box;min-height:44px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--txt);padding:10px 12px;margin-top:5px;font:inherit}#clubCreateOverlay input:focus-visible{outline:2px solid var(--sage);outline-offset:2px}.fa-badge.presumed{border-color:var(--accent);color:var(--accent-deep)}
+
+.rep-evidence{font-size:12px;text-align:left;margin-top:8px;max-width:100%;overflow-wrap:anywhere}.rep-evidence summary{cursor:pointer;color:var(--accent2)}.rep-evidence p{margin:10px 0}.rep-evidence small{color:var(--muted)}
+
+.agentchip{display:inline-block;margin-inline-end:6px;margin-bottom:3px}

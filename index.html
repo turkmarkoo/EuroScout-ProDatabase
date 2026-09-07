@@ -1729,7 +1729,7 @@ body.drawer-lock{overflow:hidden}
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260906-6">
-<link rel="stylesheet" href="euroscout-market.css?v=20260907-5"></head>
+<link rel="stylesheet" href="euroscout-market.css?v=20260907-6"></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -1761,9 +1761,9 @@ body.drawer-lock{overflow:hidden}
 <div id="toast" class="toast"></div>
 <div id="authgate" class="authgate hidden"><div class="agbox" id="agBox"></div></div>
 
-<script src="data/club-directory.js?v=20260907-5"></script>
-<script src="euroscout-clubs.js?v=20260907-5"></script>
-<script src="euroscout-countries.js?v=20260907-5"></script>
+<script src="data/club-directory.js?v=20260907-6"></script>
+<script src="euroscout-clubs.js?v=20260907-6"></script>
+<script src="euroscout-countries.js?v=20260907-6"></script>
 <script src="config.js"></script>
 <script src="overrides.js"></script>
 <script src="data/data.js"></script>
@@ -4596,7 +4596,7 @@ function agentCellHTML(p){
 }
 /* Agent/agency rosters — one card per person, sorted by raw stat grade */
 function agentRosterList(matchFn){
-  return scoutPool().filter(matchFn).sort((a,b)=>
+  return assignPool().filter(matchFn).sort((a,b)=>
     ((statGradeOverall(b,{raw:true})??-1)-(statGradeOverall(a,{raw:true})??-1))||a.name.localeCompare(b.name));
 }
 function arowHTML(p){const L=leagueOf(p),rec=recOf(p),g=statGradeOverall(p,{raw:true});
@@ -5010,8 +5010,8 @@ function renderAgencyRoster(){
   const {kind,name}=STATE.agencyView;
   const m=next26Get(), f=agState();
   let all;
-  if(kind==="agency"){const key=normAgency(name);all=scoutPool().filter(p=>p.agency&&normAgency(p.agency)===key);}
-  else{const key=normName(name);all=scoutPool().filter(p=>p.agent&&normName(p.agent)===key);}
+  if(kind==="agency"){const key=normAgency(name);all=assignPool().filter(p=>p.agency&&normAgency(p.agency)===key);}
+  else{const key=normName(name);all=assignPool().filter(p=>EuroScoutAgencyResearch.agentsOf(p).some(a=>normName(a)===key));}
   const counts={signed:0,available:0,retired:0};
   all.forEach(p=>{counts[careerStatus(p,m)]++;});
 
@@ -5149,20 +5149,20 @@ function renderAgencyRoster(){
 }
 function renderAgencies(){
   if(STATE.agencyView)return renderAgencyRoster();
-  const pool=scoutPool();
+  const pool=assignPool();
   const mode=STATE.agencyMode||"agency";
   const agMap=new Map();
-  pool.forEach(p=>{if(p.agency&&p.agency.trim()){const k=normAgency(p.agency);if(!agMap.has(k))agMap.set(k,{name:p.agency.trim(),players:[],agents:new Set()});const e=agMap.get(k);e.players.push(p);if(p.agent&&p.agent.trim())e.agents.add(normName(p.agent));}});
+  pool.forEach(p=>{if(p.agency&&p.agency.trim()){const k=normAgency(p.agency);if(!agMap.has(k))agMap.set(k,{name:p.agency.trim(),players:[],agents:new Set()});const e=agMap.get(k);e.players.push(p);EuroScoutAgencyResearch.agentsOf(p).forEach(a=>e.agents.add(normName(a)));}});
   const agencies=[...agMap.values()].sort((a,b)=>b.players.length-a.players.length||a.name.localeCompare(b.name));
   const agtMap=new Map();
-  pool.forEach(p=>{if(p.agent&&p.agent.trim()){const k=normName(p.agent);if(!agtMap.has(k))agtMap.set(k,{name:p.agent.trim(),agency:(p.agency||"").trim(),players:[]});agtMap.get(k).players.push(p);}});
+  pool.forEach(p=>EuroScoutAgencyResearch.agentsOf(p).forEach(a=>{const k=normName(a);if(!agtMap.has(k))agtMap.set(k,{name:a,agency:(p.agency||"").trim(),players:[]});agtMap.get(k).players.push(p);}));
   const agents=[...agtMap.values()].sort((a,b)=>b.players.length-a.players.length||a.name.localeCompare(b.name));
   const items=mode==="agency"?agencies:agents;
   const cards=mode==="agency"
     ? agencies.map(a=>`<button class="agencyCard" data-ag="${agencyEnc(a.name)}"><div class="acName">${esc(a.name)}</div><div class="acMeta">${a.players.length} player${a.players.length===1?"":"s"} \u00b7 ${a.agents.size} agent${a.agents.size===1?"":"s"}</div></button>`).join("")
     : agents.map(a=>`<button class="agencyCard" data-agt="${agencyEnc(a.name)}"><div class="acName">${esc(a.name)}</div><div class="acMeta">${a.players.length} player${a.players.length===1?"":"s"}${a.agency?" \u00b7 "+esc(a.agency):""}</div></button>`).join("");
   $("#app").innerHTML=`<div class="view">
-    <h1 class="title">Agencies</h1>
+    <h1 class="title">Agencies</h1><p class="hint"><a href="RealGM-agency-review.html" target="_blank" rel="noopener">RealGM research: matches and listings to review ↗</a></p>
     <div class="sub" style="margin-bottom:14px">${agencies.length} agenc${agencies.length===1?"y":"ies"} \u00b7 ${agents.length} agent${agents.length===1?"":"s"} in your database</div>
     <div class="agencyBar">
       <div class="aseg"><button class="${mode==="agency"?"on":""}" data-amode="agency">Agencies</button><button class="${mode==="agent"?"on":""}" data-amode="agent">Agents</button></div>
@@ -5177,7 +5177,7 @@ function renderAgencies(){
     $$(".agencyCard").forEach(c=>{const t=c.textContent.toLowerCase();c.style.display=(!q||t.includes(q))?"":"none";});};
 }
 function openAgentRoster(enc){const agent=decodeURIComponent(enc),key=normName(agent);
-  const list=agentRosterList(p=>p.agent&&normName(p.agent)===key);
+  const list=agentRosterList(p=>EuroScoutAgencyResearch.agentsOf(p).some(a=>normName(a)===key));
   const agency=agencyOfAgent(key);
   const sub=`${list.length} player${list.length===1?"":"s"} represented`+
     (agency?` \u00b7 <span class="arlink" onclick="hideModal();openAgencyRoster('${agencyEnc(agency)}')">${escAttr(agency)}</span>`:"");
@@ -5186,8 +5186,7 @@ function openAgencyRoster(enc){const agency=decodeURIComponent(enc),key=normAgen
   const list=agentRosterList(p=>p.agency&&normAgency(p.agency)===key);
   if(!list.length){showModal(`<h3>${escAttr(agency)}</h3><p class="empty">No players at this agency in your database yet.</p>`);return;}
   const byAgent=new Map();
-  list.forEach(p=>{const a=(p.agent&&p.agent.trim())?p.agent.trim():"\u2014 no agent listed";const k=normName(a)||"_none";
-    if(!byAgent.has(k))byAgent.set(k,{name:a,players:[]});byAgent.get(k).players.push(p);});
+  list.forEach(p=>{const agents=EuroScoutAgencyResearch.agentsOf(p);(agents.length?agents:["— no agent listed"]).forEach(a=>{const k=normName(a)||"_none";if(!byAgent.has(k))byAgent.set(k,{name:a,players:[]});byAgent.get(k).players.push(p);});});
   const groups=[...byAgent.values()].sort((a,b)=>b.players.length-a.players.length||a.name.localeCompare(b.name));
   const sections=groups.map(gp=>{
     const named=gp.name.indexOf("\u2014 no agent")!==0;
@@ -7265,14 +7264,16 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260907-5"></script>
+<script src="euroscout-ui.js?v=20260907-6"></script>
 <script src="euroscout-workflow.js?v=20260906-6"></script>
-<script src="data/free-agent-review.js?v=20260907-5"></script>
-<script src="euroscout-market.js?v=20260907-5"></script>
-<script src="euroscout-transfers.js?v=20260907-5"></script>
-<script src="euroscout-roster-edit.js?v=20260907-5"></script>
-<script src="data/agency-research.js?v=20260907-5"></script>
-<script src="euroscout-agency-research.js?v=20260907-5"></script>
+<script src="data/free-agent-review.js?v=20260907-6"></script>
+<script src="euroscout-market.js?v=20260907-6"></script>
+<script src="euroscout-transfers.js?v=20260907-6"></script>
+<script src="euroscout-roster-edit.js?v=20260907-6"></script>
+<script src="data/agency-research.js?v=20260907-6"></script>
+<script src="euroscout-agency-research.js?v=20260907-6"></script>
+<script src="data/realgm-representation.js?v=20260907-6"></script>
+<script src="euroscout-representation.js?v=20260907-6"></script>
 <script>esSetup();boot();</script>
 </body>
 </html>
