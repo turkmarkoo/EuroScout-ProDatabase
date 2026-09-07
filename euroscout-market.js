@@ -27,13 +27,14 @@ function wasSearched(p){if(searchedReview!==review){searchedReview=review;search
 function evidence(p,m,mb){const a=auditFor(p),assigned=effective26keys(p,m,mb||next26bGet()),retired=statusOf(p,m)===STATUS_RETIRED;
  if(statusOf(p,m)===STATUS_FREE)return {status:'available',label:'Free agent',note:'Manually recorded in the 2026/27 roster editor',checked:'',url:''};
  if(retired)return {status:'retired',label:'Retired',note:'Recorded career status',checked:'',url:''};
+ if(assigned.length){const club=clubByKey(assigned[0]);return {status:'signed',label:'Signed',club:club&&club.name||assigned[0],note:'Saved 2026/27 roster assignment',checked:'',url:''};}
  const events=exactNews(p).filter(t=>validDate(t.date)&&t.date>=START&&['signed','extended','left','available','retired'].includes(t.status)&&(!['signed','extended'].includes(t.status)||t.to&&!/unknown|free agent|^\s*\?\s*$/i.test(t.to)));
  let e=a?{...a,checked:a.checkedAt||review.checkedAt,url:safeURL(a.url)}:null;
  const latest=events.find(t=>!e||t.date>(e.date||e.checked||''));
  if(latest){let s=latest.status==='left'?(!latest.to||/free agent|unknown/i.test(latest.to)?'departed':'signed'):latest.status==='extended'?'signed':latest.status; if(s==='signed'&&!latest.to)s='unknown';e={status:s,club:latest.to||'',date:latest.date,checked:'',url:safeURL(latest.source_url),source:latest.source_name||'Transfer feed',note:'Transfer-feed record; check the linked announcement.'};}
  if(e&&e.status==='retired')return {...e,label:'Retired'};
  if(e&&e.status==='signed')return {...e,label:'Signed'};
- if(assigned.length){const club=clubByKey(assigned[0]);return {status:'signed',label:'On 26/27 roster',club:club&&club.name||assigned[0],note:e&&e.status==='departed'?'Departure evidence conflicts with saved assignment; review the roster.':'Saved roster assignment',checked:'',url:e&&e.url||''};}
+
  if(e){if(['unknown','departed'].includes(e.status))return {...e,status:'presumed',label:'Free agent · presumed',note:(e.note?e.note+' ':'')+'No confirmed destination. Kept in the free-agent pool until a signing or roster is recorded.'};return {...e,label:({available:'Reported available',departed:'Departure reported',unknown:'Unverified',retired:'Retired'})[e.status]||'Unverified'};}
  const rumor=exactNews(p).find(t=>t.status==='rumor'&&t.date>=START),searched=wasSearched(p);return {status:'presumed',label:'Free agent · presumed',club:'',checked:searched?review.coverage?.checkedAt||review.checkedAt:'',url:safeURL(rumor&&rumor.source_url),note:rumor?'Rumour only — no confirmed signing.':searched?'Web search completed; current club or availability remains unverified.':'No current contract evidence recorded. Availability is presumed until a signing or roster is recorded.'};
 }
@@ -99,3 +100,7 @@ window.marketCandidate=function(p,m,mb){return !['signed','retired'].includes(ev
 window.EuroScoutMarket={evidence,filterRows,center,broadBig,exactNews,refresh:refreshMarket,get filters(){return f;},get feed(){return feed;}};
 installNav();
 })();
+
+// Update the visible list as soon as any roster picker saves a change.
+(function(){const save=set26;let pending;set26=function(id,key){save(id,key);clearTimeout(pending);pending=setTimeout(()=>{if(STATE.view==="agencies"||STATE.view==="freeagents")render();},0);};window.set26=set26;})();
+function agencyStatusControl(p,extra=''){const e=EuroScoutMarket.evidence(p,next26Get());const label=e.status==='presumed'?'Unverified':e.label;return '<'+(Store.canEdit()?'button':'span')+' class="ag-status-edit '+escAttr(e.status)+extra+'"'+(Store.canEdit()?' type="button" onclick="event.stopPropagation();openEditModal(decodeURIComponent(this.dataset.player))" data-player="'+encodeURIComponent(p.id)+'" title="Edit club or availability for 2026/27"':'')+'>'+esc(label)+(Store.canEdit()?'<small>Edit status ↗</small>':'')+'</'+(Store.canEdit()?'button':'span')+'>'; }

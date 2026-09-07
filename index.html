@@ -1729,7 +1729,7 @@ body.drawer-lock{overflow:hidden}
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260906-6">
-<link rel="stylesheet" href="euroscout-market.css?v=20260907-6"></head>
+<link rel="stylesheet" href="euroscout-market.css?v=20260907-7"></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -1761,9 +1761,9 @@ body.drawer-lock{overflow:hidden}
 <div id="toast" class="toast"></div>
 <div id="authgate" class="authgate hidden"><div class="agbox" id="agBox"></div></div>
 
-<script src="data/club-directory.js?v=20260907-6"></script>
-<script src="euroscout-clubs.js?v=20260907-6"></script>
-<script src="euroscout-countries.js?v=20260907-6"></script>
+<script src="data/club-directory.js?v=20260907-7"></script>
+<script src="euroscout-clubs.js?v=20260907-7"></script>
+<script src="euroscout-countries.js?v=20260907-7"></script>
 <script src="config.js"></script>
 <script src="overrides.js"></script>
 <script src="data/data.js"></script>
@@ -4562,7 +4562,7 @@ function eurobasketURL(p){
 /* Agent / Agency: manual field. OVR.bio[id].agent = agent name, .agency = agency,
    .agentUrl = RealGM agent-client-list URL. AGENCY_LIST is a user-editable roster. */
 /* Agency dropdown roster (user-editable). Renames are normalized on read. */
-const AGENCY_RENAME={"Wasserman":"The Team","TeamWass":"The Team"};
+const AGENCY_RENAME={"Wasserman":"The Team","TeamWass":"The Team","Octagon Europe":"Octagon"};
 function normAgency(a){return a?(AGENCY_RENAME[a]||a):a;}
 function agencyList(){
   const base=(window.EUROSCOUT_AGENCIES||[]);
@@ -5041,12 +5041,12 @@ function renderAgencyRoster(){
   // not the league his stats happen to come from
   const lineOf=p=>{const st=careerStatus(p,m);
     const cl=(st==="signed")?clubByKey(effective26(p,m)):null;
-    return {st,cl,club:cl?cl.name:(p.teamName||"\u2014"),
-      lg:cl?comps2627Label(cl):leagueOf(p).meta.name};};
+    return {st,cl,club:cl?cl.name:(EuroScoutMarket.evidence(p,m).club&&st==="signed"?EuroScoutMarket.evidence(p,m).club:st==="retired"?"Retired":"No confirmed club"),
+      lg:cl?comps2627Label(cl):""};};
   const cards=players.map(p=>{const L=lineOf(p);const st=L.st;const g=statGradeOverall(p);const rec=recOf(p);const rt=effRating(p);
     const ph=photoOf(p);
     return `<div class="agCard st-${st}" data-id="${p.id}">
-      ${agStatusTag(st," corner")}
+      ${agencyStatusControl(p," corner")}
       ${Store.canEdit()?`<button class="agCardRm" data-rm="${p.id}" title="Remove from this ${kind}">\u2715</button>`:""}
       <span class="agCardPh${ph?"":" noimg"}">${ph?`<img src="${ph}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name)}</span>
       <div class="agCardName">${esc(p.name)}</div>
@@ -5095,20 +5095,20 @@ function renderAgencyRoster(){
               <td class="agTblClub">${esc(L.club)}<span>${esc(L.lg)}</span></td>
               <td>${p.ppg!=null?p.ppg.toFixed(1):"\u2013"}</td><td>${p.rpg!=null?p.rpg.toFixed(1):"\u2013"}</td><td>${p.apg!=null?p.apg.toFixed(1):"\u2013"}</td>
               <td><b class="agscore">${g!=null?g.toFixed(1):"\u2013"}</b></td>
-              <td>${agDot(L.st)}</td>
+              <td>${agencyStatusControl(p)}</td>
               ${Store.canEdit()?`<td><button class="amdel agRm" data-rm="${p.id}" title="Remove from this ${kind}">\u2715</button></td>`:""}
             </tr>`;}).join("")}</tbody></table></div>`
       :`<div class="agCards">${cards}</div>`)
     :`<div class="empty" style="margin-top:16px">No players match these filters.</div>`}
   </div>`;
 
-  $$(".agCard").forEach(c=>c.onclick=e=>{if(e.target.closest(".agCardRm"))return;openProfile(c.dataset.id);});
+  $$(".agCard").forEach(c=>c.onclick=e=>{if(e.target.closest(".agCardRm, .ag-status-edit"))return;openProfile(c.dataset.id);});
   $$(".agCardRm").forEach(b=>b.onclick=e=>{e.stopPropagation();
     const nm=(player(b.dataset.rm)||{}).name||"Player";
     agencyClear(b.dataset.rm,kind); toast(nm+" removed"); renderAgencyRoster();});
   $$(".agStBtn").forEach(b=>b.onclick=()=>{f.st=b.dataset.st;renderAgencyRoster();});
   $$(".agViewBtn").forEach(b=>b.onclick=()=>{f.view=b.dataset.v;agViewSet(f.view);renderAgencyRoster();});
-  $$(".agTbl tbody tr").forEach(tr=>tr.onclick=e=>{if(e.target.closest(".agRm"))return;openProfile(tr.dataset.id);});
+  $$(".agTbl tbody tr").forEach(tr=>tr.onclick=e=>{if(e.target.closest(".agRm, .ag-status-edit"))return;openProfile(tr.dataset.id);});
   $$(".agTbl .agRm").forEach(b=>b.onclick=e=>{e.stopPropagation();
     const nm=(player(b.dataset.rm)||{}).name||"Player";
     agencyClear(b.dataset.rm,kind); toast(nm+" removed"); renderAgencyRoster();});
@@ -7264,16 +7264,16 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260907-6"></script>
+<script src="euroscout-ui.js?v=20260907-7"></script>
 <script src="euroscout-workflow.js?v=20260906-6"></script>
-<script src="data/free-agent-review.js?v=20260907-6"></script>
-<script src="euroscout-market.js?v=20260907-6"></script>
-<script src="euroscout-transfers.js?v=20260907-6"></script>
-<script src="euroscout-roster-edit.js?v=20260907-6"></script>
-<script src="data/agency-research.js?v=20260907-6"></script>
-<script src="euroscout-agency-research.js?v=20260907-6"></script>
-<script src="data/realgm-representation.js?v=20260907-6"></script>
-<script src="euroscout-representation.js?v=20260907-6"></script>
+<script src="data/free-agent-review.js?v=20260907-7"></script>
+<script src="euroscout-market.js?v=20260907-7"></script>
+<script src="euroscout-transfers.js?v=20260907-7"></script>
+<script src="euroscout-roster-edit.js?v=20260907-7"></script>
+<script src="data/agency-research.js?v=20260907-7"></script>
+<script src="euroscout-agency-research.js?v=20260907-7"></script>
+<script src="data/realgm-representation.js?v=20260907-7"></script>
+<script src="euroscout-representation.js?v=20260907-7"></script>
 <script>esSetup();boot();</script>
 </body>
 </html>

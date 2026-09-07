@@ -15,3 +15,21 @@ html[data-theme=dark] .fa-presets .active,html[data-theme=dark] .fa-badge.availa
 .rep-evidence{font-size:12px;text-align:left;margin-top:8px;max-width:100%;overflow-wrap:anywhere}.rep-evidence summary{cursor:pointer;color:var(--accent2)}.rep-evidence p{margin:10px 0}.rep-evidence small{color:var(--muted)}
 
 .agentchip{display:inline-block;margin-inline-end:6px;margin-bottom:3px}
+
+/* Agency roster: readable names, stable columns and explicit status actions. */
+.agtableWrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+.agTbl{font-family:var(--body,system-ui),sans-serif;font-size:13px;min-width:1040px}
+.agTbl thead th{font-family:inherit;font-size:11px;letter-spacing:.02em;padding:14px 12px}
+.agTbl td{font-family:inherit;padding:12px;vertical-align:middle;font-variant-numeric:tabular-nums}
+.agTbl th:first-child,.agTbl td:first-child,.agTbl th:nth-child(6),.agTbl td:nth-child(6){text-align:left}
+.agTblInner{display:flex;justify-content:flex-start;min-width:190px;padding-left:6px}
+.agTbl .agpName{font-family:inherit;font-weight:600;white-space:normal}
+.agTblClub{min-width:160px;max-width:210px;white-space:normal!important;line-height:1.4}
+.agTblClub span{font-family:inherit;font-size:11px;margin-top:3px}
+.agTbl tr.st-available td.agTblP::before{background:#b89a59}.agTbl tr.st-signed td.agTblP::before{background:#32805b}
+.ag-status-edit{font:600 12px/1.35 system-ui;color:var(--txt);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;white-space:nowrap;text-align:left;cursor:pointer}
+.ag-status-edit small{display:block;font:11px/1.4 system-ui;color:var(--muted);margin-top:2px}
+.ag-status-edit.signed{border-color:#72a28b}.ag-status-edit.presumed{border-color:#c4ae7a}
+.ag-status-edit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ag-status-edit.corner{position:absolute;top:10px;left:10px}
+.es-edit-section .es-add-club{display:block;width:max-content;min-height:30px;padding:4px 9px;font-size:12px;background:transparent;color:var(--txt);border:1px solid var(--line);margin:8px 0 16px;border-radius:7px;box-shadow:none}
