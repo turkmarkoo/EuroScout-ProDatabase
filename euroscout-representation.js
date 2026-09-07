@@ -2,7 +2,7 @@
 const norm=s=>String(s||'').replace(/[đĐ]/g,'dj').replace(/[łŁ]/g,'l').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b(jr|junior|sr|ii|iii|iv)\b\.?/g,'').replace(/[^a-z0-9]/g,'');
 const research=window.EUROSCOUT_REALGM_REPRESENTATION||{records:[]},records=research.records,byId=new Map();for(const r of records)for(const id of r.ids){if(!byId.has(id))byId.set(id,[]);byId.get(id).push(r);}
 // Merge both names without discarding saved player or agent associations.
-for(const r of records){for(const x of r.representatives)if(x.agency==='Octagon Europe')x.agency='Octagon';if(r.agency==='Octagon Europe')r.agency='Octagon';const names=[...new Set(r.representatives.map(x=>x.agency).filter(Boolean))];r.agencyConflict=names.length>1;if(names.length===1)r.agency=names[0];}
+for(const r of records){for(const x of r.representatives)if(x.agency==='Octagon Europe')x.agency='Octagon';else if(x.agency==='Sportspromotion LLC'||x.agent==='Nick Lotsos')x.agency='Lotsos';if(r.agency==='Octagon Europe')r.agency='Octagon';const names=[...new Set(r.representatives.map(x=>x.agency).filter(Boolean))];r.agencyConflict=names.length>1;if(names.length===1)r.agency=names[0];}
 const reps=records.filter(r=>!r.identityConflict&&!r.agencyConflict).flatMap(r=>r.representatives);
 Object.assign(AGENCY_RENAME,{'THE.TEAM (previously known as Wasserman)':'The Team','Beo Basket Ltd.':'BeoBasket','Beo Basket Ltd':'BeoBasket','Sports International Group, Inc.':'Sports International Group'});
 window.EUROSCOUT_AGENCIES=[...new Set([...(window.EUROSCOUT_AGENCIES||[]),...reps.map(r=>r.agency)].filter(Boolean))];

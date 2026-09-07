@@ -1729,7 +1729,7 @@ body.drawer-lock{overflow:hidden}
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260906-6">
-<link rel="stylesheet" href="euroscout-market.css?v=20260907-7"></head>
+<link rel="stylesheet" href="euroscout-market.css?v=20260907-8"></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -1761,9 +1761,9 @@ body.drawer-lock{overflow:hidden}
 <div id="toast" class="toast"></div>
 <div id="authgate" class="authgate hidden"><div class="agbox" id="agBox"></div></div>
 
-<script src="data/club-directory.js?v=20260907-7"></script>
-<script src="euroscout-clubs.js?v=20260907-7"></script>
-<script src="euroscout-countries.js?v=20260907-7"></script>
+<script src="data/club-directory.js?v=20260907-8"></script>
+<script src="euroscout-clubs.js?v=20260907-8"></script>
+<script src="euroscout-countries.js?v=20260907-8"></script>
 <script src="config.js"></script>
 <script src="overrides.js"></script>
 <script src="data/data.js"></script>
@@ -4562,7 +4562,7 @@ function eurobasketURL(p){
 /* Agent / Agency: manual field. OVR.bio[id].agent = agent name, .agency = agency,
    .agentUrl = RealGM agent-client-list URL. AGENCY_LIST is a user-editable roster. */
 /* Agency dropdown roster (user-editable). Renames are normalized on read. */
-const AGENCY_RENAME={"Wasserman":"The Team","TeamWass":"The Team","Octagon Europe":"Octagon"};
+const AGENCY_RENAME={"Wasserman":"The Team","TeamWass":"The Team","Octagon Europe":"Octagon","Sportspromotion LLC":"Lotsos"};
 function normAgency(a){return a?(AGENCY_RENAME[a]||a):a;}
 function agencyList(){
   const base=(window.EUROSCOUT_AGENCIES||[]);
@@ -4599,16 +4599,7 @@ function agentRosterList(matchFn){
   return assignPool().filter(matchFn).sort((a,b)=>
     ((statGradeOverall(b,{raw:true})??-1)-(statGradeOverall(a,{raw:true})??-1))||a.name.localeCompare(b.name));
 }
-function arowHTML(p){const L=leagueOf(p),rec=recOf(p),g=statGradeOverall(p,{raw:true});
-  const _rt=effRating(p);const stars=_rt?"\u2605".repeat(_rt):"";
-  return `<div class="arow" data-id="${p.id}">
-    ${p.img?`<img class="aav" src="${p.img}" loading="lazy" onerror="this.style.visibility='hidden'"/>`:'<span class="aav anoimg"></span>'}
-    <span class="an">${p.name}</span>
-    <span class="ameta"><span class="badge role">${p.role||""}</span> <span class="atm">${p.teamName||p.team||""}</span></span>
-    <span class="alg">${L?L.meta.name:""}</span>
-    <span class="astars">${stars}</span>
-    <span class="agr">${g==null?"":g.toFixed(1)}</span>
-  </div>`;}
+function arowHTML(p){const g=statGradeOverall(p,{raw:true}),rating=effRating(p),e=EuroScoutMarket.evidence(p,next26Get()),photo=photoOf(p);return '<button type="button" class="arow client-row" data-id="'+escAttr(p.id)+'"><span class="client-photo">'+(photo?'<img src="'+escAttr(photo)+'" loading="lazy" alt="">':esc(initials(p.name)))+'</span><span class="client-info"><strong>'+esc(p.name)+'</strong><small>'+esc([posLabel(p),p.height?p.height+' cm':'',p.age!=null?p.age+' years':''].filter(Boolean).join(' · '))+'</small><span>'+esc(e.status==='signed'?(e.club||'Signed'):e.label)+'</span></span><span class="client-score"><small>GRADE</small><b>'+(g==null?'—':g.toFixed(1))+'</b>'+(rating?'<span aria-label="'+rating+' stars">'+'★'.repeat(rating)+'</span>':'')+'</span><span aria-hidden="true">›</span></button>';}
 function rosterModal(title,subHTML,list,kind){
   if(!list.length){showModal(`<h3>${escAttr(title)}</h3><p class="arsub">${subHTML}</p><p class="empty">No players with this ${kind} in your database yet.</p>`);return;}
   const rows=list.map(arowHTML).join("");
@@ -7264,16 +7255,16 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260907-7"></script>
+<script src="euroscout-ui.js?v=20260907-8"></script>
 <script src="euroscout-workflow.js?v=20260906-6"></script>
-<script src="data/free-agent-review.js?v=20260907-7"></script>
-<script src="euroscout-market.js?v=20260907-7"></script>
-<script src="euroscout-transfers.js?v=20260907-7"></script>
-<script src="euroscout-roster-edit.js?v=20260907-7"></script>
-<script src="data/agency-research.js?v=20260907-7"></script>
-<script src="euroscout-agency-research.js?v=20260907-7"></script>
-<script src="data/realgm-representation.js?v=20260907-7"></script>
-<script src="euroscout-representation.js?v=20260907-7"></script>
+<script src="data/free-agent-review.js?v=20260907-8"></script>
+<script src="euroscout-market.js?v=20260907-8"></script>
+<script src="euroscout-transfers.js?v=20260907-8"></script>
+<script src="euroscout-roster-edit.js?v=20260907-8"></script>
+<script src="data/agency-research.js?v=20260907-8"></script>
+<script src="euroscout-agency-research.js?v=20260907-8"></script>
+<script src="data/realgm-representation.js?v=20260907-8"></script>
+<script src="euroscout-representation.js?v=20260907-8"></script>
 <script>esSetup();boot();</script>
 </body>
 </html>
