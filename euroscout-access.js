@@ -15,6 +15,25 @@ async function commit(path,fields,condition){const w={update:{name:'projects/'+P
 async function digest(bytes){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');}
 async function readPayload(root,id){const meta=await get(root+'/'+id),count=Number(field(meta,'chunks'));if(!meta||!Number.isInteger(count)||count<1||count>300)throw Error('Private data setup is incomplete.');const chunks=new Array(count);for(let i=0;i<count;i+=6)await Promise.all(Array.from({length:Math.min(6,count-i)},async(_,j)=>{const doc=await get(root+'/'+id+'/chunks/'+(i+j));if(!doc)throw Error('Protected data chunk missing.');chunks[i+j]=Uint8Array.from(atob(field(doc,'content')),x=>x.charCodeAt(0));}));const bytes=new Uint8Array(chunks.reduce((n,x)=>n+x.length,0));let pos=0;chunks.forEach(x=>{bytes.set(x,pos);pos+=x.length;});if(await digest(bytes)!==field(meta,'sha256'))throw Error('Protected data integrity check failed.');return new TextDecoder().decode(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());}
 async function writePayload(root,id,data){const bytes=new Uint8Array(await new Response(new Blob([JSON.stringify(data)]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()),size=300000,count=Math.max(1,Math.ceil(bytes.length/size));for(let i=0;i<count;i++){const part=bytes.subarray(i*size,(i+1)*size);let text='';for(let k=0;k<part.length;k+=8192)text+=String.fromCharCode(...part.subarray(k,k+8192));await commit(root+'/'+id+'/chunks/'+i,{content:btoa(text)},{exists:false});}await commit(root+'/'+id,{chunks:count,sha256:await digest(bytes)},{exists:false});}
+async function hydrate(snapshot){
+ if(snapshot.schema!==1||!snapshot.records||!snapshot.appData)throw Error('Invalid private snapshot.');
+ if(snapshot.seedSnapshot){
+  const seed=JSON.parse(await readPayload('euroscoutSnapshots',snapshot.seedSnapshot));
+  if(seed.schema!==1||!seed.seeds||!seed.core)throw Error('Invalid private seed snapshot.');
+  seedSnapshot=snapshot.seedSnapshot;
+  return {...snapshot,seeds:seed.seeds,core:seed.core};
+ }
+ seedSnapshot=null;return snapshot;
+}
+api.refresh=async()=>{
+ if(!api.internal)return false;
+ await saveQueue.catch(()=>{});
+ const head=await get('euroscoutState/current');
+ if(!head)throw Error('EuroScout private data migration is not complete.');
+ if(head.updateTime===version)return false;
+ const snapshot=await hydrate(JSON.parse(await readPayload('euroscoutSnapshots',field(head,'snapshot'))));
+ api.state=snapshot;version=head.updateTime;return true;
+};
 function saveState(next){saveQueue=saveQueue.catch(()=>{}).then(async()=>{if(!api.owner)throw Error('Only an authorized administrator can save.');if(!seedSnapshot&&(next.seeds||next.core)){const newSeed=crypto.randomUUID();await writePayload('euroscoutSnapshots',newSeed,{schema:1,seeds:next.seeds||{},core:next.core||{}});seedSnapshot=newSeed;}const id=crypto.randomUUID(),stored={...next};if(seedSnapshot){stored.seedSnapshot=seedSnapshot;delete stored.seeds;delete stored.core;}await writePayload('euroscoutSnapshots',id,stored);await commit('euroscoutState/current',{snapshot:id},version?{updateTime:version}:{exists:false});const head=await get('euroscoutState/current');if(field(head,'snapshot')!==id)throw Error('Another device saved newer data. Reload before editing.');version=head.updateTime;api.state=next;return true;});return saveQueue;}
 async function authenticate(){if(resolving)return;resolving=true;try{const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:token})});if(!r.ok)throw Error('Your DragonsHub session expired.');const u=(await r.json()).users?.[0];if(!u)throw Error('Session unavailable.');const doc=await get('users/'+u.localId),role=field(doc,'role');if(!doc||doc.fields?.active?.booleanValue===false||!['admin','front_office','viewer','coach','scout'].includes(role))throw Error('Your DragonsHub role does not grant internal EuroScout access.');if(api.internal&&api.user?.uid===u.localId){api.owner=role==='admin';await get('euroscoutState/current');badge();window.dispatchEvent(new Event('es-access-role'));return;}api.owner=role==='admin';api.user={email:u.email,uid:u.localId};
 if(window.ES_MIGRATION){if(!api.owner||u.email.toLowerCase()!==OWNER)throw Error('Only the owner can migrate data.');api.internal=true;finish();badge();window.dispatchEvent(new Event('euroscout-authenticated'));return;}

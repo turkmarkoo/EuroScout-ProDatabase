@@ -1,0 +1,3 @@
+EuroScout v15.1 sign-in fix
+Replace index.html and euroscout-access.js in the EuroScout website with these two files. Then reload Pro Database in DragonsHub.
+No migration or Firestore rules change is needed. Do not upload these files to the DragonsHub website.
