@@ -1797,7 +1797,7 @@ function buildTransferIndex(items){
   TRANSFERS_LOADED=TRANSFERS.size>0;
 }
 const AUTO_APPLIED_KEY="euroscout:autoApplied:v1";
-function autoAppliedGet(){try{return JSON.parse(localStorage.getItem(AUTO_APPLIED_KEY)||"{}");}catch(e){return {};}}
+function autoAppliedGet(){try{return (JSON.parse(localStorage.getItem(AUTO_APPLIED_KEY)||"{}")||JSON.parse("{}"));}catch(e){return {};}}
 function autoAppliedSet(m){try{localStorage.setItem(AUTO_APPLIED_KEY,JSON.stringify(m));}catch(e){}
   try{Sync.stampKey(AUTO_APPLIED_KEY);}catch(e){} try{Store.pushAppKey(AUTO_APPLIED_KEY);}catch(e){}}
 // Applies transfers flagged autoApply:true directly into the 26/27 map.
@@ -1865,7 +1865,7 @@ const STATUSES={[STATUS_FREE]:{label:"Free agent",short:"Free agent",cls:"stFa"}
 function isStatus(k){return !!(k&&STATUSES[k]);}
 function statusOf(p,m){const k=effective26(p,m);return isStatus(k)?k:null;}
 function statusLabel(k){return (STATUSES[k]||{}).label||"";}
-function next26Get(){try{return JSON.parse(localStorage.getItem(NEXT26_KEY)||"{}");}catch(e){return {};}}
+function next26Get(){try{return (JSON.parse(localStorage.getItem(NEXT26_KEY)||"{}")||JSON.parse("{}"));}catch(e){return {};}}
 function next26Set(m){try{localStorage.setItem(NEXT26_KEY,JSON.stringify(m));}catch(e){}
   try{Sync.stampKey(NEXT26_KEY);}catch(e){} try{Store.pushAppKey(NEXT26_KEY);}catch(e){}}
 function effective26(p,m){m=m||next26Get();
@@ -1884,7 +1884,7 @@ function set26(pid,key){const m=next26Get();const p=player(pid);
 // Used for two-way contract players who appear on both an NBA and a G League roster at once.
 const NEXT26B_KEY="euroscout:next26b:v1";
 const TWOWAY_LEAGUES=new Set(["nba","gleague"]);
-function next26bGet(){try{return JSON.parse(localStorage.getItem(NEXT26B_KEY)||"{}");}catch(e){return {};}}
+function next26bGet(){try{return (JSON.parse(localStorage.getItem(NEXT26B_KEY)||"{}")||JSON.parse("{}"));}catch(e){return {};}}
 function next26bSet(m){try{localStorage.setItem(NEXT26B_KEY,JSON.stringify(m));}catch(e){}
   try{Sync.stampKey(NEXT26B_KEY);}catch(e){} try{Store.pushAppKey(NEXT26B_KEY);}catch(e){}}
 // league id a club key belongs to (from its DB teams)
@@ -2064,7 +2064,7 @@ function next26CellHTML(p){const k=effective26(p);
   return `<span class="bioadd n26fa" onclick="event.stopPropagation();openTeamPickerProfile('${p.id}')" title="Assign a 26/27 team"><b>Free agent</b> <span class="bioaddhint">sign</span></span>`;}
 /* ---------- transfer approval inbox (review only, never auto-commit) ---------- */
 const TR_HANDLED_KEY="euroscout:trHandled:v1";
-function trHandledGet(){try{return JSON.parse(localStorage.getItem(TR_HANDLED_KEY)||"{}");}catch(e){return {};}}
+function trHandledGet(){try{return (JSON.parse(localStorage.getItem(TR_HANDLED_KEY)||"{}")||JSON.parse("{}"));}catch(e){return {};}}
 function trHandledSet(m){try{localStorage.setItem(TR_HANDLED_KEY,JSON.stringify(m));}catch(e){}
   try{Sync.stampKey(TR_HANDLED_KEY);}catch(e){} try{Store.pushAppKey(TR_HANDLED_KEY);}catch(e){}}
 let PLAYER_BY_NAME=null;
@@ -2258,7 +2258,7 @@ const Store = (()=>{
       const access=await ESAccess.ready;
       if(access.internal){user=access.user;member=true;role=access.owner?'editor':'viewer';
         const state=access.state;cache=state.records;local.set(cache);
-        for(const k of APP_KEYS){if(Object.hasOwn(state.appData,k))localStorage.setItem(k,JSON.stringify(state.appData[k]));else localStorage.removeItem(k);}
+        for(const k of APP_KEYS){if(Object.hasOwn(state.appData,k)&&state.appData[k]!=null)localStorage.setItem(k,JSON.stringify(state.appData[k]));else localStorage.removeItem(k);}
         for(const [k,v] of Object.entries(state.seeds||{}))if(/^EUROSCOUT_[A-Z_]+$/.test(k)){if(k==='EUROSCOUT_AGENTS')window[k]={...(window[k]||{}),...v};else if(k==='EUROSCOUT_AGENCIES')window[k]=[...new Set([...(window[k]||[]),...v])];else window[k]=v;}
       }
       return;
@@ -2357,7 +2357,7 @@ const Store = (()=>{
   }
   async function refreshPrivate(){
     if(!window.ESAccess?.internal||privateDirty||document.visibilityState!=='visible'||document.activeElement?.matches('input,textarea,select,[contenteditable=true]')||document.querySelector('#modal.open'))return;
-    try{if(!await ESAccess.refresh())return;cache=ESAccess.state.records;local.set(cache);for(const k of APP_KEYS){if(Object.hasOwn(ESAccess.state.appData,k))localStorage.setItem(k,JSON.stringify(ESAccess.state.appData[k]));}
+    try{if(!await ESAccess.refresh())return;cache=ESAccess.state.records;local.set(cache);for(const k of APP_KEYS){if(Object.hasOwn(ESAccess.state.appData,k)&&ESAccess.state.appData[k]!=null)localStorage.setItem(k,JSON.stringify(ESAccess.state.appData[k]));else localStorage.removeItem(k);}
       OVR=ovrMerged();rebuildLinks();applyOverrides();EuroScoutMarketRecords.refresh();render();if(CURRENT)renderProfile();
     }catch(e){console.warn('Shared refresh unavailable:',e.message);}
   }
@@ -2709,7 +2709,7 @@ const Sync = (()=>{
   const OTHER_KEYS=["euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:dashboardOrder:v1"];
   let cfg=loadCfg(), status="idle", busy=false, pushT=null, lastPull=0, lastPush=0, lastErr="";
 
-  function loadCfg(){try{return Object.assign({token:"",gistId:"",device:"",on:false},JSON.parse(localStorage.getItem(CFG_KEY)||"{}"));}catch(e){return{token:"",gistId:"",device:"",on:false};}}
+  function loadCfg(){try{return Object.assign({token:"",gistId:"",device:"",on:false},(JSON.parse(localStorage.getItem(CFG_KEY)||"{}")||JSON.parse("{}")));}catch(e){return{token:"",gistId:"",device:"",on:false};}}
   function saveCfg(){localStorage.setItem(CFG_KEY,JSON.stringify(cfg));}
   function jget(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v;}catch(e){return d;}}
   function sp(s){try{return JSON.parse(s);}catch(e){return null;}}
@@ -4594,7 +4594,7 @@ async function applyImportedData(){
   if(!Object.keys(rs).length && !Object.keys(ns).length) return;
   if(!(Store.enabled && Store.user && Store.canEdit())) return;
   const DONE_KEY="euroscout:notionApplied:v1";
-  let done={};try{done=JSON.parse(localStorage.getItem(DONE_KEY)||"{}");}catch(e){}
+  let done={};try{done=(JSON.parse(localStorage.getItem(DONE_KEY)||"{}")||JSON.parse("{}"));}catch(e){}
   const seen=new Set(); const items=[]; let changed=false;
   (allPlayersFlat()||[]).forEach(p=>{
     const g=gid(p); if(!g||seen.has(g))return; seen.add(g);
@@ -4625,23 +4625,23 @@ const AGENCY_RENAME={"Wasserman":"The Team","TeamWass":"The Team","Octagon Europ
 function normAgency(a){return a?(AGENCY_RENAME[a]||a):a;}
 function agencyList(){
   const base=(window.EUROSCOUT_AGENCIES||[]);
-  let local=[];try{local=JSON.parse(localStorage.getItem("euroscout:agencies")||"[]");}catch(e){}
+  let local=[];try{local=(JSON.parse(localStorage.getItem("euroscout:agencies")||"[]")||JSON.parse("[]"));}catch(e){}
   return [...new Set([...base,...local].map(normAgency))].filter(Boolean).sort((a,b)=>a.localeCompare(b));
 }
 function addAgency(name){if(!Store.canEdit())return;name=(name||"").trim();if(!name)return;
-  let local=[];try{local=JSON.parse(localStorage.getItem("euroscout:agencies")||"[]");}catch(e){}
+  let local=[];try{local=(JSON.parse(localStorage.getItem("euroscout:agencies")||"[]")||JSON.parse("[]"));}catch(e){}
   if(!local.includes(name)){local.push(name);localStorage.setItem("euroscout:agencies",JSON.stringify(local));try{Sync.stampKey("euroscout:agencies");}catch(e){}try{Store.pushAppKey("euroscout:agencies");}catch(e){}}
 }
 /* Agent roster + agent→agency map. Base map from overrides.js, plus any you add live. */
 function agentMap(){
   const base=Object.assign({},window.EUROSCOUT_AGENTS||{});
-  let local={};try{local=JSON.parse(localStorage.getItem("euroscout:agents")||"{}");}catch(e){}
+  let local={};try{local=(JSON.parse(localStorage.getItem("euroscout:agents")||"{}")||JSON.parse("{}"));}catch(e){}
   return Object.assign(base,local);
 }
 function agentList(){return Object.keys(agentMap()).sort((a,b)=>a.localeCompare(b));}
 function agencyForAgent(agent){const m=agentMap();return agent&&m[agent]?normAgency(m[agent]):"";}
 function addAgent(agent,agency){if(!Store.canEdit())return;agent=(agent||"").trim();if(!agent)return;
-  let local={};try{local=JSON.parse(localStorage.getItem("euroscout:agents")||"{}");}catch(e){}
+  let local={};try{local=(JSON.parse(localStorage.getItem("euroscout:agents")||"{}")||JSON.parse("{}"));}catch(e){}
   local[agent]=(agency||"").trim(); localStorage.setItem("euroscout:agents",JSON.stringify(local));try{Sync.stampKey("euroscout:agents");}catch(e){}try{Store.pushAppKey("euroscout:agents");}catch(e){}
 }
 function agentCellHTML(p){
@@ -6173,7 +6173,7 @@ function riserBadgeHTML(p){
 }
 // RECENTLY VIEWED (localStorage, most-recent-first, capped)
 const RECENT_KEY="euroscout:recent";
-function recentGet(){try{return JSON.parse(localStorage.getItem(RECENT_KEY)||"[]");}catch(e){return [];}}
+function recentGet(){try{return (JSON.parse(localStorage.getItem(RECENT_KEY)||"[]")||JSON.parse("[]"));}catch(e){return [];}}
 function recentPush(id){
   // store the person's canonical id so switching competitions doesn't list them multiple times
   const p=player(id); const key=(p&&gid(p))||id;
@@ -6184,7 +6184,7 @@ function recentPush(id){
 }
 // SAVED VIEWS (localStorage): named filter combinations
 const VIEWS_KEY="euroscout:views";
-function viewsGet(){try{return JSON.parse(localStorage.getItem(VIEWS_KEY)||"[]");}catch(e){return [];}}
+function viewsGet(){try{return (JSON.parse(localStorage.getItem(VIEWS_KEY)||"[]")||JSON.parse("[]"));}catch(e){return [];}}
 function viewsSave(list){if(!Store.canEdit())return;try{localStorage.setItem(VIEWS_KEY,JSON.stringify(list));Sync.stampKey(VIEWS_KEY);Store.pushAppKey(VIEWS_KEY);}catch(e){}}
 function currentViewState(){const s=STATE.scout;return {q:s.q,leagues:[...s.leagues],roles:[...s.roles],tags:[...s.tags],status:s.status,sort:s.sort};}
 function viewIsActive(v){const s=STATE.scout;
