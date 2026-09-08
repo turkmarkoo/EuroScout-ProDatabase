@@ -56,3 +56,5 @@ body.es-redesign{background:var(--bg);font-family:var(--body);font-size:13px;pad
 .es-redesign #drawer .prohero-wrap:has(.es-actions-more[open]){z-index:60!important}
 
 .es-dashboard-title{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;margin:0!important}.es-dashboard-title h3{margin:0!important}.es-dashboard-title select{width:auto;max-width:46%;margin:0}.es-dashboard-controls{display:flex;align-items:center;min-height:44px;margin:8px 0 12px!important}.es-dashboard>.es-panel .es-player{min-height:71px}@media(max-width:600px){.es-dashboard-title{flex-wrap:wrap}.es-dashboard-title select{max-width:100%}}
+
+body.es-redesign .es-profile-tabs{position:static!important;top:auto!important}.es-back-top{position:fixed;right:18px;bottom:48px;z-index:10005;border:0;border-radius:50%;width:40px;height:40px;background:#17644f;color:white;cursor:pointer}.es-quick-review{border:1px solid #cbd8d2;background:transparent;color:inherit;border-radius:6px;cursor:pointer;margin-left:4px;padding:4px 8px}
