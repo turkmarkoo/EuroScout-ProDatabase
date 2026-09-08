@@ -1765,9 +1765,10 @@ body.drawer-lock{overflow:hidden}
 <script src="euroscout-clubs.js?v=20260907-13"></script>
 <script src="euroscout-countries.js?v=20260907-13"></script>
 <script src="config.js"></script>
-<script src="overrides.js"></script>
+<script src="euroscout-access.js"></script>
+<!-- Manual overrides are loaded from the authorized snapshot. -->
 <script src="data/exhibitions.js"></script>
-<script src="data/notion-import.js"></script>
+<!-- Scouting seeds are loaded from the authorized snapshot. -->
 <script>
 /* ============================ EuroScout app ============================ */
 /* Capture any deep-link hash (#p=<id>) before anything can wipe it. */
@@ -2244,15 +2245,24 @@ function esAuthStorage(){
 }
 const Store = (()=>{
   const cfg = window.EUROSCOUT_CONFIG||{};
-  const enabled = !!(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY);
+  const enabled = !!(window.ESAccess || (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY));
   let sb=null, user=null, role=null, member=false, cache={};
   const LKEY="euroscout:records";
-  const APP_KEYS=["euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1"];
+  const APP_KEYS=["euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1","euroscout:market:v1"];
   const local = {
     all(){try{return JSON.parse(localStorage.getItem(LKEY))||{}}catch(e){return{}}},
     set(o){localStorage.setItem(LKEY,JSON.stringify(o))}
   };
   async function initSB(){
+    if(window.ESAccess){
+      const access=await ESAccess.ready;
+      if(access.internal){user=access.user;member=true;role=access.owner?'editor':'viewer';
+        const state=access.state;cache=state.records;local.set(cache);
+        for(const k of APP_KEYS){if(Object.hasOwn(state.appData,k))localStorage.setItem(k,JSON.stringify(state.appData[k]));else localStorage.removeItem(k);}
+        for(const [k,v] of Object.entries(state.seeds||{}))if(/^EUROSCOUT_[A-Z_]+$/.test(k)){if(k==='EUROSCOUT_AGENTS')window[k]={...(window[k]||{}),...v};else if(k==='EUROSCOUT_AGENCIES')window[k]=[...new Set([...(window[k]||[]),...v])];else window[k]=v;}
+      }
+      return;
+    }
     if(!enabled) return;
     await new Promise((res,rej)=>{const s=document.createElement("script");
       s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
@@ -2276,9 +2286,10 @@ const Store = (()=>{
       if(!error&&data){member=true;role=(data.role==="editor")?"editor":"viewer";
         try{localStorage.setItem("es:wasmember:"+(email||"").toLowerCase(),"1");}catch(e){}}}catch(e){}
   }
-  function canEdit(){ return !enabled ? true : (member && role==="editor"); }
+  function canEdit(){ if(window.ESAccess)return ESAccess.internal&&ESAccess.owner;return !enabled ? true : (member && role==="editor"); }
   // pull the whole shared dataset into the local cache
   async function load(){
+    if(window.ESAccess)return ESAccess.internal?cache:{};
     cache = local.all();                 // instant local cache first
     if(sb && user && member){
       try{const {data,error}=await sb.from("scouting").select("*");
@@ -2301,10 +2312,11 @@ const Store = (()=>{
         try{localStorage.setItem(r.k,typeof r.v==="string"?r.v:JSON.stringify(r.v));}catch(e){}}});
     }catch(e){}
   }
-  function get(id){return cache[id]||{report:"",rating:0,tags:[],watch:false,board:null,eye:{}};}
+  function get(id){if(window.ESAccess&&!ESAccess.internal)return {report:"",rating:0,tags:[],watch:false,board:null,eye:{}};return cache[id]||{report:"",rating:0,tags:[],watch:false,board:null,eye:{}};}
   async function save(id,rec){
     if(enabled && !canEdit()) return;    // viewers cannot write
     cache[id]={...get(id),...rec}; local.set(cache);
+    if(window.ESAccess){await persistPrivate();return;}
     if(sb && user && canEdit()){
       const r=cache[id];
       try{await sb.from("scouting").upsert({player_id:id,report:r.report,rating:r.rating,
@@ -2317,6 +2329,7 @@ const Store = (()=>{
     if(!items||!items.length) return 0;
     items.forEach(it=>{cache[it.id]={...get(it.id),...it.rec};});
     local.set(cache);
+    if(window.ESAccess){await persistPrivate();return items.length;}
     if(sb && user && canEdit()){
       const rows=items.map(it=>{const r=cache[it.id];return{player_id:it.id,report:r.report,rating:r.rating,
         tags:r.tags,watch:r.watch,board:r.board,eye:r.eye,updated_at:new Date().toISOString(),updated_by:user.email};});
@@ -2325,11 +2338,31 @@ const Store = (()=>{
     return items.length;
   }
   async function pushAppKey(k){
+    if(window.ESAccess)return persistPrivate();
     if(!enabled)return true;
     if(!sb||!user||!canEdit())return false;
     let v=null;try{v=JSON.parse(localStorage.getItem(k));}catch(e){v=localStorage.getItem(k);}
     try{const {error}=await sb.from("appdata").upsert({k,v,updated_at:new Date().toISOString()},{onConflict:"k"});return !error;}catch(e){return false;}
   }
+  let privateTimer,privateWaiters=[],privateDirty=false;
+  function persistPrivate(){
+    if(!ESAccess.internal||!canEdit())return Promise.resolve(false);
+    privateDirty=true;clearTimeout(privateTimer);const promise=new Promise(resolve=>privateWaiters.push(resolve));
+    privateTimer=setTimeout(async()=>{const waiters=privateWaiters;privateWaiters=[];
+      const appData={};for(const k of APP_KEYS){try{appData[k]=JSON.parse(localStorage.getItem(k)||'null');}catch{}}
+      const snapshot={...ESAccess.state,records:cache,appData};
+      try{await ESAccess.saveState(snapshot);privateDirty=privateWaiters.length>0;waiters.forEach(r=>r(true));}
+      catch(e){toast('Cloud save failed: '+e.message+' Your local changes are retained.');waiters.forEach(r=>r(false));}
+    },500);return promise;
+  }
+  async function refreshPrivate(){
+    if(!window.ESAccess?.internal||privateDirty||document.visibilityState!=='visible'||document.activeElement?.matches('input,textarea,select,[contenteditable=true]')||document.querySelector('#modal.open'))return;
+    try{if(!await ESAccess.refresh())return;cache=ESAccess.state.records;local.set(cache);for(const k of APP_KEYS){if(Object.hasOwn(ESAccess.state.appData,k))localStorage.setItem(k,JSON.stringify(ESAccess.state.appData[k]));}
+      OVR=ovrMerged();rebuildLinks();applyOverrides();EuroScoutMarketRecords.refresh();render();if(CURRENT)renderProfile();
+    }catch(e){console.warn('Shared refresh unavailable:',e.message);}
+  }
+  window.addEventListener('es-access-role',()=>{applyRoleClass();renderHeaderAuth();if(STATE.league)render();});
+  setInterval(refreshPrivate,60000);document.addEventListener('visibilitychange',refreshPrivate);
   // first-run migration: if the shared DB is empty and this editor has local work, push it up
   async function migrateLocalUp(){
     if(!sb||!user||!canEdit())return;
@@ -2686,7 +2719,7 @@ const Sync = (()=>{
   /* ---- edit stamps (called from every write site) ---- */
   function stampRecord(gid){if(!gid)return;const m=jget(RT_KEY,{});m[gid]=Date.now();localStorage.setItem(RT_KEY,JSON.stringify(m));schedule();}
   function stampKey(key){const m=jget(KM_KEY,{});m[key]=Date.now();localStorage.setItem(KM_KEY,JSON.stringify(m));schedule();}
-  function schedule(){if(!configured())return;setPill("dirty");clearTimeout(pushT);pushT=setTimeout(()=>push().catch(()=>{}),4000);}
+  function schedule(){if(window.ESAccess)return;if(!configured())return;setPill("dirty");clearTimeout(pushT);pushT=setTimeout(()=>push().catch(()=>{}),4000);}
 
   function readBundle(){
     const keys={};DATA_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!=null)keys[k]=v;});
@@ -2848,12 +2881,15 @@ async function loadCoreData(){
   });
 }
 async function boot(){
+  if(!window.ESAccess){$('#app').textContent='Access verification could not load. Reload the page or reopen Pro Database from DragonsHub.';return;}
   // Public stats can download while auth resolves; shared reads still await authentication.
   const rawPromise=loadCoreData();
   try{ await Store.initSB(); }catch(e){ console.warn("Supabase init failed",e); }
   const raw=await rawPromise;
+  if(window.ESAccess&&!ESAccess.internal){ESAccess.external(raw);return;}
   if(!raw){ $("#app").innerHTML='<div class="empty">Could not load data. Make sure '+
     '<code>data/data.json</code> (or <code>data/data.js</code>) is present — see README.</div>'; return; }
+  if(window.ESAccess?.internal)Object.assign(raw,ESAccess.state.core||{});
   STATE.data = raw;
   injectExhibitions(raw);
   raw.leagues.forEach(L=>L.players.forEach(p=>{
@@ -2867,7 +2903,7 @@ async function boot(){
   muInit();
   await Store.load();
   mergeGroupRecords();
-  loadExtraLeagues();   // stream NBA/G League, then NCAA, in the background
+  // Other-league packs load only when a section/search needs them.
   const sel=$("#leagueSel");
   if(sel){ sel.innerHTML="";
     const allOpt=document.createElement("option");allOpt.value="__all__";allOpt.textContent="All leagues";sel.appendChild(allOpt);
@@ -2885,6 +2921,7 @@ async function boot(){
   $$("#scopeSeg button").forEach(b=>b.onclick=()=>setScopeMode(b.dataset.scope));
   updateScopeLabel();
   wireGlobalSearch();
+  document.addEventListener("focusin",e=>{if(e.target.matches("#globalSearch, #gSearch, #searchAll"))loadExtraLeagues().catch(e=>toast(e.message));});
   scheduleSticky();
   const sc=$("#scrim");if(sc)sc.onclick=closeDrawer;
   document.addEventListener("keydown",onGlobalKey);
@@ -2905,14 +2942,15 @@ async function boot(){
   // 2026/27 transfers (from euroball-tracker) — loaded for manual review/approval only, never auto-committed
   loadTransfers().then(()=>{if(TRANSFERS_LOADED)render();});
   // deep-link: open a player if the URL points at one (#p=<id>), e.g. a shared link
-  openFromHash(__DEEPHASH);
+  if(/^#p=(nba|gleague|ncaa)/i.test(__DEEPHASH))loadExtraLeagues().then(()=>openFromHash(__DEEPHASH)).catch(e=>toast(e.message));
+  else openFromHash(__DEEPHASH);
   window.addEventListener("popstate",()=>{
     const m=/^#p=(.+)$/.exec(location.hash||"");
     if(m){const id=decodeURIComponent(m[1]);if(PROF_HIST.length&&PROF_HIST[PROF_HIST.length-1]===id)PROF_HIST.pop();openProfile(id,true);}
     else if(DRAWER_OPEN){PROF_HIST=[];closeDrawer(true);}
   });
   if(Store.enabled){
-    // Supabase mode: gate the app behind sign-in + membership; header shows the account
+    // Authorized shared mode: gate the app behind sign-in + membership; header shows the account
     if(Store.canEdit())await Store.migrateLocalUp();
     if(Store.canEdit())await applyImportedData();
     applyRoleClass(); applyAuthGate(); startPendingPoll();
@@ -3150,6 +3188,7 @@ function applyRoleClass(){
   document.body.classList.toggle("role-editor",Store.enabled && Store.canEdit());
 }
 function renderHeaderAuth(){
+  if(window.ESAccess&&ESAccess.internal){const host=document.getElementById('authBtn');if(host){host.textContent='Internal';host.title=ESAccess.user.email;host.onclick=()=>toast('Authenticated through DragonsHub · '+ESAccess.user.email);}return;}
   const b=$("#authBtn"); if(!b)return;
   if(!Store.enabled){ b.classList.add("syncpill"); Sync.renderPill(); b.onclick=()=>Sync.openSettings(); return; }
   b.classList.remove("syncpill","s-ok","s-err","s-sync","s-off","s-dirty");
@@ -3266,6 +3305,7 @@ function applyAuthGate(){
      already authenticated, so it must never put its own gate in front of them.
      It was also showing "Access revoked" during the moment before membership
      had loaded, which is not the same thing as having been removed. */
+  if(window.ESAccess){if(!ESAccess.internal){ESAccess.external(STATE.data);return;}g.classList.add("hidden");renderHeaderAuth();return;}
   if(typeof HUB_EMBED!=="undefined" && HUB_EMBED){ g.classList.add("hidden"); renderHeaderAuth(); return; }
   const blocked = Store.enabled && !(Store.user && Store.member);
   g.classList.toggle("hidden",!blocked);
@@ -5926,13 +5966,21 @@ function renderCompare(){
 /* ---------- Exhibitions / Events (NBA Summer League 2026) ---------- */
 let EXHIB=null, EXHIB_BYNN={};
 function roleFromHt(ht){ if(ht==null)return "Guard"; if(ht>=207)return "Center"; if(ht>=198)return "Forward"; return "Guard"; }
-async function loadExtraLeagues(){
-  const steps=[{f:"data/leagues_pro.json",label:"pro"},{f:"data/leagues_ncaa.json",label:"ncaa"}];
+const EXTRA_JOBS=new Map();
+async function loadExtraLeagues(scope='all'){
+  const labels=scope==='pro'?['pro']:['pro','ncaa'];
+  await Promise.all(labels.map(label=>{
+    if(!EXTRA_JOBS.has(label))EXTRA_JOBS.set(label,loadExtraPack(label).catch(e=>{EXTRA_JOBS.delete(label);throw e;}));
+    return EXTRA_JOBS.get(label);
+  }));
+}
+async function loadExtraPack(label){
+  const steps=[{f:label==='pro'?'data/leagues_pro.json':'data/leagues_ncaa.json',label}];
   for(const st of steps){
     let pack=null;
     try{ pack=await (await fetch(st.f,{cache:"no-cache"})).json(); }
     catch(e){ pack=(window.EUROSCOUT_EXTRA&&window.EUROSCOUT_EXTRA[st.label])||null; }
-    if(!pack||!pack.leagues||!pack.leagues.length){ console.warn("extra league not loaded:",st.label,"— check that "+st.f+" is deployed"); continue; }
+    if(!pack||!pack.leagues||!pack.leagues.length)throw Error("Could not load "+st.label+" players. Try again.");
     // add any leagues not already present
     const have=new Set(STATE.data.leagues.map(L=>L.meta.id));
     pack.leagues.forEach(L=>{ if(!have.has(L.meta.id)) STATE.data.leagues.push(L); });
@@ -5945,12 +5993,12 @@ async function loadExtraLeagues(){
     applyOverrides(); rebuildLinks();
     try{ mergeGroupRecords(); }catch(e){}
     // now that these players + their clubs exist, apply any auto-flagged transfers targeting them
-    try{ if(TRANSFERS_LOADED){ applyAutoTransfers(STATE.data.transfers||[]); updateTransferBadge(); } }catch(e){}
+    try{ if(TRANSFERS_LOADED)updateTransferBadge(); }catch(e){}
     // if the user is looking at a view that could show these, refresh it
     STATE._extraLoaded=(STATE._extraLoaded||[]).concat(st.label);
     if(["exhib","players","teams","agencies","freeagents"].includes(STATE.view)){ try{ render(); }catch(e){} }
   }
-  STATE._extraDone=true;
+  STATE._extraDone=["pro","ncaa"].every(k=>STATE._extraLoaded?.includes(k));
   if(STATE.view==="exhib"){ try{ render(); }catch(e){} }
 }
 function injectExhibitions(raw){
@@ -5987,6 +6035,7 @@ function exhibMatch(p){ if(!p||p.league==="sl")return null; const nn=normName(p.
 
 function otherLeagues(){return STATE.data.leagues.filter(L=>isOtherLeague(L.meta));}
 function renderExhib(){
+  if(!STATE._extraDone)loadExtraLeagues().catch(e=>toast(e.message));
   const others=otherLeagues();
   if(!others.length){
     if(!STATE._extraDone){
@@ -7276,7 +7325,8 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
 <script src="euroscout-ui.js?v=20260907-13"></script>
 <script src="euroscout-workflow.js?v=20260906-6"></script>
-<script src="data/free-agent-review.js?v=20260907-13"></script>
+
+<script src="euroscout-market-records.js"></script>
 <script src="euroscout-market.js?v=20260908-1"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
@@ -7285,5 +7335,5 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/realgm-representation.js?v=20260907-13"></script>
 <script src="euroscout-representation.js?v=20260907-13"></script>
 <script>esSetup();boot();</script>
-<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260907-13"></script><script src="euroscout-export.js?v=20260907-13"></script></body>
+<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260907-13"></script><script src="euroscout-export.js?v=20260907-13"></script><script src="euroscout-agent-identities.js"></script></body>
 </html>

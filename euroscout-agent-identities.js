@@ -1,0 +1,12 @@
+(function(){'use strict';
+const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
+const known={miskoraznatovic:'Miško Ražnatović'};
+function canonical(name){name=String(name||'').trim().replace(/\s+/g,' ');return known[normalize(name)]||name;}
+const originalMap=agentMap;
+function audited(){const source=originalMap(),groups=new Map(),review=[];for(const [name,agency] of Object.entries(source)){const key=normalize(name);if(!key)continue;if(!groups.has(key))groups.set(key,[]);groups.get(key).push({name,agency});}const map={},aliases={};for(const [key,items]of groups){const name=known[key]||items.map(x=>x.name).find(n=>/[^\x00-\x7f]/.test(n))||items[0].name;map[name]=items[0].agency;for(const item of items)aliases[item.name]=name;if(new Set(items.map(x=>normAgency(x.agency))).size>1)review.push({name,reason:'Different agency associations; retained in source',items});}
+const sorted=new Map();for(const name of Object.keys(map)){const k=String(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().split(/\W+/).filter(Boolean).sort().join(' ');if(sorted.has(k)&&sorted.get(k)!==name)review.push({reason:'Possible reordered name; not merged',names:[sorted.get(k),name]});else sorted.set(k,name);}return {map,aliases,review};}
+agentMap=function(){return audited().map;};window.agentMap=agentMap;
+const add=addAgent;addAgent=function(name,agency){const audit=audited(),existing=Object.keys(audit.map).find(n=>normalize(n)===normalize(name));if(existing){if(agency&&normAgency(audit.map[existing])!==normAgency(agency)){toast('This agent already exists as '+existing+'. Review the existing agency before changing it.');return;}toast('Using existing agent: '+existing);return;}const words=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().match(/[\p{L}\p{N}]+/gu)?.sort().join(' ');const possible=Object.keys(audit.map).find(n=>words(n)===words(name));if(possible)toast('Possible duplicate of '+possible+'. Kept separate pending review.');return add(canonical(name),agency);};window.addAgent=addAgent;
+const apply=applyOverrides;applyOverrides=function(){apply();const aliases=audited().aliases;for(const L of STATE.data?.leagues||[])for(const p of L.players||[])if(p.agent)p.agent=aliases[p.agent]||canonical(p.agent);};window.applyOverrides=applyOverrides;
+window.EuroScoutAgentIdentities={normalize,canonical,audit:audited};
+})();
