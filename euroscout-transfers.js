@@ -13,9 +13,29 @@ const checks=[
 const key=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const aliases=[['Pizza Bulls Bandırma Bordo','Bordo BK','Bordo Sportif Balikesir','Bandırma Bordo Basketbol'],['Kangoeroes Basket Mechelen','Kangoeroes Mechelen'],['Besiktas Istanbul','Beşiktaş GAIN','Besiktas','Besiktas Icrypex'],['Balkan Botevgrad','BC Balkan','BK Balkan'],['Brussels Basketball','Circus Brussels Basketball'],['Lokomotiv Kuban','Lokomotiv-Kuban','PBC Lokomotiv Kuban']];
 const originalTeam=dbTeamForClub;
-dbTeamForClub=function(name){if(!name||/^(\?|unknown|free agent)$/i.test(name.trim()))return null;const group=aliases.find(a=>a.some(x=>key(x)===key(name)));if(group){const t=allDbTeams().find(t=>key(t.name)===key(group[0]));if(t)return t;}const exact=allDbTeams().filter(t=>[t.name,...(t.searchAliases||[])].some(n=>key(n)===key(name)));if(exact.length){const identities=new Set(exact.map(t=>clubForTeamKey(t.key)?.key||t.key));return identities.size===1?exact[0]:null;}
-// A sponsor variation may only resolve when all matching entries belong to the same club.
-const q=normClub(name),possible=allDbTeams().filter(t=>{if(t.directoryOnly)return false;const n=normClub(t.name);return Math.min(n.length,q.length)>=5&&(n.includes(q)||q.includes(n));});const clubs=new Set(possible.map(t=>clubForTeamKey(t.key)?.key||t.key));return clubs.size===1?possible[0]:null;};
+// Rebuild derived names only when the existing team cache is invalidated.
+let indexedTeams,exactTeams=new Map(),primaryTeams=new Map(),fuzzyTeams=[];
+function indexTeams(){
+ const teams=allDbTeams();if(indexedTeams===teams)return;
+ indexedTeams=teams;exactTeams=new Map();primaryTeams=new Map();fuzzyTeams=[];
+ for(const t of teams){
+  const name=key(t.name);if(!primaryTeams.has(name))primaryTeams.set(name,t);
+  for(const n of new Set([t.name,...(t.searchAliases||[])].map(key))){
+   if(!exactTeams.has(n))exactTeams.set(n,[]);exactTeams.get(n).push(t);
+  }
+  if(!t.directoryOnly)fuzzyTeams.push({team:t,name:normClub(t.name)});
+ }
+}
+dbTeamForClub=function(name){
+ if(!name||/^(\?|unknown|free agent)$/i.test(name.trim()))return null;
+ indexTeams();const normalized=key(name),group=aliases.find(a=>a.some(x=>key(x)===normalized));
+ if(group){const t=primaryTeams.get(key(group[0]));if(t)return t;}
+ const exact=exactTeams.get(normalized)||[];
+ if(exact.length){const identities=new Set(exact.map(t=>clubForTeamKey(t.key)?.key||t.key));return identities.size===1?exact[0]:null;}
+ // Preserve ambiguity rejection and the existing sponsor-variation matching rule.
+ const q=normClub(name),possible=fuzzyTeams.filter(x=>Math.min(x.name.length,q.length)>=5&&(x.name.includes(q)||q.includes(x.name))).map(x=>x.team);
+ const clubs=new Set(possible.map(t=>clubForTeamKey(t.key)?.key||t.key));return clubs.size===1?possible[0]:null;
+};
 const basePending=pendingTransfers;
 pendingTransfers=function(){return basePending().map(x=>{const direct=checks.find(c=>[c.name,...(c.aliases||[])].some(n=>key(n)===key(x.tr.player))),a=(window.EUROSCOUT_MARKET_REVIEW?.items||[]).find(a=>a.ids.some(id=>[x.p.id,gid(x.p),...(x.p._grp||[]).map(p=>p.id)].includes(id))),review=direct||(a?{...a}:null);
 if(!review||x.tr.date>checked)return {...x,review:null};const status=review.status||'signed',tr={...x.tr};if(status==='signed'&&review.club)tr.to=review.club;return {...x,tr,team:status==='signed'?dbTeamForClub(tr.to):null,review:{...review,status,checked}};}).filter(x=>!((x.review&&['unknown','departed','available'].includes(x.review.status))||!x.tr.to||/^(\?|unknown|free agent)$/i.test(x.tr.to.trim())));};

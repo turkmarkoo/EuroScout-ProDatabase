@@ -1729,7 +1729,7 @@ body.drawer-lock{overflow:hidden}
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260906-6">
-<link rel="stylesheet" href="euroscout-market.css?v=20260907-13"></head>
+<link rel="stylesheet" href="euroscout-market.css?v=20260908-1"></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -1766,7 +1766,6 @@ body.drawer-lock{overflow:hidden}
 <script src="euroscout-countries.js?v=20260907-13"></script>
 <script src="config.js"></script>
 <script src="overrides.js"></script>
-<script src="data/data.js"></script>
 <script src="data/exhibitions.js"></script>
 <script src="data/notion-import.js"></script>
 <script>
@@ -2828,11 +2827,31 @@ const Sync = (()=>{
   return {stampRecord,stampKey,pull,push,renderPill,bootPull,openSettings,get configured(){return configured();}};
 })();
 
+async function loadCoreData(){
+  // Fetch one copy over HTTP. Load the inline bundle only for file:// or a failed request.
+  if(location.protocol!=="file:"){
+    const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),15000);
+    try{
+      const response=await fetch("data/data.json",{cache:"no-cache",signal:ctl.signal});
+      if(!response.ok)throw new Error("Core data HTTP "+response.status);
+      const raw=await response.json();
+      if(!Array.isArray(raw.leagues))throw new Error("Invalid core data");
+      return raw;
+    }catch(e){console.warn("Using bundled core data",e);}
+    finally{clearTimeout(timer);}
+  }
+  if(window.EUROSCOUT_INLINE)return window.EUROSCOUT_INLINE;
+  return new Promise(resolve=>{
+    const script=document.createElement("script");script.src="data/data.js";
+    script.onload=()=>resolve(window.EUROSCOUT_INLINE||null);
+    script.onerror=()=>resolve(null);document.head.appendChild(script);
+  });
+}
 async function boot(){
+  // Public stats can download while auth resolves; shared reads still await authentication.
+  const rawPromise=loadCoreData();
   try{ await Store.initSB(); }catch(e){ console.warn("Supabase init failed",e); }
-  let raw;
-  try{ raw = await (await fetch("data/data.json",{cache:"no-cache"})).json(); }
-  catch(e){ raw = window.EUROSCOUT_INLINE || null; }
+  const raw=await rawPromise;
   if(!raw){ $("#app").innerHTML='<div class="empty">Could not load data. Make sure '+
     '<code>data/data.json</code> (or <code>data/data.js</code>) is present — see README.</div>'; return; }
   STATE.data = raw;
@@ -5929,7 +5948,7 @@ async function loadExtraLeagues(){
     try{ if(TRANSFERS_LOADED){ applyAutoTransfers(STATE.data.transfers||[]); updateTransferBadge(); } }catch(e){}
     // if the user is looking at a view that could show these, refresh it
     STATE._extraLoaded=(STATE._extraLoaded||[]).concat(st.label);
-    if(["exhib","players","teams","agencies"].includes(STATE.view)){ try{ render(); }catch(e){} }
+    if(["exhib","players","teams","agencies","freeagents"].includes(STATE.view)){ try{ render(); }catch(e){} }
   }
   STATE._extraDone=true;
   if(STATE.view==="exhib"){ try{ render(); }catch(e){} }
@@ -7258,13 +7277,13 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-ui.js?v=20260907-13"></script>
 <script src="euroscout-workflow.js?v=20260906-6"></script>
 <script src="data/free-agent-review.js?v=20260907-13"></script>
-<script src="euroscout-market.js?v=20260907-13"></script>
-<script src="euroscout-transfers.js?v=20260907-13"></script>
+<script src="euroscout-market.js?v=20260908-1"></script>
+<script src="euroscout-transfers.js?v=20260908-1"></script>
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
 <script src="data/agency-research.js?v=20260907-13"></script>
-<script src="euroscout-agency-research.js?v=20260907-13"></script>
+<script src="euroscout-agency-research.js?v=20260908-1"></script>
 <script src="data/realgm-representation.js?v=20260907-13"></script>
 <script src="euroscout-representation.js?v=20260907-13"></script>
 <script>esSetup();boot();</script>
-<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260907-13"></script><script src="euroscout-option-search.js?v=20260907-13"></script><script src="euroscout-export.js?v=20260907-13"></script></body>
+<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260907-13"></script><script src="euroscout-export.js?v=20260907-13"></script></body>
 </html>
