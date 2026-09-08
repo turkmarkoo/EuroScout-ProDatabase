@@ -89,3 +89,5 @@ html[data-theme=dark] .fa-presets .active,html[data-theme=dark] .fa-badge.availa
 #marketRecordForm button[type=submit]{border:0;border-radius:9px;background:#176449;color:#fff;padding:11px 18px;font-weight:600}
 .market-detail{font-size:12px;line-height:1.6;margin-top:8px}.market-detail button{display:block;margin-top:8px;border:1px solid #cdd8d2;border-radius:8px;padding:6px 10px;background:transparent;color:inherit}
 @media(max-width:540px){#marketRecordForm .fa-filter-grid{grid-template-columns:1fr;gap:12px}}
+
+.fa-roster-edit{display:inline-flex;align-items:center;justify-content:center;margin-top:8px;padding:7px 12px;border:1px solid #a4b9ae;border-radius:8px;background:var(--surface,#f5f8f6);color:var(--text,#21483b);font-family:inherit;font-size:12px;font-weight:600;line-height:1.4;cursor:pointer}.fa-roster-edit:hover{border-color:#207457;background:#e8f1eb}.fa-roster-edit:focus-visible{outline:2px solid #207457;outline-offset:3px}
