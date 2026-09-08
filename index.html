@@ -3415,7 +3415,7 @@ function render(){if(typeof scheduleSticky==="function")scheduleSticky();
   updateTransferBadge();
   if(typeof paintCompareBar==="function")paintCompareBar();
 }
-function goView(v){if(v==="teams"&&STATE.teamsMode==="fa")STATE.teamsMode="next";STATE.view=v;render();}
+function goView(v){if(v==="teams")STATE.teamsMode="next";STATE.view=v;render();}
 function statsSubNav(active){
   return `<div class="subnav">${[["players","Stats"],["compare","Compare"],["charts","Charts"],["fit","Fit Finder"]].map(([v,l])=>`<button class="subnavbtn ${active===v?"on":""}" onclick="goView('${v}')">${l}</button>`).join("")}</div>`;
 }
@@ -4669,9 +4669,9 @@ function agencyEnc(a){return encodeURIComponent(a).replace(/'/g,"%27");}
 function agencyOfAgent(key){const p=scoutPool().find(x=>x.agent&&normName(x.agent)===key&&x.agency&&x.agency.trim());return p?p.agency.trim():null;}
 function openAgencyPage(kind,name){STATE.agencyView={kind,name};STATE.view="agencies";render();try{window.scrollTo(0,0);}catch(e){}}
 function backToAgencies(){STATE.agencyView=null;renderAgencies();}
-function teamsModeToggle(){const md=STATE.teamsMode||"current";
+function teamsModeToggle(){const md=STATE.teamsMode||"next";
   const b=(k,l)=>`<button class="subnavbtn ${md===k?"on":""}" data-tmode="${k}">${l}</button>`;
-  return `<div class="subnav" style="margin-bottom:16px">${b("current","Teams 2025/26")}${b("next","Teams 2026/27")}${b("fa","Free agents 26/27")}</div>`;}
+  return `<div class="subnav" style="margin-bottom:16px">${b("current","Teams 2025/26")}${b("next","Teams 2026/27")}</div>`;}
 function wireTeamsToggle(){$$("[data-tmode]").forEach(b=>b.onclick=()=>{STATE.teamsMode=b.dataset.tmode;STATE.curTeam=null;if(b.dataset.tmode==="fa")renderFreeAgents();else renderTeams();});}
 function reRenderTeams(){(STATE.teamsMode==="fa"?renderFreeAgents:renderTeamsNext)();}
 function openTeamPicker(pid,onDone){const p=player(pid);if(!p)return;
@@ -6989,7 +6989,7 @@ function openTeamBoard(k,label,hi){
   const me=$("#modal tr.me");if(me)me.scrollIntoView({block:"center"});
 }
 function renderTeams(){
-  if(STATE.teamsMode==="next")return renderTeamsNext();
+  if(!STATE.teamsMode||STATE.teamsMode==="next")return renderTeamsNext();
   if(STATE.teamsMode==="fa"){STATE.teamsMode="next";return renderTeamsNext();}
   return renderTeamsCurrent();
 }
@@ -7323,7 +7323,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260907-13"></script>
+<script src="euroscout-ui.js?v=18"></script>
 <script src="euroscout-workflow.js?v=20260906-6"></script>
 
 <script src="euroscout-market-records.js?v=16"></script>
