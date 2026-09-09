@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const normalize=s=>String(s||'').replace(/[đĐ]/g,'dj').replace(/[łŁ]/g,'l').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const normalize=s=>String(s||'').replace(/[đĐ]/g,'dj').replace(/[łŁ]/g,'l').replace(/[đĐ]/g,'dj').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 let current=null;
 function eligible(s){return s instanceof HTMLSelectElement&&!s.disabled&&!s.multiple&&s.size<=1&&(s.options.length>=7||/team|club|agent|agency|league|country|arch|role|position/i.test(s.id));}
 function open(s,initial=''){

@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const SEASON='2026/27',START='2026-05-01',KEY='euroscout:market-searches:v1',STATEKEY='euroscout:market-filters:v1';
-const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const norm=s=>String(s||'').replace(/[đĐ]/g,'dj').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const day=()=>new Date().toISOString().slice(0,10),safeURL=u=>{try{const x=new URL(u);return /^https?:$/.test(x.protocol)?x.href:'';}catch{return '';}};
 const validDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s||'')&&!isNaN(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s&&s<=day();
 const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))||f;}catch{return f;}};

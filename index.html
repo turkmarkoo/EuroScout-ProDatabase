@@ -1729,7 +1729,8 @@ body.drawer-lock{overflow:hidden}
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=24">
-<link rel="stylesheet" href="euroscout-market.css?v=16"></head>
+<link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
+</head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -1761,7 +1762,7 @@ body.drawer-lock{overflow:hidden}
 <div id="toast" class="toast"></div>
 <div id="authgate" class="authgate hidden"><div class="agbox" id="agBox"></div></div>
 
-<script src="data/club-directory.js?v=33"></script>
+<script src="data/club-directory.js?v=36"></script>
 <script src="euroscout-clubs.js?v=23"></script>
 <script src="euroscout-countries.js?v=20260907-13"></script>
 <script src="config.js"></script>
@@ -1785,7 +1786,7 @@ const photoOf = p => {if(!p)return null;if(p.img)return p.img;
 
 /* ---------- 2026/27 transfers (live from euroball-tracker, same origin) ---------- */
 let TRANSFERS=new Map(), TRANSFERS_SUR=new Map(), TRANSFERS_LOADED=false, CLUB_LG=new Map();
-const normNm=s=>(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z ]/g,"").replace(/\s+/g," ").trim();
+const normNm=s=>searchFold(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z ]/g,"").replace(/\s+/g," ").trim();
 const normClub=s=>(s||"").toLowerCase().replace(/[\u0142]/g,"l").replace(/[\u0111]/g,"d").replace(/\u00df/g,"ss").replace(/[\u00f8]/g,"o").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[-\u2013\u2014\/&+.\u2019']/g," ").replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim();
 function buildTransferIndex(items){
   TRANSFERS=new Map(); TRANSFERS_SUR=new Map(); CLUB_LG=new Map();
@@ -2477,7 +2478,7 @@ function applyOverrides(){
     p._ext=extFor(p)||null;
   }));
 }
-function normName(x){return (x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u0111\u0142]/g,"d").replace(/\u0142/g,"l").replace(/[\u015f\u0219]/g,"s").replace(/[\u0131]/g,"i").replace(/[\u0127]/g,"h").replace(/[\u00f0]/g,"d").replace(/[\u00f8]/g,"o").replace(/[\u00e6]/g,"ae").replace(/[^a-z ]/g,"").trim();}
+function normName(x){return searchFold(x).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u0111\u0142]/g,"d").replace(/\u0142/g,"l").replace(/[\u015f\u0219]/g,"s").replace(/[\u0131]/g,"i").replace(/[\u0127]/g,"h").replace(/[\u00f0]/g,"d").replace(/[\u00f8]/g,"o").replace(/[\u00e6]/g,"ae").replace(/[^a-z ]/g,"").trim();}
 function allPlayersEvery(){const a=[];STATE.data.leagues.forEach(L=>{if(L.meta.teamsOnly)return;L.players.forEach(p=>a.push(p));});return a;}
 function rebuildLinks(){
   const all=allPlayersEvery(); const byId={}; all.forEach(p=>byId[p.id]=p);
@@ -2616,7 +2617,7 @@ function openEditModal(id){
   // searchable country dropdown (type to filter; free text still allowed)
   (function(){const inp=$("#eCountry"), list=$("#eCountryList"); if(!inp||!list)return;
     const paint=q=>{const qq=(q||"").trim().toLowerCase();
-      const ms=(qq?COUNTRY_LIST.filter(c=>c.toLowerCase().includes(qq)):COUNTRY_LIST);
+      const ms=(qq?COUNTRY_LIST.filter(c=>searchFold(c).includes(searchFold(qq))):COUNTRY_LIST);
       if(!ms.length){list.classList.add("hidden");list.innerHTML="";return;}
       list.innerHTML=ms.slice(0,60).map(c=>{const fe=flagEmoji(c);
         return '<div class="ecombo-opt" data-c="'+esc(c)+'">'+(fe?'<span class="ecflag">'+fe+'</span>':'<span class="ecflag"></span>')+esc(c)+'</div>';}).join("");
@@ -2641,7 +2642,7 @@ function openEditModal(id){
   if(ls) ls.oninput=()=>{const q=ls.value.trim().toLowerCase();const box=$("#linkResults");
     if(q.length<2){box.innerHTML="";return;}
     const inG=new Set((player(id)._grp||[p]).map(x=>x.id));
-    const res=allPlayersFlat().filter(x=>!inG.has(x.id)&&x.name.toLowerCase().includes(q)).sort((a,b)=>(b.pir||0)-(a.pir||0)).slice(0,8);
+    const res=allPlayersFlat().filter(x=>!inG.has(x.id)&&searchFold(x.name).includes(searchFold(q))).sort((a,b)=>(b.pir||0)-(a.pir||0)).slice(0,8);
     box.innerHTML=res.length?res.map(x=>'<div class="gsitem" data-link="'+x.id+'"><div class="gi"><div class="gn">'+esc(x.name)+'</div><div class="gm">'+esc(leagueOf(x).meta.name)+' \u00b7 '+esc(x.teamName)+' \u00b7 b. '+(x.born||"?")+'</div></div><span class="glg">link</span></div>').join(""):'<div class="gsempty">No match</div>';
     $$("#linkResults [data-link]").forEach(el=>el.onclick=()=>{ovrSaveLocal({links:[[id,el.dataset.link]]});toast("Linked");renderProfile();openEditModal(id);});
   };
@@ -2665,7 +2666,7 @@ function muState(){try{return JSON.parse(localStorage.getItem(MU_KEY))||{}}catch
 function muSave(o){if(!Store.canEdit())return;localStorage.setItem(MU_KEY,JSON.stringify(o));try{Sync.stampKey(MU_KEY);}catch(e){}try{Store.pushAppKey(MU_KEY);}catch(e){}}
 function muInit(){
   const bar=$("#matchupBar");if(!bar)return;
-  const opts=[];STATE.data.leagues.filter(L=>!isOtherLeague(L.meta)&&!L.meta.teamsOnly).forEach(L=>L.teams.forEach(t=>opts.push({v:L.meta.id+"|"+t.code,n:t.name,lg:L.meta.name,s:(t.name+" "+t.code).toLowerCase()})));
+  const opts=[];STATE.data.leagues.filter(L=>!isOtherLeague(L.meta)&&!L.meta.teamsOnly).forEach(L=>L.teams.forEach(t=>opts.push({v:L.meta.id+"|"+t.code,n:t.name,lg:L.meta.name,s:searchFold(t.name+" "+t.code)})));
   const paint=()=>{
     const st=muState(),host=$("#muPills");if(!host)return;
     const pill=v=>{if(!v)return "";const[l,c]=v.split("|");
@@ -2680,7 +2681,7 @@ function muInit(){
     const st=muState();
     if(st[slot]){const o=opts.find(x=>x.v===st[slot]);if(o)inp.value=o.n;}
     const close=()=>{box.classList.add("hidden");box.innerHTML="";};
-    inp.oninput=()=>{const q=inp.value.trim().toLowerCase();
+    inp.oninput=()=>{const q=searchFold(inp.value.trim());
       if(q.length<2){close();return;}
       const res=opts.filter(o=>o.s.includes(q)).slice(0,8);
       box.innerHTML=res.length?res.map((o,i)=>`<div class="gsitem" data-i="${i}"><div class="gi"><div class="gn">${o.n}</div><div class="gm">${o.lg}</div></div><span class="glg">${o.v.split("|")[1]}</span></div>`).join(""):'<div class="gsempty">No team</div>';
@@ -3159,10 +3160,10 @@ function wireGlobalSearch(){
     box.classList.remove("hidden");
   };
   const search=()=>{
-    const q=inp.value.trim().toLowerCase();active=-1;
+    const q=searchFold(inp.value.trim());active=-1;
     if(q.length<2){close();return;}
     const qn=normName(q);
-    results=allPlayersIndexed().filter(({p})=>normName(p.name).includes(qn)||p.name.toLowerCase().includes(q))
+    results=allPlayersIndexed().filter(({p})=>normName(p.name).includes(qn)||searchFold(p.name).includes(searchFold(q)))
       .sort((a,b)=>(b.p.pir||0)-(a.p.pir||0)).slice(0,12);
     if(!results.length){box.innerHTML='<div class="gsempty">No players found</div>';box.classList.remove("hidden");return;}
     paint();
@@ -3544,7 +3545,7 @@ function filterSort(){
   if(f.role)rows=rows.filter(p=>p.role===f.role);
   if(f.country)rows=rows.filter(p=>p.country===f.country);
   if(f.born)rows=rows.filter(p=>String(p.born)===String(f.born));
-  if(f.q){const q=f.q.toLowerCase();rows=rows.filter(p=>p.name.toLowerCase().includes(q));}
+  if(f.q){const q=f.q.toLowerCase();rows=rows.filter(p=>searchFold(p.name).includes(searchFold(q)));}
   const {key,dir}=STATE.sort;
   rows.sort((a,b)=>{let x,y;
     if(key==="league"){x=(leagueOf(a)||{meta:{}}).meta.name||"";y=(leagueOf(b)||{meta:{}}).meta.name||"";}
@@ -4932,7 +4933,7 @@ function renderNextRoster(club){
   $$(".rbTeamAdd").forEach(inp=>inp.oninput=()=>{const tk=inp.dataset.tk,box=$("#rbSug0");if(!box)return;
     const qq=inp.value.toLowerCase().trim();if(qq.length<2){box.innerHTML="";return;}const qn=normNm(qq);
     // identity-aware: skip anyone already assigned on any of their league entries
-    const hits=pool.filter(p=>!effective26(p,m)&&(p.name.toLowerCase().includes(qq)||normNm(p.name).includes(qn))).slice(0,8);
+    const hits=pool.filter(p=>!effective26(p,m)&&(searchFold(p.name).includes(searchFold(qq))||normNm(p.name).includes(qn))).slice(0,8);
     box.innerHTML=hits.map(p=>{const L=leagueOf(p);const other=isOtherLeague(L.meta);
       const tag=other?` <span class="rbSugLg">${esc(L.meta.name)}</span>`:"";
       return `<button class="rbSugItem" data-pick="${p.id}">${esc(p.name)}${tag} <small>${posLabel(p)}${p.age?" \u00b7 "+p.age:""} \u00b7 ${esc(p.teamName||"")}</small></button>`;}).join("")||'<div class="rbSugNone">No unassigned player matches.</div>';
@@ -5223,8 +5224,8 @@ function renderAgencies(){
   $$("[data-amode]").forEach(b=>b.onclick=()=>{STATE.agencyMode=b.dataset.amode;renderAgencies();});
   $$(".agencyCard[data-ag]").forEach(c=>c.onclick=()=>openAgencyPage("agency",decodeURIComponent(c.dataset.ag)));
   $$(".agencyCard[data-agt]").forEach(c=>c.onclick=()=>openAgencyPage("agent",decodeURIComponent(c.dataset.agt)));
-  const sq=$("#agencyQ");if(sq)sq.oninput=()=>{const q=sq.value.toLowerCase();
-    $$(".agencyCard").forEach(c=>{const t=c.textContent.toLowerCase();c.style.display=(!q||t.includes(q))?"":"none";});};
+  const sq=$("#agencyQ");if(sq)sq.oninput=()=>{const q=searchFold(sq.value);
+    $$(".agencyCard").forEach(c=>{const t=searchFold(c.textContent);c.style.display=(!q||t.includes(q))?"":"none";});};
 }
 function openAgentRoster(enc){const agent=decodeURIComponent(enc),key=normName(agent);
   const list=agentRosterList(p=>EuroScoutAgencyResearch.agentsOf(p).some(a=>normName(a)===key));
@@ -6053,7 +6054,7 @@ function renderExhib(){
   if(st.euOnly)pool=pool.filter(p=>p._euMatch);
   if(st.role)pool=pool.filter(p=>p.role===st.role);
   if(st.country)pool=pool.filter(p=>(p.country||"")===st.country);
-  if(st.q){const q=st.q.toLowerCase(),qn=normName(st.q);pool=pool.filter(p=>p.name.toLowerCase().includes(q)||normName(p.name).includes(qn));}
+  if(st.q){const q=st.q.toLowerCase(),qn=normName(st.q);pool=pool.filter(p=>searchFold(p.name).includes(searchFold(q))||normName(p.name).includes(qn));}
   const COLS=st.mode==="adv"
    ?[["ppg","PPG"],["ts","TS%"],["efg","eFG%"],["ftr","FTr"],["pps","PPS"],["orbp","OR%"],["drbp","DR%"],["pts40","P40"],["reb40","R40"],["ast40","A40"]]
    :[["ppg","PPG"],["rpg","RPG"],["apg","APG"],["spg","SPG"],["bpg","BPG"],["fgp","FG%"],["f3p","3P%"],["ftp","FT%"],["mpg","MIN"],["g","GP"]];
@@ -6330,7 +6331,7 @@ function renderScout(){
     const active=f.min>st.min||f.max<st.max; if(!active)return;
     pool=pool.filter(p=>{const v=(f.key==="grade")?statGradeOverall(p):p[f.key];return v!=null&&v>=f.min&&v<=f.max;});});}
   if(s.q){const q=s.q.toLowerCase(),qn=normName(s.q);
-    pool=pool.filter(p=>p.name.toLowerCase().includes(q)||normName(p.name).includes(qn)||noteText(p).includes(q));}
+    pool=pool.filter(p=>searchFold(p.name).includes(searchFold(q))||normName(p.name).includes(qn)||searchFold(noteText(p)).includes(searchFold(q)));}
   // sort
   const rateOf=p=>effRating(p);
   if(simP){
@@ -7329,7 +7330,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-workflow.js?v=23"></script>
 
 <script src="euroscout-market-records.js?v=16"></script>
-<script src="euroscout-market.js?v=33"></script>
+<script src="euroscout-market.js?v=36"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
 <script src="data/agency-research.js?v=20260907-13"></script>
@@ -7337,5 +7338,5 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/realgm-representation.js?v=20260907-13"></script>
 <script src="euroscout-representation.js?v=20260907-13"></script>
 <script>esSetup();boot();</script>
-<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260907-13"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=24"></script></body>
+<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=36"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script></body>
 </html>
