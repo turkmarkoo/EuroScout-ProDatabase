@@ -1728,7 +1728,7 @@ body.drawer-lock{overflow:hidden}
 
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
-<link rel="stylesheet" href="euroscout-ui.css?v=23">
+<link rel="stylesheet" href="euroscout-ui.css?v=24">
 <link rel="stylesheet" href="euroscout-market.css?v=16"></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
@@ -1761,7 +1761,7 @@ body.drawer-lock{overflow:hidden}
 <div id="toast" class="toast"></div>
 <div id="authgate" class="authgate hidden"><div class="agbox" id="agBox"></div></div>
 
-<script src="data/club-directory.js?v=20260907-13"></script>
+<script src="data/club-directory.js?v=33"></script>
 <script src="euroscout-clubs.js?v=23"></script>
 <script src="euroscout-countries.js?v=20260907-13"></script>
 <script src="config.js"></script>
@@ -2072,7 +2072,7 @@ function playerNameIndex(){if(PLAYER_BY_NAME)return PLAYER_BY_NAME;PLAYER_BY_NAM
   // assignPool (not scoutPool) so NBA / G League / NCAA players can also be resolved as transfer
   // targets and placed on 26/27 rosters, not just European-league players.
   assignPool().forEach(p=>{const n=normNm(p.name);if(!PLAYER_BY_NAME.has(n))PLAYER_BY_NAME.set(n,[]);PLAYER_BY_NAME.get(n).push(p);});return PLAYER_BY_NAME;}
-function playerForTransfer(tr){const cands=playerNameIndex().get(normNm(tr.player))||[];
+function playerForTransfer(tr){if(tr.playerId){const exact=STATE.data.leagues.flatMap(l=>l.players||[]).find(p=>p.id===tr.playerId);if(exact)return exact;}const cands=playerNameIndex().get(normNm(tr.player))||[];
   if(cands.length<=1)return cands[0]||null;
   if(tr.birth_year){const byY=cands.find(p=>p.born&&+p.born===+tr.birth_year);if(byY)return byY;}
   return cands[0];}
@@ -7329,7 +7329,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-workflow.js?v=23"></script>
 
 <script src="euroscout-market-records.js?v=16"></script>
-<script src="euroscout-market.js?v=16"></script>
+<script src="euroscout-market.js?v=33"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
 <script src="data/agency-research.js?v=20260907-13"></script>
@@ -7337,5 +7337,5 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/realgm-representation.js?v=20260907-13"></script>
 <script src="euroscout-representation.js?v=20260907-13"></script>
 <script>esSetup();boot();</script>
-<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260907-13"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script></body>
+<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260907-13"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=24"></script></body>
 </html>
