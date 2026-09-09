@@ -2481,7 +2481,7 @@ function applyOverrides(){
 function normName(x){return searchFold(x).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u0111\u0142]/g,"d").replace(/\u0142/g,"l").replace(/[\u015f\u0219]/g,"s").replace(/[\u0131]/g,"i").replace(/[\u0127]/g,"h").replace(/[\u00f0]/g,"d").replace(/[\u00f8]/g,"o").replace(/[\u00e6]/g,"ae").replace(/[^a-z ]/g,"").trim();}
 function allPlayersEvery(){const a=[];STATE.data.leagues.forEach(L=>{if(L.meta.teamsOnly)return;L.players.forEach(p=>a.push(p));});return a;}
 function rebuildLinks(){
-  const all=allPlayersEvery(); const byId={}; all.forEach(p=>byId[p.id]=p);
+  const all=allPlayersEvery(); all.forEach(p=>{delete p._solo;}); const byId={}; all.forEach(p=>byId[p.id]=p);
   const parent={}; all.forEach(p=>parent[p.id]=p.id);
   const find=x=>{while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x];}return x;};
   const uni=(a,b)=>{if(byId[a]&&byId[b]){const ra=find(a),rb=find(b);if(ra!==rb)parent[ra]=rb;}};
@@ -2492,7 +2492,7 @@ function rebuildLinks(){
   const byCode={},byName={};
   // player codes are only comparable within a code-space: EuroLeague+EuroCup share FIBA codes,
   // every other league has its own local numeric ids (aba-5150 and lba-5150 are DIFFERENT people)
-  const codeSpace=p=>{const lg=p.league||(String(p.id).split("-")[0]);return (lg==="euroleague"||lg==="eurocup")?"f":lg;};
+  const codeSpace=p=>{const lg=p.league||(String(p.id).split("-")[0]);return lg==="kls"?String(p.id).split("-").slice(0,2).join("-"):(lg==="euroleague"||lg==="eurocup")?"f":lg;};
   all.forEach(p=>{
     // only link by code when there IS one — leagues without player ids must not all collapse into one person
     const c=p.code; const hasCode=(c!=null&&c!==""&&String(c)!=="null"&&String(c)!=="undefined");
@@ -2507,7 +2507,8 @@ function rebuildLinks(){
   // same (token-sorted) name links entries when birth years agree OR either side lacks one
   Object.values(byName).forEach(a=>{for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++){
     const A=byId[a[i]],B=byId[a[j]];
-    if(!A.born||!B.born||A.born===B.born)uni(a[i],a[j]);}});
+    const years=new Set(a.map(id=>byId[id].born).filter(Boolean));
+    if((A.born&&B.born&&A.born===B.born)||((!A.born||!B.born)&&years.size<=1))uni(a[i],a[j]);}});
   // nickname variants: same surname + same birth year + first name is a prefix of the other
   // (links "Matt Hurt" to "Matthew Christopher Hurt", "Nico" to "Nicolas", etc.)
   const bucket={};
