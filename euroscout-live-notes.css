@@ -2,3 +2,5 @@
 
 .liveLayout .rrNum{display:inline-flex!important;min-width:26px;justify-content:center;font-variant-numeric:tabular-nums}.livePlayer #liveNumber{display:inline-block;margin-right:8px}.livePlayer #liveProfile{display:inline-block;margin-right:8px}
 
+.liveIdentity{display:flex;align-items:center;gap:14px}.liveAvatar{flex:0 0 60px;width:60px;height:68px;display:grid;place-items:center;background:#ffffff20;border-radius:12px;font-size:22px;font-weight:bold;overflow:hidden}.liveAvatar img{width:100%;height:100%;object-fit:cover}.liveClub{color:#d2e9df;margin-top:5px}.liveHeaderActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.livePlayer .liveHeaderActions .btn{margin:0!important;padding:11px 14px;min-height:44px;background:#fff;color:#175b43;border:1px solid #ffffff60;border-radius:9px}.liveBody details label{display:inline-flex;flex-direction:column;gap:6px;margin:12px 12px 0 0}
+
