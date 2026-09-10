@@ -2322,7 +2322,7 @@ const Store = (()=>{
   async function save(id,rec){
     if(enabled && !canEdit()) return;    // viewers cannot write
     cache[id]={...get(id),...rec}; local.set(cache);
-    if(window.ESAccess){await persistPrivate();return;}
+    if(window.ESAccess){return await persistPrivate();}
     if(sb && user && canEdit()){
       const r=cache[id];
       try{await sb.from("scouting").upsert({player_id:id,report:r.report,rating:r.rating,
@@ -7361,5 +7361,4 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/aba-rosters-2026.js?v=20260910-1"></script>
 <script src="euroscout-aba-rosters.js?v=20260910-1"></script>
 <script>esSetup();boot();</script>
-<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=36"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script></body>
-</html>
+<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=36"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260910-1"><script src="euroscout-live-notes.js?v=20260910-1"></script></body></html>
