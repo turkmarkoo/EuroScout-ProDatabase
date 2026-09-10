@@ -1783,7 +1783,11 @@ const surnameOf = n => {const parts=(n||"").trim().split(/\s+/);const suf=/^(jr\
 const posLabel = p => p.role||((p.pos&&p.pos!=="-")?p.pos:"\u2014");
 const isPlayerPhoto = src => !!src && !/(?:^|[\/])flags?[\/]|(?:flagcdn\.com|flagpedia\.net)/i.test(src);
 const photoOf = p => {if(!p)return null;if(isPlayerPhoto(p.img))return p.img;
-  const g=p._grp||[];for(const x of g){if(isPlayerPhoto(x.img))return x.img;}return null;};
+  const g=p._grp||[];for(const x of g){if(isPlayerPhoto(x.img))return x.img;}
+  const pro=[p,...g].find(x=>['nba','gleague'].includes(x.league)&&/^\d+$/.test(String(x._nbaId||x.code||'')));
+  if(pro)return 'https://cdn.nba.com/headshots/nba/latest/260x190/'+(pro._nbaId||pro.code)+'.png';
+  return ['nba','gleague'].includes(p.league)?'player-silhouette.svg':null;};
+document.addEventListener('error',function(e){const img=e.target;if(img.tagName==='IMG'&&(img.hasAttribute('data-player-portrait')||/^https:\/\/cdn\.nba\.com\/headshots\//.test(img.src))&&!img.dataset.silhouette){e.stopImmediatePropagation();img.dataset.silhouette='1';img.style.display='';img.src='player-silhouette.svg';}},true);
 
 /* ---------- 2026/27 transfers (live from euroball-tracker, same origin) ---------- */
 let TRANSFERS=new Map(), TRANSFERS_SUR=new Map(), TRANSFERS_LOADED=false, CLUB_LG=new Map();
@@ -7351,7 +7355,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-workflow.js?v=20260910-3"></script>
 
 <script src="euroscout-market-records.js?v=16"></script>
-<script src="euroscout-market.js?v=36"></script>
+<script src="euroscout-market.js?v=20260910-photos"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
 <script src="data/agency-research.js?v=20260907-13"></script>
