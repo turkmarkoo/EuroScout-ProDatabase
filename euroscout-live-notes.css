@@ -9,3 +9,20 @@
 
 /* Keep every label readable on a single horizontally scrollable row. */
 .liveCategories{flex-wrap:nowrap;overflow-x:auto;min-width:0;gap:5px;padding-bottom:5px;scrollbar-width:thin;overscroll-behavior-x:contain}.liveCategories .btn{flex:0 0 auto;white-space:nowrap;min-height:40px;padding:9px 10px;font-size:12px}
+
+/* Matchup owns the viewport; only each roster and the note list scroll. */
+html:has(.liveScouting),body:has(.liveScouting){height:100%;overflow:hidden;overscroll-behavior:none}
+body:has(.liveScouting) main#app{height:calc(var(--matchup-viewport,100dvh) - var(--matchup-header,76px));box-sizing:border-box;padding:10px 16px;overflow:hidden;min-height:0}
+.liveScouting{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.liveScouting>.scouthead,.liveScouting>.liveRecent{display:none}
+.liveScouting .liveLayout{flex:1;min-height:0;grid-template-columns:minmax(150px,1fr) minmax(300px,1.8fr) minmax(150px,1fr);grid-template-rows:minmax(0,1fr);align-items:stretch;overflow:hidden}
+.liveScouting .liveLayout>.rosterCol,.liveScouting .liveNotebook{height:100%;min-height:0;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;grid-column:auto;grid-row:auto}
+.liveScouting .rosterHead,.liveScouting .rosterTeam,.liveScouting .rosterSub,.liveScouting .livePlayer{flex-shrink:0}
+.liveScouting .liveLayout .rosterList{flex:1;min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.liveScouting .liveBody{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.liveScouting .liveCategories,.liveScouting .liveNoteTools{flex-shrink:0}
+.liveScouting #liveBullets{flex:1;min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.liveScouting #liveRelated{max-height:25%;flex-shrink:0;overflow:auto;overscroll-behavior:contain}
+.liveScouting .liveHeaderActions details[open]{position:absolute;z-index:20;right:12px;top:12px;padding:12px;border:1px solid #6b9b87;border-radius:10px;background:#175b43;max-width:calc(100% - 24px);box-sizing:border-box}
+.liveScouting .livePlayer{position:relative}
+@media(max-width:700px){body:has(.liveScouting) main#app{padding:6px}.liveScouting .liveLayout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(90px,25%) minmax(0,1fr);gap:6px}.liveScouting .liveNotebook{grid-column:1/-1;grid-row:2}.liveScouting .liveLayout>.rosterCol:last-child{grid-column:2;grid-row:1}.liveScouting .rosterTeam,.liveScouting .rosterSub{display:none}.liveScouting .liveBody{padding:8px}.liveScouting .livePlayer{padding:8px 12px}.liveScouting .liveAvatar{height:40px;flex-basis:36px;width:36px}.liveScouting .livePlayer h2{font-size:19px}.liveScouting .liveHeaderActions{margin-top:6px}}

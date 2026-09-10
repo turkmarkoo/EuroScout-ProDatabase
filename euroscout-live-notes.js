@@ -1,5 +1,8 @@
 (function(){
 'use strict';
+function sizeWorkspace(){const header=document.querySelector('body > header');document.documentElement.style.setProperty('--matchup-header',(header?.getBoundingClientRect().height||76)+'px');document.documentElement.style.setProperty('--matchup-viewport',(window.visualViewport?.height||window.innerHeight)+'px');}
+sizeWorkspace();window.addEventListener('resize',sizeWorkspace);window.visualViewport?.addEventListener('resize',sizeWorkspace);const appHeader=document.querySelector('body > header');if(appHeader)new ResizeObserver(sizeWorkspace).observe(appHeader);
+
 const cats=[['nAth','Athleticism'],['nOff','Offense'],['nDef','Defense'],['nIntel','Intel'],['nProj','Projection / verdict']];
 let selected='',category='nOff',recent=[],busy=false,status='';
 const draftKey=()=> 'euroscout:live-drafts:'+ (window.ESAccess?.user?.email||'local');
