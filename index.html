@@ -6249,16 +6249,19 @@ function watchlistAlerts(pool){
   out.forEach(a=>{if(seen.has(a.p.id))return;seen.add(a.p.id);uniq.push(a);});
   return uniq;
 }
+function watchAlertsHidden(){try{return localStorage.getItem('euroscout:watchAlertsHidden:'+String(window.ESAccess?.user?.email||'local'))==='1';}catch{return false;}}
+function toggleWatchAlerts(){try{localStorage.setItem('euroscout:watchAlertsHidden:'+String(window.ESAccess?.user?.email||'local'),watchAlertsHidden()?'0':'1');}catch{}renderWatchlist();}
 function watchlistAlertsHTML(pool){
   const al=watchlistAlerts(pool);
   if(!al.length)return "";
+  if(watchAlertsHidden())return '<div class="waPanel"><button type="button" class="btn" data-toggle-watch-alerts>Show alerts ('+al.length+')</button></div>';
   const ICON={hot:"\uD83D\uDD25",cold:"\u2744\uFE0F",high:"\u2B50",signed:"\u270D\uFE0F",riser:"\uD83D\uDE80"};
   const rows=al.slice(0,12).map(a=>`<button class="waRow wa-${a.kind}" data-id="${a.p.id}">
     <span class="waIcon">${ICON[a.kind]||"\u2022"}</span>
     <span class="waName">${esc(a.p.name)}</span>
     <span class="waTxt">${esc(a.txt)}</span></button>`).join("");
   return `<div class="waPanel">
-    <div class="waHead">Alerts <span class="hint" style="font-weight:400;font-size:11.5px">notable changes for your flagged players</span></div>
+    <div class="waHead">Alerts <span class="hint" style="font-weight:400;font-size:11.5px">notable changes for your flagged players</span><button type="button" class="btn" data-toggle-watch-alerts style="margin-left:auto">Hide alerts</button></div>
     <div class="waList">${rows}</div>
   </div>`;
 }
@@ -6308,6 +6311,7 @@ function renderWatchlist(){
     ${pool.length?`<div class="wboard">${pool.map(row).join("")}</div>`:`<div class="empty" style="margin-top:20px">No players on your watchlist yet. Tap the ☆ star on any player card or profile to add them here.</div>`}
   </div>`;
   $$(".wsort").forEach(b=>b.onclick=()=>{STATE.watchSort=b.dataset.ws;renderWatchlist();});
+  $$("[data-toggle-watch-alerts]").forEach(b=>b.onclick=toggleWatchAlerts);
   $$(".waRow").forEach(r=>r.onclick=()=>openProfile(r.dataset.id));
   $$(".wrow").forEach(r=>r.onclick=e=>{
     if(e.target.closest("[data-rm]")){e.stopPropagation();const id=e.target.closest("[data-rm]").dataset.rm;
