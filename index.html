@@ -1781,8 +1781,9 @@ const fmt = (v,d=1)=> (v===undefined||v===null||isNaN(v))?"—":Number(v).toFixe
 const initials = n => n.split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase();
 const surnameOf = n => {const parts=(n||"").trim().split(/\s+/);const suf=/^(jr\.?|sr\.?|ii|iii|iv|v)$/i;let i=parts.length-1;if(i>0&&suf.test(parts[i]))i--;return parts[i]||n||"";};
 const posLabel = p => p.role||((p.pos&&p.pos!=="-")?p.pos:"\u2014");
-const photoOf = p => {if(!p)return null;if(p.img)return p.img;
-  const g=p._grp||[];for(const x of g){if(x.img)return x.img;}return null;};
+const isPlayerPhoto = src => !!src && !/(?:^|[\/])flags?[\/]|(?:flagcdn\.com|flagpedia\.net)/i.test(src);
+const photoOf = p => {if(!p)return null;if(isPlayerPhoto(p.img))return p.img;
+  const g=p._grp||[];for(const x of g){if(isPlayerPhoto(x.img))return x.img;}return null;};
 
 /* ---------- 2026/27 transfers (live from euroball-tracker, same origin) ---------- */
 let TRANSFERS=new Map(), TRANSFERS_SUR=new Map(), TRANSFERS_LOADED=false, CLUB_LG=new Map();
@@ -2485,7 +2486,7 @@ function applyOverrides(){
 function normName(x){return searchFold(x).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u0111\u0142]/g,"d").replace(/\u0142/g,"l").replace(/[\u015f\u0219]/g,"s").replace(/[\u0131]/g,"i").replace(/[\u0127]/g,"h").replace(/[\u00f0]/g,"d").replace(/[\u00f8]/g,"o").replace(/[\u00e6]/g,"ae").replace(/[^a-z ]/g,"").trim();}
 function allPlayersEvery(){const a=[];STATE.data.leagues.forEach(L=>{if(L.meta.teamsOnly)return;L.players.forEach(p=>a.push(p));});return a;}
 function rebuildLinks(){
-  const all=allPlayersEvery(); all.forEach(p=>{delete p._solo;}); const byId={}; all.forEach(p=>byId[p.id]=p);
+  const all=allPlayersEvery(); all.forEach(p=>{delete p._solo;if(p.img&&!isPlayerPhoto(p.img))p.img=null;}); const byId={}; all.forEach(p=>byId[p.id]=p);
   const parent={}; all.forEach(p=>parent[p.id]=p.id);
   const find=x=>{while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x];}return x;};
   const uni=(a,b)=>{if(byId[a]&&byId[b]){const ra=find(a),rb=find(b);if(ra!==rb)parent[ra]=rb;}};
@@ -2893,6 +2894,7 @@ async function boot(){
   const rawPromise=loadCoreData();
   try{ await Store.initSB(); }catch(e){ console.warn("Supabase init failed",e); }
   const raw=await rawPromise;
+  for(const L of raw?.leagues||[])for(const p of L.players||[])if(p.img&&!isPlayerPhoto(p.img))p.img=null;
   window.EuroScoutABA?.apply(raw);
   if(window.ESAccess&&!ESAccess.internal){ESAccess.external(raw);return;}
   if(!raw){ $("#app").innerHTML='<div class="empty">Could not load data. Make sure '+
@@ -6260,6 +6262,12 @@ function watchlistAlertsHTML(pool){
     <div class="waList">${rows}</div>
   </div>`;
 }
+function watchlistClubLabel(p){
+  const k=effective26(p);
+  if(isStatus(k))return statusLabel(k);
+  const clubs=effective26keys(p).map(key=>clubByKey(key)?.name).filter(Boolean);
+  return [...new Set(clubs)].join(" / ")||"Free agent";
+}
 function renderWatchlist(){
   const rateOf=p=>effRating(p);
   let pool=scoutPool().filter(isWatched);
@@ -6279,7 +6287,7 @@ function renderWatchlist(){
       <div class="wPhoto${p.img?"":" noimg"}">${photo}</div>
       <div class="wMain">
         <div class="wName">${p.name} ${form}</div>
-        <div class="wMeta">${p.teamName} · ${L.meta.name}${p.age?" · "+p.age+"y":""}${(p.pos&&p.pos!=="-")?" · "+p.pos:(p.role?" · "+p.role:"")}</div>
+        <div class="wMeta">${esc(watchlistClubLabel(p))} · 2026/27${p.age?" · "+p.age+"y":""}${(p.pos&&p.pos!=="-")?" · "+p.pos:(p.role?" · "+p.role:"")}</div>
         ${tags?`<div class="wtags">${tags}</div>`:""}
       </div>
       <div class="wLevel">${band?`<span class="wBand b${band.i}">${band.label}</span>`:""}</div>
