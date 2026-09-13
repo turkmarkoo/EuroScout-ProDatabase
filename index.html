@@ -1797,6 +1797,8 @@ let TRANSFERS=new Map(), TRANSFERS_SUR=new Map(), TRANSFERS_LOADED=false, CLUB_L
 const normNm=s=>searchFold(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z ]/g,"").replace(/\s+/g," ").trim();
 const normClub=s=>(s||"").toLowerCase().replace(/[\u0142]/g,"l").replace(/[\u0111]/g,"d").replace(/\u00df/g,"ss").replace(/[\u00f8]/g,"o").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[-\u2013\u2014\/&+.\u2019']/g," ").replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim();
 function buildTransferIndex(items){
+  items=window.EuroScoutTransferConfirmations?.clean(items)||items;
+  items=[...(items||[])].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
   TRANSFERS=new Map(); TRANSFERS_SUR=new Map(); CLUB_LG=new Map();
   (items||[]).forEach(it=>{if(!it||!it.player||!it.status)return;
     const n=normNm(it.player); if(!TRANSFERS.has(n))TRANSFERS.set(n,it);
@@ -1813,16 +1815,20 @@ function autoAppliedSet(m){try{localStorage.setItem(AUTO_APPLIED_KEY,JSON.string
 // Safe: never overrides a manual assignment, a rejected transfer, or one the user already handled;
 // only touches players it placed itself (tracked in AUTO_APPLIED_KEY) so user edits always win.
 function applyAutoTransfers(items){
+  window.EuroScoutTransferConfirmations?.repair();
+  items=window.EuroScoutTransferConfirmations?.clean(items)||items;
+  items=[...(items||[])].sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
   const handled=trHandledGet(), m=next26Get(), applied=autoAppliedGet();
   let changed=false, count=0;
   (items||[]).forEach(tr=>{
     const isRet=(tr.status==="retired");
-    if(!tr||!tr.autoApply||(!isRet&&tr.status!=="signed"&&tr.status!=="extended"))return;
+    if(!tr||!tr.autoApply||(!tr.playerId&&!tr.birth_year)||(!isRet&&tr.status!=="signed"&&tr.status!=="extended"))return;
     if(handled[tr.id]==="rejected")return;                 // respect an explicit reject
+    if(window.EuroScoutTransferConfirmations?.rejected(tr))return;
     const p=playerForTransfer(tr); if(!p)return;
     const key=gid(p);
     // skip if this person already has ANY 26/27 assignment that WE did not place
-    if(m[key]!=null && !applied[key])return;               // manual assignment wins
+    if([key,p.id,...(p._grp||[]).map(x=>x.id)].some(id=>m[id]!=null&&!applied[id]))return;
     if(isRet){ if(m[key]===STATUS_RETIRED)return;           // bake a career status, not a club
       set26(p.id,STATUS_RETIRED); applied[key]=tr.id; changed=true; count++; return; }
     const club=dbTeamForClub(tr.to); if(!club||!club.key)return;
@@ -1835,7 +1841,7 @@ function applyAutoTransfers(items){
 }
 async function loadTransfers(){
   // 1) transfers shipped with the dataset (e.g. the ACB market) — available immediately
-  const baked=(STATE.data&&Array.isArray(STATE.data.transfers))?STATE.data.transfers.slice():[];
+  const baked=(window.EuroScoutTransferConfirmations?.records||[]).concat((STATE.data&&Array.isArray(STATE.data.transfers))?STATE.data.transfers:[]);
   if(baked.length){buildTransferIndex(baked);try{applyAutoTransfers(baked);}catch(e){}try{updateTransferBadge();}catch(e){}}
   // 2) live tracker feed, merged in when it answers. Timed out so a slow feed can never
   //    stop the baked transfers from showing.
@@ -1855,6 +1861,7 @@ function nextOf(p){
   if(!it){const parts=normNm(p.name).split(" "),sur=parts[parts.length-1];const cands=TRANSFERS_SUR.get(sur)||[];
     it=cands.find(c=>c.birth_year&&p.born&&+c.birth_year===+p.born)||(cands.length===1?cands[0]:null);}
   if(!it)return null;
+  const matched=playerForTransfer(it);if(!matched||gid(matched)!==gid(p))return null;
   let kind=it.status, club=it.to;
   if(it.status==="left"){ if(!it.to||/free agent|unknown|^$/i.test(it.to)){kind="available";club=null;} else kind="signed"; }
   return {kind,club,from:it.from,contract:it.contract,source:it.source_name,url:it.source_url,league:it.league};
@@ -1879,7 +1886,7 @@ function next26Set(m){try{localStorage.setItem(NEXT26_KEY,JSON.stringify(m));}ca
   try{Sync.stampKey(NEXT26_KEY);}catch(e){} try{Store.pushAppKey(NEXT26_KEY);}catch(e){}}
 function effective26(p,m){m=m||next26Get();
   const k=m[gid(p)]||m[p.id]||((p._grp||[]).map(x=>m[x.id]).find(Boolean));
-  const registered=window.EuroScoutABA?.key(p)||window.EuroScoutElite2?.key(p)||window.EuroScoutExpansion?.key(p)||window.EuroScoutNCAA?.key(p);
+  const registered=window.EuroScoutTransferConfirmations?.key(p)||window.EuroScoutABA?.key(p)||window.EuroScoutElite2?.key(p)||window.EuroScoutExpansion?.key(p)||window.EuroScoutNCAA?.key(p);
   const automated=autoAppliedGet(),ids=[gid(p),p.id,...(p._grp||[]).map(x=>x.id)];
   if(registered&&k&&ids.some(id=>automated[id]))return registered;
   return k?canonKey(k):(registered||null);}   // keyed per person, so it is shared across every competition he plays
@@ -2053,10 +2060,15 @@ function playerNameIndex(){if(PLAYER_BY_NAME)return PLAYER_BY_NAME;PLAYER_BY_NAM
   // assignPool (not scoutPool) so NBA / G League / NCAA players can also be resolved as transfer
   // targets and placed on 26/27 rosters, not just European-league players.
   assignPool().forEach(p=>{const n=normNm(p.name);if(!PLAYER_BY_NAME.has(n))PLAYER_BY_NAME.set(n,[]);PLAYER_BY_NAME.get(n).push(p);});return PLAYER_BY_NAME;}
-function playerForTransfer(tr){if(tr.playerId){const exact=STATE.data.leagues.flatMap(l=>l.players||[]).find(p=>p.id===tr.playerId);if(exact)return exact;}const cands=playerNameIndex().get(normNm(tr.player))||[];
-  if(cands.length<=1)return cands[0]||null;
-  if(tr.birth_year){const byY=cands.find(p=>p.born&&+p.born===+tr.birth_year);if(byY)return byY;}
-  return cands[0];}
+function playerForTransfer(tr){
+  if(!tr||(window.EuroScoutTransferConfirmations&&!window.EuroScoutTransferConfirmations.clean([tr]).length))return null;
+  if(tr.playerId){const exact=STATE.data.leagues.flatMap(l=>l.players||[]).find(p=>p.id===tr.playerId);
+    return exact&&(!tr.birth_year||!exact.born||+exact.born===+tr.birth_year)?exact:null;}
+  let cands=playerNameIndex().get(normNm(tr.player))||[];
+  if(tr.birth_year)cands=cands.filter(p=>p.born&&+p.born===+tr.birth_year);
+  // Duplicate competition rows are one person; different identities are never guessed.
+  const identities=new Map(cands.map(p=>[gid(p),p]));
+  return identities.size===1?[...identities.values()][0]:null;}
 function dbTeamForClub(name){if(!name||/free agent/i.test(name))return null;const q=normClub(name);if(!q)return null;
   const teams=allDbTeams();let t=teams.find(x=>normClub(x.name)===q);if(t)return t;
   t=teams.find(x=>{const n=normClub(x.name);return (n.includes(q)||q.includes(n))&&Math.min(n.length,q.length)>=4;});return t||null;}
@@ -7349,6 +7361,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-market-records.js?v=16"></script>
 <script src="euroscout-market.js?v=20260913-batch"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
+<script src="euroscout-transfer-confirmations.js?v=20260913-1"></script>
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
 <script src="data/agency-research.js?v=20260907-13"></script>
 <script src="euroscout-agency-research.js?v=20260908-1"></script>
@@ -7358,6 +7371,4 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-aba-rosters.js?v=20260910-1"></script>
 <script>esSetup();boot();</script>
 <script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=36"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260910-6"><script src="euroscout-live-notes.js?v=20260913-expansion"></script></body></html>
-
-
 
