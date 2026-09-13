@@ -1,4 +1,4 @@
-/* Official FEB regular-season enrichment. Current assignments and private records are untouched. */
+/* Official LNB Élite 2 regular-season enrichment and published 2026/27 club defaults. */
 (function(){
 function apply(raw){const pack=window.EUROSCOUT_ELITE2_DATA;if(!raw?.leagues||!pack)return;
 const directory=window.EUROSCOUT_CLUB_DIRECTORY||(window.EUROSCOUT_CLUB_DIRECTORY=[]);for(const t of pack.teams)if(!directory.some(v=>v.id===t.id))directory.push({...t});
