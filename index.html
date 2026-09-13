@@ -1730,8 +1730,8 @@ body.drawer-lock{overflow:hidden}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=24">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
-</head>
-<body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
+<script src="feb-data.js?v=20260913"></script><script src="euroscout-feb.js?v=20260913"></script></head>
+<body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=3Y7lXbDvH8pAG9lPBacTPclY0DT0LplrHz1eTf5OXUo-1789284776.9266841-1.2.1.1-x5DFik2ap6VDH42hUPVphw8tQy6FKPoLaH5riZbc2q_ycdpGCOE2dg20ikdH7sb." aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
     <div class="logo" id="homeLogo" title="Back to players" role="button" tabindex="0"><span class="mark"><svg viewBox="0 0 112 112" width="100%" height="100%" style="display:block" aria-hidden="true"><rect width="112" height="112" fill="#0F2C45"/><circle cx="56" cy="56" r="30" fill="none" stroke="#7FA8C9" stroke-width="5"/><g stroke="#7FA8C9" stroke-width="5" stroke-linecap="round"><line x1="56" y1="9" x2="56" y2="29"/><line x1="56" y1="83" x2="56" y2="103"/><line x1="9" y1="56" x2="29" y2="56"/><line x1="83" y1="56" x2="103" y2="56"/></g><circle cx="56" cy="56" r="16" fill="#EE7A3C"/><g fill="none" stroke="#0F2C45" stroke-width="3.2" stroke-linecap="round"><path d="M40 56H72"/><path d="M56 40V72"/><path d="M45 46q11 10 22 0"/><path d="M45 66q11 -10 22 0"/></g></svg></span><span class="logotext">Euro<b>Scout</b></span></div>
@@ -1766,7 +1766,7 @@ body.drawer-lock{overflow:hidden}
 <script src="euroscout-clubs.js?v=20260910-virtus"></script>
 <script src="euroscout-countries.js?v=20260907-13"></script>
 <script src="config.js"></script>
-<script src="euroscout-access.js?v=15.1"></script>
+<script src="euroscout-access.js?v=20260913-batch"></script>
 <!-- Manual overrides are loaded from the authorized snapshot. -->
 <script src="data/exhibitions.js"></script>
 <!-- Scouting seeds are loaded from the authorized snapshot. -->
@@ -1943,35 +1943,14 @@ function clubTokens(name){return normClub(name).split(" ").filter(w=>(w.length>=
 function tokEq(a,b){if(a===b)return true;const m=Math.min(a.length,b.length);return m>=5&&(a.slice(0,m)===b.slice(0,m));}
 const CLUB_ALIAS={"barca":"fc barcelona","partizan mozzart bet":"partizan belgrade","buducnost voli":"buducnost podgorica","kids us manresa":"baxi manresa","besiktas gain":"besiktas istanbul","bahcesehir koleji":"bahcesehir college","aek bc":"aek athens","petrolina aek":"petrolina aek larnaca"};
 function clubCanon(n){return CLUB_ALIAS[n]||n;}
+const VERIFIED_CLUB_PAIRS=new Set(["euroleague|OLY~gbl|OLY","acb|VBC~euroleague|PAM","acb|RMB~euroleague|MAD","bsl|FEN~euroleague|ULK","euroleague|ZAL~lkl|ZAL","euroleague|HTA~il|HTA","euroleague|PAN~gbl|PAO","euroleague|MCO~lnb|MON","acb|BAR~euroleague|BAR","aba|CZV~euroleague|RED","aba|DUB~euroleague|DUB","euroleague|TEL~il|MTA","bbl|FCB~euroleague|MUN","euroleague|MIL~lba|MIO","aba|PAR~euroleague|PAR","euroleague|PRS~lnb|PAB","euroleague|VIR~lba|BOV","acb|BKN~euroleague|BAS","bsl|EFS~euroleague|IST","euroleague|ASV~lnb|VIL","bsl|BJK~eurocup|BES","eurocup|BOU~lnb|BOU","aba|BUD~eurocup|BUD","bsl|TTK~eurocup|TTK","eurocup|TRN~lba|TN","bbl|CHE~eurocup|NIN","bbl|ULM~eurocup|ULM","eurocup|LKB~lkl|LIE","eurocup|NIO~gbl|PAN","eurocup|JER~il|JER","bsl|BAH~eurocup|BAH","aba|COL~eurocup|LJU","eurocup|LJU~slo|CED","eurocup|VNC~lba|VE","acb|MAN~eurocup|MAN","aba|CLU~eurocup|CLU","eurocup|CLU~rou|CLJ","eurocup|ARI~gbl|ARI","eurocup|KLA~lkl|NEP","eurocup|WRO~plk|WŚW","bbl|HAM~eurocup|HAM","aba|SPR~kls|SPARTAKOFFICESHOES","aba|COL~slo|CED","aba|CLU~rou|CLJ","aba|MEG~kls|MEGASUPERBET","aba|FMP~kls|FMP","aba|KRK~slo|KRK","aba|ILI~slo|PER","aba|VIE~autbsl|BCV","aba|BOR~kls|BORACMOZZART","bcl|AEK~gbl|AEK","cyp|PA~fec|PA"]);
 function sameClub(a,b){
-  if(a.directoryOnly||b.directoryOnly)return false;
-  if(a.lg===b.lg)return false;                       // never merge inside one competition
-  const na=clubCanon(normClub(a.name)), nb=clubCanon(normClub(b.name));
-  if(!na||!nb)return false;
-  // 26/27 new-entrant leagues are pre-checked standalone clubs, so by default they don't merge.
-  // EXCEPTION: a promoted/relocated club we already track (e.g. Široki moving ABA2 -> ABA) should
-  // merge with its existing entry — but ONLY on an exact / whole-word-containment name match,
-  // never on fuzzy token overlap, so genuinely new clubs (e.g. Slovan Bratislava) stay standalone.
-  if(a.lg==="n2627"||b.lg==="n2627"){
-    if(na===nb)return true;
-    const wa2=" "+na+" ", wb2=" "+nb+" ";
-    return wa2.includes(wb2)||wb2.includes(wa2);
-  }
-  if(na===nb)return true;
-  const wa=" "+na+" ", wb=" "+nb+" ";
-  if(wa.includes(wb)||wb.includes(wa))return true;   // whole-word containment only ("Aris" must not match "Paris")
-  // stop-word-stripped subset: "AEK BC" vs "AEK Athens" ("BC" is noise)
-  const sa=na.split(" ").filter(w=>w.length>=3&&!CLUB_STOP.has(w)), sb=nb.split(" ").filter(w=>w.length>=3&&!CLUB_STOP.has(w));
-  if(sa.length&&sb.length){
-    const inb=sa.every(w=>sb.includes(w)), ina=sb.every(w=>sa.includes(w));
-    if((inb&&sa.length<sb.length)||(ina&&sb.length<sa.length))return true;
-  }
-  const ta=clubTokens(na), tb=clubTokens(nb);
-  if(!ta.length||!tb.length)return false;
-  let shared=0;ta.forEach(x=>{if(tb.some(y=>tokEq(x,y)))shared++;});
-  if(!shared)return false;
-  const union=new Set([...ta,...tb]).size;
-  return shared/union>=0.34;
+ if(a.directoryOnly||b.directoryOnly)return false;
+ if(VERIFIED_CLUB_PAIRS.has([a.key,b.key].sort().join('~')))return true;
+ const country=x=>String(window.EuroScoutCountries?.canonical(x)||x||'').toLowerCase();
+ if(!a.country||!b.country||country(a.country)!==country(b.country))return false;
+ const names=t=>[t.name,...(t.searchAliases||[])].map(normClub).map(clubCanon).filter(Boolean);
+ return names(a).some(n=>names(b).includes(n));
 }
 function buildClubs(){
   const teams=DBTEAM_LIST;
@@ -1979,7 +1958,7 @@ function buildClubs(){
   const find=i=>{while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i];}return i;};
   const lgSet=teams.map(t=>new Set([t.lg]));   // a club can appear only once per competition
   const uni=(i,j)=>{const a=find(i),b=find(j);if(a===b)return;
-    for(const l of lgSet[b])if(lgSet[a].has(l))return;   // would duplicate a competition -> not the same club
+    /* Verified identity, including duplicate competition records. */   // would duplicate a competition -> not the same club
     parent[b]=a;lgSet[b].forEach(l=>lgSet[a].add(l));};
   const BROWSE=new Set(["nba","gleague","ncaam"]);
   const crossOK=(a,b)=>{const ab=BROWSE.has(a.lg),bb=BROWSE.has(b.lg);
@@ -2516,6 +2495,7 @@ function rebuildLinks(){
   // same (token-sorted) name links entries when birth years agree OR either side lacks one
   Object.values(byName).forEach(a=>{for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++){
     const A=byId[a[i]],B=byId[a[j]];
+    if((A._strictIdentity||B._strictIdentity)&&(!A.born||!B.born))continue;
     const years=new Set(a.map(id=>byId[id].born).filter(Boolean));
     if((A.born&&B.born&&A.born===B.born)||((!A.born||!B.born)&&years.size<=1))uni(a[i],a[j]);}});
   // nickname variants: same surname + same birth year + first name is a prefix of the other
@@ -2524,10 +2504,12 @@ function rebuildLinks(){
   all.forEach(p=>{if(!p.born||!nameMergeable(p))return;const t=normName(p.name).split(" ").filter(Boolean);
     if(t.length<2)return;const k=t[t.length-1]+"|"+p.born;(bucket[k]=bucket[k]||[]).push(p);});
   Object.values(bucket).forEach(arr=>{for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){
+    if(arr[i]._strictIdentity||arr[j]._strictIdentity)continue;
     const a=normName(arr[i].name).split(" ")[0], b=normName(arr[j].name).split(" ")[0];
     const m=Math.min(a.length,b.length);
     if(m>=3&&a.slice(0,m)===b.slice(0,m))uni(arr[i].id,arr[j].id);}});
   window.EuroScoutABA?.link(uni);
+  window.EuroScoutFEB?.link(uni);
   (OVR.links||[]).forEach(pr=>uni(pr[0],pr[1]));
   const groups={}; all.forEach(p=>{const r=find(p.id);(groups[r]=groups[r]||[]).push(p);});
   Object.values(groups).forEach(g=>{if(g.length>8)g.forEach(x=>{x._solo=true;});});   // guard against bad links
@@ -2900,11 +2882,13 @@ async function boot(){
   const raw=await rawPromise;
   for(const L of raw?.leagues||[])for(const p of L.players||[])if(p.img&&!isPlayerPhoto(p.img))p.img=null;
   window.EuroScoutABA?.apply(raw);
+  window.EuroScoutFEB?.apply(raw);
   if(window.ESAccess&&!ESAccess.internal){ESAccess.external(raw);return;}
   if(!raw){ $("#app").innerHTML='<div class="empty">Could not load data. Make sure '+
     '<code>data/data.json</code> (or <code>data/data.js</code>) is present — see README.</div>'; return; }
   if(window.ESAccess?.internal)Object.assign(raw,ESAccess.state.core||{});
   window.EuroScoutABA?.apply(raw);
+  window.EuroScoutFEB?.apply(raw);
   STATE.data = raw;
   injectExhibitions(raw);
   raw.leagues.forEach(L=>L.players.forEach(p=>{
@@ -4626,6 +4610,7 @@ async function applyImportedData(){
   if(items.length){ const n=await Store.bulkSet(items);
     try{toast("Imported "+n+" rating"+(n===1?"":"s")+" & notes from Notion \u2014 saved to your account");}catch(e){} }
 }
+function externalProfileProvider(url){try{const h=new URL(url).hostname.toLowerCase();for(const [domain,label] of [['eurobasket.com','Eurobasket'],['usbasket.com','USBasket'],['asia-basket.com','Asia-Basket'],['latinbasket.com','Latinbasket'],['afrobasket.com','AfroBasket'],['australiabasket.com','AustraliaBasket']])if(h===domain||h.endsWith('.'+domain))return label;}catch{}return 'Profile link';}
 function eurobasketURL(p){
   const direct=(window.EUROSCOUT_EBLINKS||{})[ebKey(p)];   // exact player page imported from Notion
   if(direct)return direct;
@@ -5312,7 +5297,7 @@ function renderProfile(){
               <button class="btn ghost sm" onclick="copyPlayerLink('${p.id}',this)" title="Copy a shareable link to this player">🔗 Copy link</button>
               <button class="btn ghost sm" onclick="exportPlayerReport('${p.id}')" title="Open a printable one-page report (Save as PDF or print)">🖨 Report</button>
               <a class="btn ghost sm" href="${eurobasketURL(p)}" target="_blank" rel="noopener" title="Find this player on Eurobasket.com">↗ Eurobasket</a>
-              ${(p._ext&&!/eurobasket\.com/i.test(p._ext))?`<a class="btn ghost sm" href="${p._ext}" target="_blank" rel="noopener">↗ Profile link</a>`:''}
+              ${(p._ext&&!/eurobasket\.com/i.test(p._ext))?`<a class="btn ghost sm" href="${p._ext}" target="_blank" rel="noopener">↗ ${esc(externalProfileProvider(p._ext))}</a>`:''}
             </div>
           </div>
           <div class="ph-rating">
@@ -7355,7 +7340,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-workflow.js?v=20260910-3"></script>
 
 <script src="euroscout-market-records.js?v=16"></script>
-<script src="euroscout-market.js?v=20260910-photos"></script>
+<script src="euroscout-market.js?v=20260913-batch"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
 <script src="data/agency-research.js?v=20260907-13"></script>
@@ -7365,4 +7350,4 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/aba-rosters-2026.js?v=20260910-1"></script>
 <script src="euroscout-aba-rosters.js?v=20260910-1"></script>
 <script>esSetup();boot();</script>
-<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=36"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260910-6"><script src="euroscout-live-notes.js?v=20260910-6"></script></body></html>
+<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=36"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260910-6"><script src="euroscout-live-notes.js?v=20260910-6"></script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3a575ffc8bc5ba3',t:'MTc4OTI4NDc3Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body></html>
