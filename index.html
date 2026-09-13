@@ -1730,7 +1730,7 @@ body.drawer-lock{overflow:hidden}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260913-search">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
-<script src="feb-data.js?v=20260913"></script><script src="euroscout-feb.js?v=20260913"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script></head>
+<script src="feb-data.js?v=20260913"></script><script src="euroscout-feb.js?v=20260913"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=3Y7lXbDvH8pAG9lPBacTPclY0DT0LplrHz1eTf5OXUo-1789284776.9266841-1.2.1.1-x5DFik2ap6VDH42hUPVphw8tQy6FKPoLaH5riZbc2q_ycdpGCOE2dg20ikdH7sb." aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -1876,7 +1876,7 @@ function next26Set(m){try{localStorage.setItem(NEXT26_KEY,JSON.stringify(m));}ca
   try{Sync.stampKey(NEXT26_KEY);}catch(e){} try{Store.pushAppKey(NEXT26_KEY);}catch(e){}}
 function effective26(p,m){m=m||next26Get();
   const k=m[gid(p)]||m[p.id]||((p._grp||[]).map(x=>m[x.id]).find(Boolean));
-  const registered=window.EuroScoutABA?.key(p)||window.EuroScoutElite2?.key(p);
+  const registered=window.EuroScoutABA?.key(p)||window.EuroScoutElite2?.key(p)||window.EuroScoutNCAA?.key(p);
   const automated=autoAppliedGet(),ids=[gid(p),p.id,...(p._grp||[]).map(x=>x.id)];
   if(registered&&k&&ids.some(id=>automated[id]))return registered;
   return k?canonKey(k):(registered||null);}   // keyed per person, so it is shared across every competition he plays
@@ -5315,6 +5315,7 @@ function renderProfile(){
           </div>
           ${levelBarometerHTML(p)}
         </div>
+        ${window.EuroScoutNCAA?.profileHTML(p)||""}
         ${(p._grp&&p._grp.length>1)?`<div class="comptabs ph-comps"><span class="hint" style="align-self:center;margin-right:2px">Competitions:</span>${p._grp.map(c=>`<button class="comptab ${c.id===p.id?'active':''}" onclick="switchComp('${c.league}','${c.id}')" title="${leagueOf(c).meta.name} · ${c.teamName}">${leagueOf(c).meta.name}</button>`).join('')}</div>`:''}
       </div>
     </div>
@@ -5984,9 +5985,11 @@ async function loadExtraPack(label){
     try{ pack=await (await fetch(st.f,{cache:"no-cache"})).json(); }
     catch(e){ pack=(window.EUROSCOUT_EXTRA&&window.EUROSCOUT_EXTRA[st.label])||null; }
     if(!pack||!pack.leagues||!pack.leagues.length)throw Error("Could not load "+st.label+" players. Try again.");
+    if(label==="ncaa"&&window.EuroScoutNCAA)await EuroScoutNCAA.enrich(pack);
     // add any leagues not already present
     const have=new Set(STATE.data.leagues.map(L=>L.meta.id));
     if(window.EuroScoutABA){EuroScoutABA.merge(STATE.data,pack.leagues);EuroScoutABA.apply(STATE.data);}else pack.leagues.forEach(L=>{if(!have.has(L.meta.id))STATE.data.leagues.push(L);});
+    window.EuroScoutNCAA?.apply(STATE.data);
     // derived per-player fields the core boot computes (astto etc.) for the new leagues
     pack.leagues.forEach(L=>L.players.forEach(p=>{
       if(p.astto==null)p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);
@@ -6039,6 +6042,7 @@ function exhibMatch(p){ if(!p||p.league==="sl")return null; const nn=normName(p.
 
 function otherLeagues(){return STATE.data.leagues.filter(L=>isOtherLeague(L.meta));}
 function renderExhib(){
+  if(STATE.oth?.lg==="ncaam"&&window.EuroScoutNCAA?.ready()){EuroScoutNCAA.render();return;}
   if(!STATE._extraDone)loadExtraLeagues().catch(e=>toast(e.message));
   const others=otherLeagues();
   if(!others.length){
@@ -7354,3 +7358,4 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-aba-rosters.js?v=20260910-1"></script>
 <script>esSetup();boot();</script>
 <script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=36"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260910-6"><script src="euroscout-live-notes.js?v=20260910-6"></script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3a575ffc8bc5ba3',t:'MTc4OTI4NDc3Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body></html>
+
