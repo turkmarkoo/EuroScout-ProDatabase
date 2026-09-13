@@ -1730,7 +1730,10 @@ body.drawer-lock{overflow:hidden}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260913-search">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
-<script src="feb-data.js?v=20260913"></script><script src="euroscout-feb.js?v=20260913"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script></head>
+<script src="feb-data.js?v=20260913"></script><script src="euroscout-feb.js?v=20260913"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="membership-data.js?v=20260913-entries"></script>
+<script src="euroscout-memberships.js?v=20260913-entries"></script>
+<style>.membership-review{margin:12px 0 18px;padding:12px 16px;background:var(--card,#fff);border:1px solid var(--border,#d9e3df);border-radius:12px;color:var(--text,#193442);font-size:13px}.membership-review details{margin-top:8px}.membership-review summary{cursor:pointer}.membership-review-row{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 0;align-items:baseline}.membership-review-row>span{flex:1 1 250px}.membership-review-row>a{white-space:nowrap}.membership-review details[open]{max-height:340px;overflow:auto}.rbFilters>select{min-width:min(320px,100%);max-width:100%;height:auto;min-height:44px;padding:10px 36px 10px 12px}</style>
+</head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=3Y7lXbDvH8pAG9lPBacTPclY0DT0LplrHz1eTf5OXUo-1789284776.9266841-1.2.1.1-x5DFik2ap6VDH42hUPVphw8tQy6FKPoLaH5riZbc2q_ycdpGCOE2dg20ikdH7sb." aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -1933,7 +1936,7 @@ function showsTeams(m){return !!(m&&!m.exhibition&&(
 // stat-scope leagues: the ones that belong in stats filters/percentiles (never the browse-only ones)
 function isStatLeague(m){return !!(m&&!isOtherLeague(m)&&!m.teamsOnly);}
 function allDbTeams(){if(DBTEAM_LIST)return DBTEAM_LIST;const out=[];(STATE.data.leagues||[]).forEach(L=>{if(!showsTeams(L.meta))return;(L.teams||[]).forEach(t=>out.push({key:L.meta.id+"|"+t.code,name:t.name,city:t.city||"",country:t.country||"",lg:L.meta.id,lgName:L.meta.name,conf:t.conference||null,code:t.code,logo:t.logo||null}));});EuroScoutClubs.extend(out);
-  DBTEAM_LIST=out;DBTEAM_BYKEY=new Map(out.map(t=>[t.key,t]));buildClubs();EuroScoutClubs.linkAliases(DBTEAM_BYKEY,CLUB_BY_TEAMKEY);return out;}
+  DBTEAM_LIST=out;DBTEAM_BYKEY=new Map(out.map(t=>[t.key,t]));buildClubs();EuroScoutClubs.linkAliases(DBTEAM_BYKEY,CLUB_BY_TEAMKEY);window.EuroScoutMemberships?.decorate(CLUBS,CLUB_BY_TEAMKEY);DOM27=null;NEXTCOMP=null;return out;}
 
 /* ---------- clubs: one entry per real club, tagged with every competition it plays ---------- */
 let CLUBS=null, CLUB_BY_TEAMKEY=null;
@@ -1944,6 +1947,7 @@ function tokEq(a,b){if(a===b)return true;const m=Math.min(a.length,b.length);ret
 const CLUB_ALIAS={"barca":"fc barcelona","partizan mozzart bet":"partizan belgrade","buducnost voli":"buducnost podgorica","kids us manresa":"baxi manresa","besiktas gain":"besiktas istanbul","bahcesehir koleji":"bahcesehir college","aek bc":"aek athens","petrolina aek":"petrolina aek larnaca"};
 function clubCanon(n){return CLUB_ALIAS[n]||n;}
 const VERIFIED_CLUB_PAIRS=new Set(["euroleague|OLY~gbl|OLY","acb|VBC~euroleague|PAM","acb|RMB~euroleague|MAD","bsl|FEN~euroleague|ULK","euroleague|ZAL~lkl|ZAL","euroleague|HTA~il|HTA","euroleague|PAN~gbl|PAO","euroleague|MCO~lnb|MON","acb|BAR~euroleague|BAR","aba|CZV~euroleague|RED","aba|DUB~euroleague|DUB","euroleague|TEL~il|MTA","bbl|FCB~euroleague|MUN","euroleague|MIL~lba|MIO","aba|PAR~euroleague|PAR","euroleague|PRS~lnb|PAB","euroleague|VIR~lba|BOV","acb|BKN~euroleague|BAS","bsl|EFS~euroleague|IST","euroleague|ASV~lnb|VIL","bsl|BJK~eurocup|BES","eurocup|BOU~lnb|BOU","aba|BUD~eurocup|BUD","bsl|TTK~eurocup|TTK","eurocup|TRN~lba|TN","bbl|CHE~eurocup|NIN","bbl|ULM~eurocup|ULM","eurocup|LKB~lkl|LIE","eurocup|NIO~gbl|PAN","eurocup|JER~il|JER","bsl|BAH~eurocup|BAH","aba|COL~eurocup|LJU","eurocup|LJU~slo|CED","eurocup|VNC~lba|VE","acb|MAN~eurocup|MAN","aba|CLU~eurocup|CLU","eurocup|CLU~rou|CLJ","eurocup|ARI~gbl|ARI","eurocup|KLA~lkl|NEP","eurocup|WRO~plk|WŚW","bbl|HAM~eurocup|HAM","aba|SPR~kls|SPARTAKOFFICESHOES","aba|COL~slo|CED","aba|CLU~rou|CLJ","aba|MEG~kls|MEGASUPERBET","aba|FMP~kls|FMP","aba|KRK~slo|KRK","aba|ILI~slo|PER","aba|VIE~autbsl|BCV","aba|BOR~kls|BORACMOZZART","bcl|AEK~gbl|AEK","cyp|PA~fec|PA"]);
+for(const pair of window.EUROSCOUT_MEMBERSHIPS?.identityPairs||[])VERIFIED_CLUB_PAIRS.add([...pair].sort().join('~'));
 function sameClub(a,b){
  if(a.directoryOnly||b.directoryOnly)return false;
  if(VERIFIED_CLUB_PAIRS.has([a.key,b.key].sort().join('~')))return true;
@@ -1994,7 +1998,7 @@ function nextCompMap(){
     NEXTCOMP.get(ck).push({id,name:c.name,stage:t.stage||null});});});
   return NEXTCOMP;
 }
-const EURO_COMPS=new Set(["euroleague","eurocup","bcl"]);
+const EURO_COMPS=new Set(["euroleague","eurocup","bcl","fec","enbl"]);
 let DOM27=null;
 /* confirmed 2026/27 domestic fields (promotions + relegations). Leagues not yet
    verified fall back to this season's membership and are flagged provisional. */
@@ -2007,32 +2011,20 @@ function dom27Map(){
     const club=CLUB_BY_TEAMKEY?CLUB_BY_TEAMKEY.get(t.key):null;
     const ck=club?club.key:t.key;
     if(!DOM27.has(ck))DOM27.set(ck,[]);
-    DOM27.get(ck).push({id:lg,name:c.name});});});
+    DOM27.get(ck).push({id:lg,name:c.name,provisional:!c.confirmed,stage:t.stage||null});});});
   return DOM27;
 }
-function dom27Confirmed(lgId){const S=(STATE.data||{}).domestic2627;return !!(S&&S.leagues&&S.leagues[lgId]);}
-function domCompsOf(club){
-  if(!club)return [];
-  if(!CLUBS)allDbTeams();
-  const confirmed=dom27Map().get(club.key)||[];
-  const CLUBSONLY=new Set(((STATE.data||{}).leagues||[]).filter(L=>L.meta.teamsOnly).map(L=>L.meta.id));
-  const carried=(club.leagues||[]).filter(l=>!EURO_COMPS.has(l.id)&&l.id!=="n2627"&&!dom27Confirmed(l.id))
-    // college and similar clubs-only competitions have no promotion/relegation to verify
-    .map(l=>({id:l.id,name:l.name,provisional:!CLUBSONLY.has(l.id)}));
-  return confirmed.concat(carried);
-}
-/* what the club actually plays in 2026/27: its domestic league(s) carry over,
-   but the European entry is taken from next season’s confirmed lists, not last season’s */
+function dom27Confirmed(lgId){const c=STATE.data?.domestic2627?.leagues?.[lgId];return !!(c?.confirmed&&c?.complete);}
+function domCompsOf(club){if(!club)return [];if(!CLUBS)allDbTeams();return dom27Map().get(club.key)||[];}
+// Current entries never fall back to historical stats membership.
 function comps2627Label(club){
   const dom=domCompsOf(club).map(l=>l.name+(l.provisional?"*":""));
-  const eu=nextCompsOf(club).map(c=>c.name);
+  const eu=nextCompsOf(club).map(c=>c.name+(c.stage==="Q"?" (qualifying)":c.stage==="conditional"?" (conditional)":""));
   const all=dom.concat(eu);
-  return all.length?all.join(" \u00b7 "):"\u2014";
+  return all.length?all.join(" \u00b7 "):"Current league unverified";
 }
 function nextCompsOf(club){if(!club)return [];if(!CLUBS)allDbTeams();return nextCompMap().get(club.key)||[];}
-function nextCompBadges(club){const cs=nextCompsOf(club);if(!cs.length)return "";
-  const AB={euroleague:"EL",eurocup:"EC",bcl:"BCL"};
-  return cs.map(c=>`<span class="n27tag ${esc(c.id)}" title="${esc(c.name)} 2026/27${c.stage==="Q"?" \u2014 qualifying rounds":""}">${esc(AB[c.id]||c.name)}${c.stage==="Q"?"<i>Q</i>":""}</span>`).join("");}
+function nextCompBadges(club){return nextCompsOf(club).map(c=>{const stage=c.stage==='Q'?' · Q':c.stage==='conditional'?' · Conditional':'';return '<span class="n27tag '+esc(c.id)+'" title="'+escAttr(c.name+' 2026/27'+stage)+'">'+esc(({euroleague:'EL',eurocup:'EC',bcl:'BCL',fec:'FEC',enbl:'ENBL'})[c.id]||c.name)+esc(stage)+'</span>';}).join('');}
 function clubLogo(c){if(!c)return null;
   if(c.logo)return c.logo;
   const t=(c.teams||[]).find(x=>x.logo); if(t)return t.logo;
@@ -2049,7 +2041,7 @@ function next26CellHTML(p){const k=effective26(p);
   const c=k?clubByKey(k):null;
   const bk=effective26b(p);const bc=bk?clubByKey(bk):null;
   const twoWayLine=bc?`<div class="bisub biTwoway">\u21c4 Two-way \u00b7 ${esc(bc.name)}</div>`:"";
-  if(c)return `<b>${esc(c.name)}</b><div class="bisub">${(c.leagues||[]).map(l=>esc(l.name)).join(" \u00b7 ")}</div>${twoWayLine}<span class="bioadd n26edit" onclick="event.stopPropagation();openTeamPickerProfile('${p.id}')" title="Change 26/27 team"><span class="bioaddhint">change</span></span>`;
+  if(c)return `<b>${esc(c.name)}</b><div class="bisub">${esc(comps2627Label(c))}</div>${twoWayLine}<span class="bioadd n26edit" onclick="event.stopPropagation();openTeamPickerProfile('${p.id}')" title="Change 26/27 team"><span class="bioaddhint">change</span></span>`;
   return `<span class="bioadd n26fa" onclick="event.stopPropagation();openTeamPickerProfile('${p.id}')" title="Assign a 26/27 team"><b>Free agent</b> <span class="bioaddhint">sign</span></span>`;}
 /* ---------- transfer approval inbox (review only, never auto-commit) ---------- */
 const TR_HANDLED_KEY="euroscout:trHandled:v1";
@@ -2885,6 +2877,7 @@ async function boot(){
   window.EuroScoutABA?.apply(raw);
   window.EuroScoutFEB?.apply(raw);
   window.EuroScoutElite2?.apply(raw);
+  window.EuroScoutMemberships?.apply(raw);
   if(window.ESAccess&&!ESAccess.internal){ESAccess.external(raw);return;}
   if(!raw){ $("#app").innerHTML='<div class="empty">Could not load data. Make sure '+
     '<code>data/data.json</code> (or <code>data/data.js</code>) is present — see README.</div>'; return; }
@@ -2892,6 +2885,7 @@ async function boot(){
   window.EuroScoutABA?.apply(raw);
   window.EuroScoutFEB?.apply(raw);
   window.EuroScoutElite2?.apply(raw);
+  window.EuroScoutMemberships?.apply(raw);
   STATE.data = raw;
   injectExhibitions(raw);
   raw.leagues.forEach(L=>L.players.forEach(p=>{
@@ -4702,18 +4696,18 @@ function openTeamPicker(pid,onDone){const p=player(pid);if(!p)return;
       const twList=teams.filter(t=>clubLeaguesOf(t.key).includes(want)&&(!qn||normClub(t.name).includes(qn)));
       listEl.innerHTML=`<button class="tpItem tpFa" data-tw="back">\u2190 Back to main club</button>`+
         (curB?`<button class="tpItem tpFa" data-tw="">\u2715 Remove two-way club</button>`:"")+
-        (twList.length?twList.slice(0,300).map(t=>`<button class="tpItem${curB===t.key?" cur":""}" data-tw="${escAttr(t.key)}">${clubBadge(t,18)}<span class="tpName">${esc(t.name)}</span><span class="tpLg">${t.leagues.map(l=>esc(l.name)).join(" \u00b7 ")}</span></button>`).join(""):`<div class="tpNone">No ${want==="nba"?"NBA":"G League"} club matches "${esc(q)}".</div>`);
+        (twList.length?twList.slice(0,300).map(t=>`<button class="tpItem${curB===t.key?" cur":""}" data-tw="${escAttr(t.key)}">${clubBadge(t,18)}<span class="tpName">${esc(t.name)}</span><span class="tpLg">${esc(comps2627Label(t))}</span></button>`).join(""):`<div class="tpNone">No ${want==="nba"?"NBA":"G League"} club matches "${esc(q)}".</div>`);
       listEl.querySelectorAll("[data-tw]").forEach(b=>b.onclick=()=>{
         const v=b.dataset.tw;
         if(v==="back"){mode="primary";render(si?si.value:"");return;}
         set26b(pid,v);closeTeamPicker();if(onDone)onDone(effective26(p));else reRenderTeams();});
       return;
     }
-    const filt=qn?teams.filter(t=>normClub(t.name+" "+t.teams.flatMap(x=>x.searchAliases||[]).join(" ")).includes(qn)||t.teams.some(x=>normClub(x.city).includes(qn))||t.leagues.some(l=>normClub(l.name).includes(qn))):teams;
+    const filt=qn?teams.filter(t=>normClub(t.name+" "+t.teams.flatMap(x=>x.searchAliases||[]).join(" ")).includes(qn)||t.teams.some(x=>normClub(x.city).includes(qn))||normClub(comps2627Label(t)).includes(qn)):teams;
     listEl.innerHTML=(cur?`<button class="tpItem tpFa" data-tk="">\u2190 Clear assignment (unknown)</button>`:"")+
       `<button class="tpItem tpFa" data-tk="${STATUS_FREE}">Mark as free agent</button><button class="tpItem tpRet${cur===STATUS_RETIRED?" cur":""}" data-tk="${STATUS_RETIRED}">\u23f9 Mark as retired</button>`+
       (twoWayEligible()?`<button class="tpItem tpTwoway" data-tw="open">${curB?`\u21c4 Two-way: ${esc((clubByKey(curB)||{}).name||"")} \u2014 change`:`\u21c4 Add two-way club (${twoWayWant()==="nba"?"NBA":"G League"})`}</button>`:"")+
-      (filt.length?filt.slice(0,300).map(t=>`<button class="tpItem${cur===t.key?" cur":""}" data-tk="${escAttr(t.key)}">${clubBadge(t,18)}<span class="tpName">${esc(t.name)}</span><span class="tpLg">${t.leagues.map(l=>esc(l.name)).join(" \u00b7 ")}${(t.teams&&t.teams[0]&&t.teams[0].conf)?" \u00b7 "+esc(t.teams[0].conf):""}</span>${nextCompBadges(t)}</button>`).join(""):`<div class="tpNone">No club matches "${esc(q)}".</div>`);
+      (filt.length?filt.slice(0,300).map(t=>`<button class="tpItem${cur===t.key?" cur":""}" data-tk="${escAttr(t.key)}">${clubBadge(t,18)}<span class="tpName">${esc(t.name)}</span><span class="tpLg">${esc(comps2627Label(t))}${(t.teams&&t.teams[0]&&t.teams[0].conf)?" \u00b7 "+esc(t.teams[0].conf):""}</span>${nextCompBadges(t)}</button>`).join(""):`<div class="tpNone">No club matches "${esc(q)}".</div>`);
     listEl.querySelectorAll("[data-tk]").forEach(b=>b.onclick=()=>{set26(pid,b.dataset.tk);closeTeamPicker();if(onDone)onDone(b.dataset.tk);else reRenderTeams();});
     listEl.querySelectorAll("[data-tw='open']").forEach(b=>b.onclick=()=>{mode="twoway";render("");});};
   render("");
@@ -4862,8 +4856,8 @@ function renderTeamsNext(){
   const lgs=[...new Set(allDbTeams().map(t=>t.lgName))];
   const S=(STATE.data||{}).season2627, nextLgs=S&&S.comps?Object.entries(S.comps).map(([id,c])=>({id,name:c.name})):[];
   // domestic leagues continue into 26/27; the European field comes from the confirmed entry lists
-  const domLgs=(STATE.data.leagues||[]).filter(L=>!L.meta.exhibition&&!L.meta.teamsOnly&&!EURO_COMPS.has(L.meta.id))
-    .map(L=>({id:L.meta.id,name:L.meta.name}));
+  const loaded=new Set((STATE.data.leagues||[]).map(L=>L.meta.id));
+  const domLgs=Object.values(STATE.data.domestic2627?.leagues||{}).filter(l=>loaded.has(l.id)).map(l=>({id:l.id,name:l.name}));
   const lgSel=STATE.next26Lg||"",q=normClub(STATE.next26Q||"");
   const isNext=lgSel.startsWith("n27:"), nextId=isNext?lgSel.slice(4):"";
   let show=clubs.filter(c=>(isNext?nextCompsOf(c).some(x=>x.id===nextId)
@@ -4879,14 +4873,15 @@ function renderTeamsNext(){
       <select id="rbLg"><option value="">All leagues</option>
         ${nextLgs.length?`<optgroup label="European 2026/27">${nextLgs.map(l=>`<option value="n27:${escAttr(l.id)}"${lgSel==="n27:"+l.id?" selected":""}>${esc(l.name)}</option>`).join("")}</optgroup>`:""}
         <optgroup label="Domestic 2026/27">${domLgs.map(l=>`<option value="${escAttr(l.name)}"${l.name===lgSel?" selected":""}>${esc(l.name)}${dom27Confirmed(l.id)?"":" *"}</option>`).join("")}</optgroup></select>
-      ${domLgs.some(l=>!dom27Confirmed(l.id))?`<span class="hint" style="align-self:center">* promotions/relegations not yet verified \u2014 showing 2025/26 membership</span>`:""}
+      ${domLgs.some(l=>!dom27Confirmed(l.id))?`<span class="hint" style="align-self:center">* provisional or awaiting a verified entry list</span>`:""}
       <input id="rbClubQ" placeholder="Search club\u2026" value="${escAttr(STATE.next26Q||"")}" autocomplete="off"/>
     </div>
+    ${window.EuroScoutMemberships?.reviewHTML(STATE.data,lgSel)||""}
     ${show.length?`<div class="tmGrid">${show.map(c=>{const n=(byTeam.get(c.key)||[]).length;
       return `<button class="tmCard" data-club="${escAttr(c.key)}">
         ${clubBadge(c,20)}<span class="tmName">${esc(c.name)}</span>
         <span class="tmMeta"><span class="tmLg">${c.leagues.map(l=>leagueFlag(l.id)).join("")} ${esc(comps2627Label(c))}</span><span class="n27wrap">${nextCompBadges(c)}</span><span class="tmN${n?"":" zero"}">${n}</span></span>
-      </button>`;}).join("")}</div>`:`<div class="empty" style="margin-top:16px">No clubs match.</div>`}
+      </button>`;}).join("")}</div>`:`<div class="empty" style="margin-top:16px">No verified clubs match. If this league’s entries are not published yet, use the previous-season view for historical teams.</div>`}
   </div>`;
   wireRosterCommon(); wireTransferInbox();
   $$(".tmCard[data-club]").forEach(b=>b.onclick=()=>{STATE.nextTeam=b.dataset.club;renderTeams();try{window.scrollTo(0,0);}catch(e){}});
@@ -4907,7 +4902,7 @@ function renderNextRoster(club){
   const whereFrom=p=>`<span class="cmpTo from">${esc(p.teamName||"\u2014")}</span>`;
   $("#app").innerHTML=`<div class="view">
     <button class="btn ghost" id="nextBack">\u2190 All clubs</button>
-    <h1 class="title" style="margin-top:10px">${esc(club.name)} <span class="rbClubLg">${club.leagues.map(l=>leagueFlag(l.id)).join("")} ${esc(club.leagues.map(l=>l.name).join(" \u00b7 "))}</span></h1>
+    <h1 class="title" style="margin-top:10px">${esc(club.name)} <span class="rbClubLg">${club.leagues.map(l=>leagueFlag(l.id)).join("")} ${esc(comps2627Label(club))}</span></h1>
     <div class="sub" style="margin-bottom:14px">Compare this season\u2019s squad with the 2026/27 roster you\u2019re building.</div>
     <div class="cmpWrap">
       <div class="cmpCol"><div class="cmpHead">2025/26 <span class="cmpN">${now.length}</span></div>
@@ -5990,11 +5985,12 @@ async function loadExtraPack(label){
     const have=new Set(STATE.data.leagues.map(L=>L.meta.id));
     if(window.EuroScoutABA){EuroScoutABA.merge(STATE.data,pack.leagues);EuroScoutABA.apply(STATE.data);}else pack.leagues.forEach(L=>{if(!have.has(L.meta.id))STATE.data.leagues.push(L);});
     window.EuroScoutNCAA?.apply(STATE.data);
+    window.EuroScoutMemberships?.apply(STATE.data);
     // derived per-player fields the core boot computes (astto etc.) for the new leagues
     pack.leagues.forEach(L=>L.players.forEach(p=>{
       if(p.astto==null)p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);
     }));
-    DBTEAM_LIST=null; DBTEAM_BYKEY=null; CLUBS=null; CLUB_BY_TEAMKEY=null;   // invalidate club caches
+    DBTEAM_LIST=null; DBTEAM_BYKEY=null; CLUBS=null; CLUB_BY_TEAMKEY=null; DOM27=null; NEXTCOMP=null;   // invalidate club caches
     PLAYER_BY_NAME=null;   // invalidate transfer name index so NBA/GL/NCAA players become resolvable
     applyOverrides(); rebuildLinks();
     try{ mergeGroupRecords(); }catch(e){}
@@ -7069,7 +7065,7 @@ function renderCurClubRoster(club){
   const head=`<tr><th>Player</th><th>Pos</th><th>Nat</th><th class="num">Ht</th><th class="num">Age</th><th>Stats from</th><th class="num">GP</th><th class="num">PPG</th><th class="num">RPG</th><th class="num">APG</th><th class="num">Score</th></tr>`;
   $("#app").innerHTML=`<div class="view">
     <button class="btn ghost" id="curBack">\u2190 All teams</button>
-    <h1 class="title" style="margin-top:10px">${logo?`<span class="clubBadge" style="--bs:30px;vertical-align:middle"><img src="${logo}" onerror="this.parentNode.remove()"/></span>`:""}${esc(club.name)} <span class="rbClubLg">${club.leagues.map(l=>leagueFlag(l.id)).join("")} ${esc(club.leagues.map(l=>l.name).join(" \u00b7 "))}</span></h1>
+    <h1 class="title" style="margin-top:10px">${logo?`<span class="clubBadge" style="--bs:30px;vertical-align:middle"><img src="${logo}" onerror="this.parentNode.remove()"/></span>`:""}${esc(club.name)} <span class="rbClubLg">${club.leagues.map(l=>leagueFlag(l.id)).join("")} ${esc(comps2627Label(club))}</span></h1>
     <div class="sub" style="margin-bottom:14px">2025/26 squad across every competition \u00b7 ${roster.length} player${roster.length===1?"":"s"}</div>
     ${roster.length?`<div class="agtableWrap"><table class="agtable rbtable">${cols}<thead>${head}</thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No players recorded for this club.</div>`}
   </div>`;
@@ -7357,5 +7353,6 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/aba-rosters-2026.js?v=20260910-1"></script>
 <script src="euroscout-aba-rosters.js?v=20260910-1"></script>
 <script>esSetup();boot();</script>
-<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=36"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260910-6"><script src="euroscout-live-notes.js?v=20260910-6"></script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3a575ffc8bc5ba3',t:'MTc4OTI4NDc3Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body></html>
+<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=36"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260910-6"><script src="euroscout-live-notes.js?v=20260910-6"></script></body></html>
+
 
