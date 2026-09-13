@@ -22,8 +22,8 @@
     let newer=false;TRANSFERS.forEach(t=>{if(normNm(t.player)===normNm(r.player)&&t.date>r.date)newer=true;});if(newer)return null;
     // An explicit rejection, including the original feed item, always wins.
     const handled=trHandledGet();if(rejected(r))return null;
-    let rejected=false;TRANSFERS.forEach(t=>{if(handled[t.id]==='rejected'&&normNm(t.player)===normNm(r.player))rejected=true;});
-    if(rejected)return null;
+    let hasRejectedMove=false;TRANSFERS.forEach(t=>{if(handled[t.id]==='rejected'&&normNm(t.player)===normNm(r.player))hasRejectedMove=true;});
+    if(hasRejectedMove)return null;
     const club=dbTeamForClub(r.to);return club?canonKey(club.key):null;
   }
   function repair(){
