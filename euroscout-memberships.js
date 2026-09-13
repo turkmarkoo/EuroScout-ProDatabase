@@ -7,7 +7,7 @@
     for(const club of data.clubs||[])if(!directory.some(t=>t.id===club.id))directory.push(copy(club));
     raw.domestic2627={season:data.season,checked:data.checked,leagues:{}};
     raw.season2627={...(raw.season2627||{}),season:data.season,checked:data.checked,comps:{}};
-    for(const [id,league] of Object.entries(data.leagues)){
+    for(const [id,league] of Object.entries({...data.leagues,...(window.EUROSCOUT_EXPANSION_DATA?.memberships||{})})){
       (league.international?raw.season2627.comps:raw.domestic2627.leagues)[id]=copy(league);
     }
   }
@@ -16,6 +16,11 @@
       const club=byKey.get(key);if(!club)continue;
       club.name=name;
       for(const team of club.teams)team.searchAliases=[...new Set([...(team.searchAliases||[]),name])];
+    }
+    for(const league of Object.values(window.EUROSCOUT_EXPANSION_DATA?.memberships||{}))if(league.confirmed)for(const team of league.teams||[]){
+      const club=byKey.get(team.key);if(!club)continue;
+      for(const t of club.teams)t.searchAliases=[...new Set([...(t.searchAliases||[]),club.name,team.name])];
+      club.name=team.name;
     }
     clubs.sort((a,b)=>a.name.localeCompare(b.name));
   }

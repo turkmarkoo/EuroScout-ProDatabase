@@ -10,7 +10,7 @@ function drafts(){try{return JSON.parse(localStorage.getItem(draftKey())||'{}')}
 function draft(p,value){const d=drafts(),k=gid(p)+'|'+category;if(value===undefined)return d[k]||'';d[k]=value;try{localStorage.setItem(draftKey(),JSON.stringify(d))}catch{status='Draft could not be stored on this device.'}}
 let clubIndex=null,rosters=new Map(),columns=new Map();
 function numberKey(p){return '2026/27|'+p._liveClub;}
-function shirt(p){const v=recOf(p).jerseyNumbers?.[numberKey(p)];return v==null?'':String(v);}
+function shirt(p){const v=recOf(p).jerseyNumbers?.[numberKey(p)];if(v!=null)return String(v);const r=window.EuroScoutExpansion?.record(p);return r&&canonKey('directory|'+r.club)===p._liveClub&&r.jersey!=null?String(r.jersey):'';}
 function jerseyOrder(a,b){const rank=p=>{const n=shirt(p);return n==='00'?-2:n==='0'?-1:/^\d{1,2}$/.test(n)?Number(n):1000};return rank(a)-rank(b)||a.name.localeCompare(b.name);}
 function resetRosters(){clubIndex=null;rosters.clear();columns.clear();}
 function liveRoster(key){if(!key)return null;key=canonKey(key);if(rosters.has(key))return rosters.get(key);const club=allClubs().find(c=>c.key===key);if(!club)return null;
@@ -61,4 +61,5 @@ renderScouting=function(partial=false){
 
 };
 })();
+
 
