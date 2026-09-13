@@ -1730,7 +1730,7 @@ body.drawer-lock{overflow:hidden}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260913-search">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
-<script src="feb-data.js?v=20260913"></script><script src="euroscout-feb.js?v=20260913"></script></head>
+<script src="feb-data.js?v=20260913"></script><script src="euroscout-feb.js?v=20260913"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=3Y7lXbDvH8pAG9lPBacTPclY0DT0LplrHz1eTf5OXUo-1789284776.9266841-1.2.1.1-x5DFik2ap6VDH42hUPVphw8tQy6FKPoLaH5riZbc2q_ycdpGCOE2dg20ikdH7sb." aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -1876,7 +1876,7 @@ function next26Set(m){try{localStorage.setItem(NEXT26_KEY,JSON.stringify(m));}ca
   try{Sync.stampKey(NEXT26_KEY);}catch(e){} try{Store.pushAppKey(NEXT26_KEY);}catch(e){}}
 function effective26(p,m){m=m||next26Get();
   const k=m[gid(p)]||m[p.id]||((p._grp||[]).map(x=>m[x.id]).find(Boolean));
-  const registered=window.EuroScoutABA?.key(p);
+  const registered=window.EuroScoutABA?.key(p)||window.EuroScoutElite2?.key(p);
   const automated=autoAppliedGet(),ids=[gid(p),p.id,...(p._grp||[]).map(x=>x.id)];
   if(registered&&k&&ids.some(id=>automated[id]))return registered;
   return k?canonKey(k):(registered||null);}   // keyed per person, so it is shared across every competition he plays
@@ -2510,6 +2510,7 @@ function rebuildLinks(){
     if(m>=3&&a.slice(0,m)===b.slice(0,m))uni(arr[i].id,arr[j].id);}});
   window.EuroScoutABA?.link(uni);
   window.EuroScoutFEB?.link(uni);
+  window.EuroScoutElite2?.link(uni);
   (OVR.links||[]).forEach(pr=>uni(pr[0],pr[1]));
   const groups={}; all.forEach(p=>{const r=find(p.id);(groups[r]=groups[r]||[]).push(p);});
   Object.values(groups).forEach(g=>{if(g.length>8)g.forEach(x=>{x._solo=true;});});   // guard against bad links
@@ -2883,12 +2884,14 @@ async function boot(){
   for(const L of raw?.leagues||[])for(const p of L.players||[])if(p.img&&!isPlayerPhoto(p.img))p.img=null;
   window.EuroScoutABA?.apply(raw);
   window.EuroScoutFEB?.apply(raw);
+  window.EuroScoutElite2?.apply(raw);
   if(window.ESAccess&&!ESAccess.internal){ESAccess.external(raw);return;}
   if(!raw){ $("#app").innerHTML='<div class="empty">Could not load data. Make sure '+
     '<code>data/data.json</code> (or <code>data/data.js</code>) is present — see README.</div>'; return; }
   if(window.ESAccess?.internal)Object.assign(raw,ESAccess.state.core||{});
   window.EuroScoutABA?.apply(raw);
   window.EuroScoutFEB?.apply(raw);
+  window.EuroScoutElite2?.apply(raw);
   STATE.data = raw;
   injectExhibitions(raw);
   raw.leagues.forEach(L=>L.players.forEach(p=>{
