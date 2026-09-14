@@ -4912,9 +4912,21 @@ function renderTeamsNext(){
   wireRosterCommon(); wireTransferInbox();
   $$(".tmCard[data-club]").forEach(b=>b.onclick=()=>{STATE.nextTeam=b.dataset.club;renderTeams();try{window.scrollTo(0,0);}catch(e){}});
 }
+function rosterHistory(p){
+  // Current roster registrations carry identity and photos, not historical statistics.
+  const candidates=(p._grp?.length?p._grp:[p]).filter(x=>!x._rosterOnly&&!x._exhib&&x.league!=="sl"&&x.teamName);
+  return candidates.sort((a,b)=>{
+    const season=x=>Number(String(leagueOf(x)?.meta?.season||'').match(/20\d{2}/)?.[0]||0);
+    return season(b)-season(a)||lastGameDate(b).localeCompare(lastGameDate(a))||(Number(b.g)||0)-(Number(a.g)||0)||String(a.id).localeCompare(String(b.id));
+  })[0]||p;
+}
 function renderNextRoster(club){
+  if(!STATE._extraDone&&!STATE._rosterHistoryLoading){
+    STATE._rosterHistoryLoading=true;
+    loadExtraLeagues().catch(e=>toast(e.message)).finally(()=>{STATE._rosterHistoryLoading=false;});
+  }
   const m=next26Get();
-  const now=clubRoster2526(club), next=clubRoster2627(club,m);
+  const now=clubRoster2526(club), next=clubRoster2627(club,m).map(rosterHistory);
   const nowIds=new Set(now.map(p=>gid(p))), nextIds=new Set(next.map(p=>gid(p)));
   const staying=next.filter(p=>nowIds.has(gid(p)));
   const arrivals=next.filter(p=>!nowIds.has(gid(p)));
@@ -7383,3 +7395,4 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-aba-rosters.js?v=20260910-1"></script><script src="official-rosters-2026.js?v=20260914"></script><script src="euroscout-official-rosters.js?v=20260914"></script>
 <script>esSetup();boot();</script>
 <script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=36"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260910-6"><script src="euroscout-live-notes.js?v=20260913-expansion"></script></body></html>
+
