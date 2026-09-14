@@ -9,6 +9,7 @@ function apply(raw){if(!raw?.leagues)return;const directory=window.EUROSCOUT_CLU
  for(const p of L.players){const r=byId.get(p.id);if(!r)continue;p._officialRoster={season:data.season,teamName:r.teamName,teamId:r.teamId,number:r.number,source:r.source,profile:r.profile,checked:data.checked};if(r.img)p.img=r.img;if(!p.born||p.born>2015)p.born=r.born;if(!p.height)p.height=r.height;if(!p.weight)p.weight=r.weight;}}
  raw.domestic2627=raw.domestic2627||{season:data.season,leagues:{}};for(const [id,name] of Object.entries({aba:'ABA League',acb:'Spain ACB',lba:'Italy Serie A'}))raw.domestic2627.leagues[id]={id,name,season:data.season,confirmed:true,complete:true,checked:data.checked.slice(0,10),source:data.teams.find(t=>t.id.startsWith(id+'-')).source,teams:data.teams.filter(t=>t.id.startsWith(id+'-')).map(t=>({key:t.key,name:t.name}))};
 }
-function decorate(clubs,byKey){for(const t of data.teams){const c=byKey.get(t.key);if(!c)continue;c.name=t.name;for(const row of c.teams)row.searchAliases=[...new Set([...(row.searchAliases||[]),t.name,...t.aliases])];}clubs.sort((a,b)=>a.name.localeCompare(b.name));}
+function decorate(clubs,byKey){for(const t of data.teams){const c=byKey.get(t.key);if(!c)continue;c.name=t.name;c.country=t.country;if(t.logo)c.logo=t.logo;for(const row of c.teams)row.searchAliases=[...new Set([...(row.searchAliases||[]),t.name,...t.aliases])];}clubs.sort((a,b)=>a.name.localeCompare(b.name));}
 window.EuroScoutOfficialRosters={apply,current,key,link,decorate,data};
 })();
+
