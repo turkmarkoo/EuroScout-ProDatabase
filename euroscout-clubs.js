@@ -9,9 +9,10 @@ function addForm(done){if(!Store.canEdit()){toast('Editing access required.');re
 const redirects=new Map();
 function extend(out){redirects.clear();
  // Change only destination-directory copies; season source teams and player statistics retain their original names.
- for(const t of out){const name=currentName(t.name);if(name!==t.name||name==='Virtus Zagreb'){t.searchAliases=[...(t.searchAliases||[]),'Cedevita Junior','KK Cedevita Junior','Virtus Zagreb'];t.name=name;}}
+ for(const t of out){const name=currentName(t.name);if(name!==t.name||name==='Virtus Zagreb'){t.searchAliases=[...(t.searchAliases||[]),'Cedevita Junior','KK Cedevita Junior','Virtus Zagreb'];t.name=name;t.country='Croatia';}}
  for(const original of directory()){
  const d={...original,name:currentName(original.name),aliases:[...(original.aliases||[]),...(currentName(original.name)==='Virtus Zagreb'?['Cedevita Junior','Virtus Zagreb']:[])]};
+ if(d.name==='Virtus Zagreb')d.country='Croatia';
  const names=[d.name,...d.aliases].map(norm);
  // Only an exact full-name/explicit alias match is eligible. No city or nickname guessing.
  const country=s=>window.EuroScoutCountries?.canonical(s)||s;
@@ -27,3 +28,4 @@ function open(key){const t=dbTeamByKey(key);if(t&&key.startsWith('directory|')&&
 }
 window.EuroScoutClubs={extend,open,linkAliases,refresh,addForm};
 })();
+
