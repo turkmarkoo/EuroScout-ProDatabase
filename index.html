@@ -951,7 +951,7 @@ body.drawer-lock{overflow:hidden}
 .waHead{font-family:var(--disp);font-weight:700;font-size:15px;margin-bottom:9px}
 .waList{display:flex;flex-direction:column;gap:5px}
 .waRow{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer;text-align:left;font:inherit;color:var(--txt);transition:.12s}
-.waRow:hover{border-color:var(--accent);transform:translateX(2px)}
+.waAlert{display:flex;align-items:stretch;gap:6px}.waAlert .waRow{flex:1;min-width:0}.waSeen{flex:0 0 40px;padding:8px;color:var(--green);font-size:18px}.waRow:hover{border-color:var(--accent);transform:translateX(2px)}
 .waIcon{font-size:14px;flex:0 0 auto}
 .waName{font-weight:700;font-size:13px;flex:0 0 auto}
 .waTxt{font-size:12.5px;color:var(--muted)}
@@ -2252,7 +2252,7 @@ const Store = (()=>{
   const enabled = !!(window.ESAccess || (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY));
   let sb=null, user=null, role=null, member=false, cache={};
   const LKEY="euroscout:records";
-  const APP_KEYS=["euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1","euroscout:market:v1"];
+  const APP_KEYS=["euroscout:watchAlertsSeen:v1","euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1","euroscout:market:v1"];
   const local = {
     all(){try{return JSON.parse(localStorage.getItem(LKEY))||{}}catch(e){return{}}},
     set(o){localStorage.setItem(LKEY,JSON.stringify(o))}
@@ -6292,17 +6292,31 @@ function watchlistAlerts(pool){
   out.forEach(a=>{if(seen.has(a.p.id))return;seen.add(a.p.id);uniq.push(a);});
   return uniq;
 }
+const WATCH_ALERT_SEEN_KEY='euroscout:watchAlertsSeen:v1';
+function watchAlertUser(){return String(window.ESAccess?.user?.email||'local').toLowerCase();}
+function watchAlertSeenMap(){try{return JSON.parse(localStorage.getItem(WATCH_ALERT_SEEN_KEY)||'{}')||{};}catch{return {};}}
+function watchAlertKey(a){
+  const event=a.kind==='signed'?effective26keys(a.p).slice().sort():[a.txt,(a.p.gameLog||[]).slice(-1),a.p.statsSeason||a.p.season||''];
+  return encodeURIComponent(JSON.stringify([a.p.gid||a.p.id,a.kind,event]));
+}
+function unseenWatchlistAlerts(pool){const seen=watchAlertSeenMap()[watchAlertUser()]||{};return watchlistAlerts(pool).filter(a=>!seen[watchAlertKey(a)]);}
+function markWatchAlertSeen(key){
+  const all=watchAlertSeenMap(),user=watchAlertUser();all[user]={...(all[user]||{}),[key]:Date.now()};
+  try{localStorage.setItem(WATCH_ALERT_SEEN_KEY,JSON.stringify(all));}catch{toast('Could not save the seen alert. Please try again.');return;}
+  try{Sync.stampKey(WATCH_ALERT_SEEN_KEY);Store.pushAppKey(WATCH_ALERT_SEEN_KEY);}catch{}
+  renderWatchlist();
+}
 function watchAlertsHidden(){try{return localStorage.getItem('euroscout:watchAlertsHidden:'+String(window.ESAccess?.user?.email||'local'))==='1';}catch{return false;}}
 function toggleWatchAlerts(){try{localStorage.setItem('euroscout:watchAlertsHidden:'+String(window.ESAccess?.user?.email||'local'),watchAlertsHidden()?'0':'1');}catch{}renderWatchlist();}
 function watchlistAlertsHTML(pool){
-  const al=watchlistAlerts(pool);
+  const al=unseenWatchlistAlerts(pool);
   if(!al.length)return "";
   if(watchAlertsHidden())return '<div class="waPanel"><button type="button" class="btn" data-toggle-watch-alerts>Show alerts ('+al.length+')</button></div>';
   const ICON={hot:"\uD83D\uDD25",cold:"\u2744\uFE0F",high:"\u2B50",signed:"\u270D\uFE0F",riser:"\uD83D\uDE80"};
-  const rows=al.slice(0,12).map(a=>`<button class="waRow wa-${a.kind}" data-id="${a.p.id}">
+  const rows=al.slice(0,12).map(a=>`<div class="waAlert"><button type="button" class="waRow wa-${a.kind}" data-id="${esc(a.p.id)}">
     <span class="waIcon">${ICON[a.kind]||"\u2022"}</span>
     <span class="waName">${esc(a.p.name)}</span>
-    <span class="waTxt">${esc(a.txt)}</span></button>`).join("");
+    <span class="waTxt">${esc(a.txt)}</span></button><button type="button" class="btn waSeen" data-watch-alert-seen="${esc(watchAlertKey(a))}" title="Mark as seen" aria-label="Mark alert for ${esc(a.p.name)} as seen">✓</button></div>`).join("");
   return `<div class="waPanel">
     <div class="waHead">Alerts <span class="hint" style="font-weight:400;font-size:11.5px">notable changes for your flagged players</span><button type="button" class="btn" data-toggle-watch-alerts style="margin-left:auto">Hide alerts</button></div>
     <div class="waList">${rows}</div>
@@ -6354,7 +6368,8 @@ function renderWatchlist(){
     ${pool.length?`<div class="wboard">${pool.map(row).join("")}</div>`:`<div class="empty" style="margin-top:20px">No players on your watchlist yet. Tap the ☆ star on any player card or profile to add them here.</div>`}
   </div>`;
   $$(".wsort").forEach(b=>b.onclick=()=>{STATE.watchSort=b.dataset.ws;renderWatchlist();});
-  $$("[data-toggle-watch-alerts]").forEach(b=>b.onclick=toggleWatchAlerts);
+  $("[data-toggle-watch-alerts]").forEach(b=>b.onclick=toggleWatchAlerts);
+  $("[data-watch-alert-seen]").forEach(b=>b.onclick=e=>{e.stopPropagation();markWatchAlertSeen(b.dataset.watchAlertSeen);});
   $$(".waRow").forEach(r=>r.onclick=()=>openProfile(r.dataset.id));
   $$(".wrow").forEach(r=>r.onclick=e=>{
     if(e.target.closest("[data-rm]")){e.stopPropagation();const id=e.target.closest("[data-rm]").dataset.rm;
