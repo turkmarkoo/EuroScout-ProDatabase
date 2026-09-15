@@ -6235,13 +6235,14 @@ function recentPush(id){
 const VIEWS_KEY="euroscout:views";
 function viewsGet(){try{return (JSON.parse(localStorage.getItem(VIEWS_KEY)||"[]")||JSON.parse("[]"));}catch(e){return [];}}
 function viewsSave(list){if(!Store.canEdit())return;try{localStorage.setItem(VIEWS_KEY,JSON.stringify(list));Sync.stampKey(VIEWS_KEY);Store.pushAppKey(VIEWS_KEY);}catch(e){}}
-function currentViewState(){const s=STATE.scout;return {q:s.q,leagues:[...s.leagues],roles:[...s.roles],tags:[...s.tags],status:s.status,sort:s.sort};}
+function currentViewState(){const s=STATE.scout;return {season:s.season||'2025/26',statsSeason:s.statsSeason||s.season||'2025/26',competition:s.competition||'all',q:s.q,leagues:[...s.leagues],roles:[...s.roles],tags:[...s.tags],status:s.status,sort:s.sort};}
 function viewIsActive(v){const s=STATE.scout;
-  return v.q===s.q && v.status===s.status && v.sort===s.sort
+  return (v.season||'2025/26')===(s.season||'2025/26') && (v.statsSeason||v.season||'2025/26')===(s.statsSeason||s.season||'2025/26') && (v.competition||'all')===(s.competition||'all') && v.q===s.q && v.status===s.status && v.sort===s.sort
     && v.leagues.length===s.leagues.size && v.leagues.every(x=>s.leagues.has(x))
     && v.roles.length===s.roles.size && v.roles.every(x=>s.roles.has(x))
     && v.tags.length===s.tags.size && v.tags.every(x=>s.tags.has(x));}
 function applyView(v){const s=STATE.scout;
+  s.season=v.season||'2025/26';s.statsSeason=v.statsSeason||s.season;s.competition=v.competition||'all';
   s.q=v.q||"";s.status=v.status||"all";s.sort=v.sort||"grade";
   s.leagues=new Set(v.leagues||[]);s.roles=new Set(v.roles||[]);s.tags=new Set(v.tags||[]);
   renderScout();}
@@ -6356,6 +6357,35 @@ function renderWatchlist(){
     openProfile(r.dataset.id);});
 }
 
+function scoutSeason(p){const v=String(p.statsSeason||p.season||leagueOf(p)?.meta?.season||'');const m=v.match(/(20\d{2})\D+(?:20)?(\d{2})/);return m?m[1]+'/'+m[2]:'';}
+function scoutSeasonPool(s){
+ const season=s.season||'2025/26',stats=s.statsSeason||season,groups=new Map();
+ for(const p of allPlayersEvery()){if(isExhib(p))continue;const id=gid(p);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
+ const registrations=new Map(),data=window.EUROSCOUT_OFFICIAL_ROSTERS;
+ const qualifying=new Set((data?.qualifiers?.teams||[]).map(t=>canonKey(t.key)));
+ for(const r of data?.roster||[]){if(!qualifying.has(canonKey(data.teams.find(t=>t.id===r.teamId)?.key)))continue;for(const id of r.ids){const p=player(id);if(p)registrations.set(gid(p),r);}}
+ const out=[];
+ for(const [id,rows] of groups){
+  const base=rows[0],reg=registrations.get(id),keys=season==='2026/27'?effective26keys(base):[];
+  if(s.competition==='bclq'&&(!reg||season!=='2026/27'))continue;
+  const historical=rows.filter(p=>!p._rosterOnly&&scoutSeason(p)===season);
+  if(season==='2025/26'&&!historical.length)continue;
+  const clubs=keys.map(k=>clubByKey(k)).filter(Boolean);
+  if(s.leagues.size){const match=season==='2026/27'?clubs.some(c=>[...domCompsOf(c),...nextCompsOf(c)].some(l=>s.leagues.has(l.id))):historical.some(p=>s.leagues.has(p.league));if(!match)continue;}
+  let candidates=rows.filter(p=>!p._rosterOnly&&scoutSeason(p)===stats);
+  if(season==='2025/26'&&s.leagues.size)candidates=candidates.filter(p=>s.leagues.has(p.league));
+  // Tournament registration is not tournament statistics. Never substitute BCL regular-season lines.
+  if(s.competition==='bclq'&&stats==='2026/27')candidates=candidates.filter(p=>p.competitionId==='bclq'||p.stage==='Q');
+  candidates.sort((a,b)=>(b.g||0)-(a.g||0));const record=candidates[0];
+  let p;if(record)p={...record};else{p={};for(const k of ['id','name','code','league','team','teamName','role','pos','height','weight','age','born','country','img','_grp','_gid'])if(base[k]!=null)p[k]=base[k];p._rosterOnly=true;p.gameLog=[];p.pct=null;p.arch=[];}
+  p._seasonLabel=record?stats+' · '+(leagueOf(record)?.meta?.name||''):'No '+stats+' statistics recorded';
+  p._seasonClub=season==='2026/27'?(s.competition==='bclq'?reg.teamName:clubs.map(c=>c.name).join(' / ')||'Club unconfirmed'):(historical[0]?.teamName||p.teamName);
+  p._seasonContext=season==='2026/27'?'2026/27 roster'+(s.competition==='bclq'?' · BCL Qualifiers':''):'2025/26 club';out.push(p);
+ }
+ return out;
+}
+function scoutSeasonControls(s){const year=s.season||'2025/26',stats=s.statsSeason||year;return `<div class="seasonFilters" style="display:flex;flex-wrap:wrap;gap:14px;align-items:end;margin:16px 0;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:12px"><label>Roster season<select id="scoutSeason" style="display:block;min-width:160px;height:44px"><option value="2025/26" ${year==='2025/26'?'selected':''}>2025/26</option><option value="2026/27" ${year==='2026/27'?'selected':''}>2026/27</option></select></label><label>Competition group<select id="scoutCompetition" style="display:block;min-width:240px;height:44px"><option value="all">All competitions</option><option value="bclq" ${s.competition==='bclq'?'selected':''}>BCL Qualifiers · 2026/27</option></select></label><label>Statistics season<select id="scoutStatsSeason" style="display:block;min-width:160px;height:44px"><option value="2025/26" ${stats==='2025/26'?'selected':''}>2025/26</option><option value="2026/27" ${stats==='2026/27'?'selected':''}>2026/27</option></select></label><p class="hint" style="flex-basis:100%;margin:0">Roster season selects the player group. Statistics season selects the numbers shown. Missing statistics stay blank. Open a profile for its full history.</p></div>`;}
+
 function renderScout(){
   const s=STATE.scout;
   if(!s._viewInit){try{const v=localStorage.getItem(SCOUT_VIEW_KEY);if(v==="table"||v==="cards")s.view=v;}catch(e){}
@@ -6363,10 +6393,10 @@ function renderScout(){
     s._viewInit=1;}
   KBD_SEL=-1;
   const simP=s.simRef?player(s.simRef):null; if(s.simRef&&!simP)s.simRef=null;
-  let pool=scoutPool();
+  let pool=scoutSeasonPool(s);
   if(simP){const rg=gid(simP);pool=pool.filter(p=>gid(p)!==rg);}
   // filters
-  if(s.leagues.size) pool=pool.filter(p=>s.leagues.has(p.league));
+  // Competition membership is resolved before deduplicating seasonal records.
   if(s.roles.size)   pool=pool.filter(p=>s.roles.has(p.role));
   if(s.status!=="all") pool=pool.filter(p=>scoutStatusOf(p)===s.status);
   if(s.tags.size)    pool=pool.filter(p=>{const t=playerTags(p);return [...s.tags].every(tag=>t.includes(tag));});
@@ -6538,6 +6568,7 @@ function renderScout(){
           </div>`}
         </div>
       </div>
+      ${scoutSeasonControls(s)}
       ${simP?"":filterBarHTML(s)}
       ${simP?"":naStrip}
       ${simP?simQuickFiltersHTML(s):""}
@@ -6551,6 +6582,7 @@ function renderScout(){
     </section>
   </div>`;
 
+  for(const [id,key] of [['scoutSeason','season'],['scoutCompetition','competition'],['scoutStatsSeason','statsSeason']]){const el=document.getElementById(id);el.onchange=async()=>{s[key]=el.value;if(key==='season'){s.statsSeason=el.value;if(el.value==='2025/26')s.competition='all';}if(key==='competition'&&el.value==='bclq'){s.season='2026/27';s.leagues.clear();}renderScout();try{await loadExtraLeagues();if(STATE.view==='scout')renderScout();}catch(e){toast(e.message);}};}
   // rail interactions
   const q=$("#scoutQ");if(q){q.oninput=()=>{s.q=q.value;const pos=q.selectionStart;renderScout();const nq=$("#scoutQ");if(nq){nq.focus();try{nq.setSelectionRange(pos,pos);}catch(e){}}};}
   $$("[data-lg]").forEach(b=>b.onclick=()=>{const id=b.dataset.lg;s.leagues.has(id)?s.leagues.delete(id):s.leagues.add(id);renderScout();});
@@ -6569,9 +6601,9 @@ function renderScout(){
   const n26c=$("#n26Clr");if(n26c)n26c.onclick=e=>{e.stopPropagation();s.next26=null;renderScout();};
   const lvlClr=$("#lvlClr");if(lvlClr)lvlClr.onclick=e=>{e.stopPropagation();s.level=null;renderScout();};
   $$("[data-chip]").forEach(b=>b.onclick=()=>{removeChip(b.dataset.chip,s);renderScout();});
-  const chipClr=$("#chipClear");if(chipClr)chipClr.onclick=()=>{s.q="";s.leagues.clear();s.roles.clear();s.tags.clear();s.status="all";s.riserOnly=false;s.arch=null;s.filters=[];s.simRef=null;s.level=null;s.next26=null;renderScout();};
+  const chipClr=$("#chipClear");if(chipClr)chipClr.onclick=()=>{s.competition="all";s.q="";s.leagues.clear();s.roles.clear();s.tags.clear();s.status="all";s.riserOnly=false;s.arch=null;s.filters=[];s.simRef=null;s.level=null;s.next26=null;renderScout();};
   const aClr=$("#archClr");if(aClr)aClr.onclick=(e)=>{e.stopPropagation();s.arch=null;renderScout();};
-  const clr=$("#scoutClear");if(clr)clr.onclick=()=>{s.q="";s.leagues.clear();s.roles.clear();s.tags.clear();s.status="all";s.riserOnly=false;s.arch=null;s.filters=[];s.level=null;s.next26=null;s.ratingMin=null;renderScout();};
+  const clr=$("#scoutClear");if(clr)clr.onclick=()=>{s.competition="all";s.q="";s.leagues.clear();s.roles.clear();s.tags.clear();s.status="all";s.riserOnly=false;s.arch=null;s.filters=[];s.level=null;s.next26=null;s.ratingMin=null;renderScout();};
   const riserBtn=$("#riserToggle");if(riserBtn)riserBtn.onclick=()=>{s.riserOnly=!s.riserOnly;renderScout();};
   // saved views
   const saveViewBtn=$("#saveViewBtn");if(saveViewBtn)saveViewBtn.onclick=saveCurrentView;
@@ -6891,7 +6923,7 @@ function scoutTable(pool,s){
       <td class="estdim">${p.born!=null?p.born:"\u2014"}</td>
       <td><span class="estpos" style="color:${rc};background:${rc}1e">${posLabel(p)}</span></td>
       <td class="estdim">${p.height!=null?p.height:"\u2014"}</td>
-      <td class="estclubcell l"><span class="estclub">${p.teamName?esc(p.teamName):"\u2014"}</span><span class="estcomp">${lg?esc(lg.meta.name):""}</span></td>
+      <td class="estclubcell l"><span class="estclub">${esc(p._seasonClub||p.teamName||"—")}</span><span class="estcomp">${esc(p._seasonContext||"")}<br>${esc(p._seasonLabel||lg?.meta?.name||"")}</span></td>
       <td>${p.g!=null?p.g:"\u2014"}</td>
       <td>${p.mpg!=null?p.mpg.toFixed(1):"\u2014"}</td>
       <td class="estgrdcell">${og!=null?`<b class="estgrade">${og.toFixed(1)}</b>`:"\u2014"}</td>
@@ -6925,7 +6957,7 @@ function scoutCard(p){
     <div class="sc2-photo${_ph?"":" noimg"}">${photo||initials(p.name)}</div>
     <div class="sc2-head">
       <div class="sc2-name">${p.name} ${formArrowHTML(p)}${riserBadgeHTML(p)}</div>
-      <div class="sc2-club">${p.teamName?esc(p.teamName):"\u2014"}${lg?`<span class="sc2-lg"> \u00b7 ${lg.meta.name}</span>`:""}</div>
+      <div class="sc2-club">${esc(p._seasonClub||p.teamName||"—")}<span class="sc2-lg"> · ${esc(p._seasonContext||"")}<br>${esc(p._seasonLabel||lg?.meta?.name||"")}</span></div>
       <div class="sc2-starsrow">${stars}</div>
       <div class="sc2-posrow"><span class="sc2-pos" style="color:${rc};background:${rc}20">${posLabel(p)}</span></div>
     </div>
