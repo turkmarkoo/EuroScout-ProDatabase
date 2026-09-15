@@ -1734,7 +1734,11 @@ body.drawer-lock{overflow:hidden}
 <script src="euroscout-memberships.js?v=20260913-expansion"></script>
 <style>.membership-review{margin:12px 0 18px;padding:12px 16px;background:var(--card,#fff);border:1px solid var(--border,#d9e3df);border-radius:12px;color:var(--text,#193442);font-size:13px}.membership-review details{margin-top:8px}.membership-review summary{cursor:pointer}.membership-review-row{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 0;align-items:baseline}.membership-review-row>span{flex:1 1 250px}.membership-review-row>a{white-space:nowrap}.membership-review details[open]{max-height:340px;overflow:auto}.rbFilters>select{min-width:min(320px,100%);max-width:100%;height:auto;min-height:44px;padding:10px 36px 10px 12px}</style>
 <link rel="stylesheet" href="euroscout-team-cards.css?v=20260914">
-</head>
+<style>
+.seasonFilters{display:flex;flex-wrap:wrap;gap:14px;align-items:end;margin:16px 0;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.seasonFilters label{display:grid;gap:7px;color:var(--muted);font-size:12px;font-weight:600;flex:1 1 155px;min-width:0}.seasonFilters label:nth-child(2){flex:2 1 245px}
+.seasonFilters select{appearance:none;width:100%;min-height:46px;border:1px solid var(--line);border-radius:10px;padding:11px 36px 11px 14px;font:600 13px var(--body);color:var(--txt);background:var(--bg);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23ce8b50' stroke-width='2'/%3E%3C/svg%3E");background-position:right 14px center;background-repeat:no-repeat;cursor:pointer;box-sizing:border-box}.seasonFilters select:hover,.seasonFilters select:focus-visible{border-color:var(--accent);outline:2px solid color-mix(in srgb,var(--accent) 20%,transparent);outline-offset:1px}.seasonFilters .hint{line-height:1.5}
+</style></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=3Y7lXbDvH8pAG9lPBacTPclY0DT0LplrHz1eTf5OXUo-1789284776.9266841-1.2.1.1-x5DFik2ap6VDH42hUPVphw8tQy6FKPoLaH5riZbc2q_ycdpGCOE2dg20ikdH7sb." aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
@@ -1882,14 +1886,15 @@ const STATUSES={[STATUS_FREE]:{label:"Free agent",short:"Free agent",cls:"stFa"}
 function isStatus(k){return !!(k&&STATUSES[k]);}
 function statusOf(p,m){const k=effective26(p,m);return isStatus(k)?k:null;}
 function statusLabel(k){return (STATUSES[k]||{}).label||"";}
-function next26Get(){try{return (JSON.parse(localStorage.getItem(NEXT26_KEY)||"{}")||JSON.parse("{}"));}catch(e){return {};}}
+const assignmentReadCache=new Map();
+function readAssignmentMap(key){const raw=localStorage.getItem(key)||'{}',old=assignmentReadCache.get(key);if(old?.raw===raw)return old.value;let value;try{value=JSON.parse(raw)||{};}catch{value={};}assignmentReadCache.set(key,{raw,value});return value;}
+function next26Get(){return {...readAssignmentMap(NEXT26_KEY)};}
 function next26Set(m){try{localStorage.setItem(NEXT26_KEY,JSON.stringify(m));}catch(e){}
   try{Sync.stampKey(NEXT26_KEY);}catch(e){} try{Store.pushAppKey(NEXT26_KEY);}catch(e){}}
 function effective26(p,m){m=m||next26Get();
   const k=m[gid(p)]||m[p.id]||((p._grp||[]).map(x=>m[x.id]).find(Boolean));
   const registered=window.EuroScoutOfficialRosters?.key(p)||window.EuroScoutBBL?.key(p)||window.EuroScoutTransferConfirmations?.key(p)||window.EuroScoutABA?.key(p)||window.EuroScoutElite2?.key(p)||window.EuroScoutExpansion?.key(p)||window.EuroScoutNCAA?.key(p);
-  const automated=autoAppliedGet(),ids=[gid(p),p.id,...(p._grp||[]).map(x=>x.id)];
-  if(registered&&k&&ids.some(id=>automated[id]))return registered;
+  if(registered&&k){const automated=readAssignmentMap(AUTO_APPLIED_KEY),ids=[gid(p),p.id,...(p._grp||[]).map(x=>x.id)];if(ids.some(id=>automated[id]))return registered;}
   return k?canonKey(k):(registered||null);}   // keyed per person, so it is shared across every competition he plays
 function set26(pid,key){const m=next26Get();const p=player(pid);
   const ids=p?[gid(p),p.id].concat((p._grp||[]).map(x=>x.id)):[pid];
@@ -1905,7 +1910,7 @@ function set26(pid,key){const m=next26Get();const p=player(pid);
 // Used for two-way contract players who appear on both an NBA and a G League roster at once.
 const NEXT26B_KEY="euroscout:next26b:v1";
 const TWOWAY_LEAGUES=new Set(["nba","gleague"]);
-function next26bGet(){try{return (JSON.parse(localStorage.getItem(NEXT26B_KEY)||"{}")||JSON.parse("{}"));}catch(e){return {};}}
+function next26bGet(){return {...readAssignmentMap(NEXT26B_KEY)};}
 function next26bSet(m){try{localStorage.setItem(NEXT26B_KEY,JSON.stringify(m));}catch(e){}
   try{Sync.stampKey(NEXT26B_KEY);}catch(e){} try{Store.pushAppKey(NEXT26B_KEY);}catch(e){}}
 // league id a club key belongs to (from its DB teams)
@@ -6358,16 +6363,21 @@ function renderWatchlist(){
 }
 
 function scoutSeason(p){const v=String(p.statsSeason||p.season||leagueOf(p)?.meta?.season||'');const m=v.match(/(20\d{2})\D+(?:20)?(\d{2})/);return m?m[1]+'/'+m[2]:'';}
+let seasonPoolCache=null;
 function scoutSeasonPool(s){
+ const m=next26Get(),mb=next26bGet();allDbTeams();
+ const signature=JSON.stringify([s.season,s.statsSeason,s.competition,[...s.leagues].sort(),m,mb,localStorage.getItem('euroscout:autoApplied:v1'),STATE.data.leagues.map(l=>[l.meta.id,l.players.length]),localStorage.getItem('euroscout:overrides')]);
+ if(seasonPoolCache?.signature===signature&&seasonPoolCache.clubs===CLUBS&&seasonPoolCache.data===STATE.data)return seasonPoolCache.rows.map(p=>({...p}));
  const season=s.season||'2025/26',stats=s.statsSeason||season,groups=new Map();
  for(const p of allPlayersEvery()){if(isExhib(p))continue;const id=gid(p);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
- const registrations=new Map(),data=window.EUROSCOUT_OFFICIAL_ROSTERS;
+ const registrations=new Map(),data=window.EUROSCOUT_OFFICIAL_ROSTERS,byId=new Map(allPlayersEvery().map(p=>[p.id,p])),teamKeys=new Map((data?.teams||[]).map(t=>[t.id,canonKey(t.key)]));
  const qualifying=new Set((data?.qualifiers?.teams||[]).map(t=>canonKey(t.key)));
- for(const r of data?.roster||[]){if(!qualifying.has(canonKey(data.teams.find(t=>t.id===r.teamId)?.key)))continue;for(const id of r.ids){const p=player(id);if(p)registrations.set(gid(p),r);}}
+ for(const r of data?.roster||[]){if(!qualifying.has(teamKeys.get(r.teamId)))continue;for(const id of r.ids){const p=byId.get(id);if(p)registrations.set(gid(p),r);}}
  const out=[];
  for(const [id,rows] of groups){
-  const base=rows[0],reg=registrations.get(id),keys=season==='2026/27'?effective26keys(base):[];
+  const base=rows[0],reg=registrations.get(id);
   if(s.competition==='bclq'&&(!reg||season!=='2026/27'))continue;
+  const keys=season==='2026/27'?effective26keys(base,m,mb):[];
   const historical=rows.filter(p=>!p._rosterOnly&&scoutSeason(p)===season);
   if(season==='2025/26'&&!historical.length)continue;
   const clubs=keys.map(k=>clubByKey(k)).filter(Boolean);
@@ -6382,9 +6392,9 @@ function scoutSeasonPool(s){
   p._seasonClub=season==='2026/27'?(s.competition==='bclq'?reg.teamName:clubs.map(c=>c.name).join(' / ')||'Club unconfirmed'):(historical[0]?.teamName||p.teamName);
   p._seasonContext=season==='2026/27'?'2026/27 roster'+(s.competition==='bclq'?' · BCL Qualifiers':''):'2025/26 club';out.push(p);
  }
- return out;
+ seasonPoolCache={signature,clubs:CLUBS,data:STATE.data,rows:out};return out.map(p=>({...p}));
 }
-function scoutSeasonControls(s){const year=s.season||'2025/26',stats=s.statsSeason||year;return `<div class="seasonFilters" style="display:flex;flex-wrap:wrap;gap:14px;align-items:end;margin:16px 0;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:12px"><label>Roster season<select id="scoutSeason" style="display:block;min-width:160px;height:44px"><option value="2025/26" ${year==='2025/26'?'selected':''}>2025/26</option><option value="2026/27" ${year==='2026/27'?'selected':''}>2026/27</option></select></label><label>Competition group<select id="scoutCompetition" style="display:block;min-width:240px;height:44px"><option value="all">All competitions</option><option value="bclq" ${s.competition==='bclq'?'selected':''}>BCL Qualifiers · 2026/27</option></select></label><label>Statistics season<select id="scoutStatsSeason" style="display:block;min-width:160px;height:44px"><option value="2025/26" ${stats==='2025/26'?'selected':''}>2025/26</option><option value="2026/27" ${stats==='2026/27'?'selected':''}>2026/27</option></select></label><p class="hint" style="flex-basis:100%;margin:0">Roster season selects the player group. Statistics season selects the numbers shown. Missing statistics stay blank. Open a profile for its full history.</p></div>`;}
+function scoutSeasonControls(s){const year=s.season||'2025/26',stats=s.statsSeason||year;return `<div class="seasonFilters"><label>Roster season<select id="scoutSeason"><option value="2025/26" ${year==='2025/26'?'selected':''}>2025/26</option><option value="2026/27" ${year==='2026/27'?'selected':''}>2026/27</option></select></label><label>Competition group<select id="scoutCompetition"><option value="all">All competitions</option><option value="bclq" ${s.competition==='bclq'?'selected':''}>BCL Qualifiers · 2026/27</option></select></label><label>Statistics season<select id="scoutStatsSeason"><option value="2025/26" ${stats==='2025/26'?'selected':''}>2025/26</option><option value="2026/27" ${stats==='2026/27'?'selected':''}>2026/27</option></select></label><p class="hint" style="flex-basis:100%;margin:0">Roster season selects the player group. Statistics season selects the numbers shown. Missing statistics stay blank. Open a profile for its full history.</p></div>`;}
 
 function renderScout(){
   const s=STATE.scout;
@@ -6582,9 +6592,9 @@ function renderScout(){
     </section>
   </div>`;
 
-  for(const [id,key] of [['scoutSeason','season'],['scoutCompetition','competition'],['scoutStatsSeason','statsSeason']]){const el=document.getElementById(id);el.onchange=async()=>{s[key]=el.value;if(key==='season'){s.statsSeason=el.value;if(el.value==='2025/26')s.competition='all';}if(key==='competition'&&el.value==='bclq'){s.season='2026/27';s.leagues.clear();}renderScout();try{await loadExtraLeagues();if(STATE.view==='scout')renderScout();}catch(e){toast(e.message);}};}
+  for(const [id,key] of [['scoutSeason','season'],['scoutCompetition','competition'],['scoutStatsSeason','statsSeason']]){const el=document.getElementById(id);el.onchange=async()=>{s[key]=el.value;if(key==='season'){s.statsSeason=el.value;if(el.value==='2025/26')s.competition='all';}if(key==='competition'&&el.value==='bclq'){s.season='2026/27';s.leagues.clear();}el.setAttribute('aria-busy','true');await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));renderScout();try{if(!STATE._extraDone){await loadExtraLeagues();if(STATE.view==='scout')renderScout();}}catch(e){toast(e.message);}};}
   // rail interactions
-  const q=$("#scoutQ");if(q){q.oninput=()=>{s.q=q.value;const pos=q.selectionStart;renderScout();const nq=$("#scoutQ");if(nq){nq.focus();try{nq.setSelectionRange(pos,pos);}catch(e){}}};}
+  const q=$("#scoutQ");if(q){q.oninput=()=>{s.q=q.value;const pos=q.selectionStart;clearTimeout(window.scoutTypingTimer);window.scoutTypingTimer=setTimeout(()=>{if(STATE.view!=="scout")return;renderScout();const nq=$("#scoutQ");if(nq){nq.focus();try{nq.setSelectionRange(pos,pos);}catch(e){}}},180);};}
   $$("[data-lg]").forEach(b=>b.onclick=()=>{const id=b.dataset.lg;s.leagues.has(id)?s.leagues.delete(id):s.leagues.add(id);renderScout();});
   $$("[data-role]").forEach(b=>b.onclick=()=>{const r=b.dataset.role;s.roles.has(r)?s.roles.delete(r):s.roles.add(r);renderScout();});
   $$("[data-status]").forEach(b=>b.onclick=()=>{s.status=b.dataset.status;renderScout();});
@@ -7422,7 +7432,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-market-records.js?v=16"></script>
 <script src="euroscout-market.js?v=20260913-batch"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
-<script src="euroscout-transfer-confirmations.js?v=20260913-3"></script>
+<script src="euroscout-transfer-confirmations.js?v=20260915-verified"></script>
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
 <script src="data/agency-research.js?v=20260907-13"></script>
 <script src="euroscout-agency-research.js?v=20260908-1"></script>
