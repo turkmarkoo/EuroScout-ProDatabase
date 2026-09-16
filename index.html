@@ -6368,8 +6368,10 @@ function renderWatchlist(){
     ${pool.length?`<div class="wboard">${pool.map(row).join("")}</div>`:`<div class="empty" style="margin-top:20px">No players on your watchlist yet. Tap the ☆ star on any player card or profile to add them here.</div>`}
   </div>`;
   $$(".wsort").forEach(b=>b.onclick=()=>{STATE.watchSort=b.dataset.ws;renderWatchlist();});
-  $("[data-toggle-watch-alerts]").forEach(b=>b.onclick=toggleWatchAlerts);
-  $("[data-watch-alert-seen]").forEach(b=>b.onclick=e=>{e.stopPropagation();markWatchAlertSeen(b.dataset.watchAlertSeen);});
+  /* $ returns one element, $$ returns the list. forEach on a single element
+     throws, which stopped the whole watchlist rendering. */
+  $$("[data-toggle-watch-alerts]").forEach(b=>b.onclick=toggleWatchAlerts);
+  $$("[data-watch-alert-seen]").forEach(b=>b.onclick=e=>{e.stopPropagation();markWatchAlertSeen(b.dataset.watchAlertSeen);});
   $$(".waRow").forEach(r=>r.onclick=()=>openProfile(r.dataset.id));
   $$(".wrow").forEach(r=>r.onclick=e=>{
     if(e.target.closest("[data-rm]")){e.stopPropagation();const id=e.target.closest("[data-rm]").dataset.rm;
