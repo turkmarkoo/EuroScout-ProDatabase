@@ -78,7 +78,7 @@ body:has(.liveScouting) #esBackTop{display:none!important}
 .liveScouting .mx-rate{grid-area:rate;display:flex;align-items:center;gap:16px}
 .liveScouting .mx-level small,.liveScouting .mx-grade small{display:block;font-size:10.5px;color:var(--muted)}
 .liveScouting .mx-level b{display:block;font:700 15px var(--disp);color:var(--mx-green)}
-.liveScouting #mxLevel{display:block;margin:1px 0 0 -4px;padding:2px 20px 2px 4px;max-width:150px;border:1px solid transparent;border-radius:6px;background-color:transparent;font:700 15px var(--disp);color:var(--mx-green);cursor:pointer}
+.liveScouting #mxLevel{display:block;margin:1px 0 0 -4px;padding:2px 20px 2px 4px;max-width:190px;border:1px solid transparent;border-radius:6px;background-color:transparent;font:700 15px var(--disp);color:var(--mx-green);cursor:pointer}
 .liveScouting #mxLevel:hover,.liveScouting #mxLevel:focus{border-color:var(--line);background-color:var(--panel2)}
 .liveScouting .mx-segs{display:flex;gap:3px;margin-top:4px}
 .liveScouting .mx-segs i{width:15px;height:8px;border-radius:2px;background:var(--line)}
@@ -116,7 +116,15 @@ body:has(.liveScouting) #esBackTop{display:none!important}
 .liveScouting #liveBullets .bl-ul{gap:5px}
 .liveScouting #liveBullets .bl-item{align-items:center;padding:9px 10px}
 .liveScouting #liveBullets .bl-txt{font-size:13.5px}
-.liveScouting .mx-time{flex:none;font-size:11px;color:var(--muted2);white-space:nowrap}
+.liveScouting .mx-move{flex:none;width:26px;height:24px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--muted2);font-size:13px;cursor:pointer;opacity:.55}
+.liveScouting .bl-item:hover .mx-move,.liveScouting .mx-move:focus-visible{opacity:1}
+.liveScouting .mx-move:hover{background:var(--chip);color:var(--mx-green)}
+.liveScouting #liveBullets .bl-item{position:relative}
+.liveScouting .mx-movemenu{position:absolute;right:30px;top:calc(100% - 4px);z-index:5;min-width:160px;padding:6px;display:grid;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.18)}
+.liveScouting .mx-movemenu small{padding:3px 8px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.liveScouting .mx-movemenu button{padding:8px 10px;text-align:left;border:0;border-radius:7px;background:transparent;color:var(--txt);font:13px var(--body);cursor:pointer}
+.liveScouting .mx-movemenu button:hover,.liveScouting .mx-movemenu button:focus-visible{background:var(--chip)}
+.liveScouting .mx-cat.drop{border-color:var(--mx-green);background:var(--mx-green-soft);box-shadow:0 0 0 2px var(--mx-green-soft)}
 .liveScouting .mx-readonly{margin:0;padding-left:18px;line-height:1.7}
 
 /* narrower screens: rosters side by side on top, notebook below */

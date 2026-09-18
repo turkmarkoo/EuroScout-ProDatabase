@@ -34,11 +34,6 @@ function walkList(){return ['a','b'].flatMap(k=>(liveRoster(STATE.scouting[k])?.
 function logViewing(r,event,date,gameDate){const who=author();const w=r._workflow={...(r._workflow||{})};w.viewings=[...(w.viewings||[])];if(!w.viewings.some(v=>!v.removed&&v.event===event&&v.date===date&&v.author===who)){w.viewings.push({id:crypto.randomUUID(),event,date,gameDate:gameDate||'',mode:SX?.active()?.mode==='Live'?'Live':'Video',notes:'',author:who,updatedAt:new Date().toISOString(),source:'matchup'});}w.updatedAt=new Date().toISOString();}
 function migrateContext(p,r){let changed=false;for(const [k]of cats){if(!r[k])continue;r[k]=r[k].split('\n').map(line=>{const m=line.match(/ \[([^\[\]]+?) · (\d{4}-\d{2}-\d{2}) · ([^\[\]]+@[^\[\]]+)\]$/);if(!m)return line;changed=true;logViewing(r,m[1],m[2],'');return line.slice(0,m.index);}).join('\n');}if(changed&&editable())saveRec(p,{report:JSON.stringify(r)});}
 function editable(){return window.ESAccess?ESAccess.internal&&ESAccess.owner:true}
-/* When each note was written. Notes are plain lines, so the stamp is kept beside
-   them, keyed by the text; a note written before this existed simply has none. */
-function stampNotes(r,unstamped){const w=r._workflow={...(r._workflow||{})},old=w.noteTimes||{},next={},now=new Date().toISOString();for(const [k]of cats)bulletParse(r[k]||'').forEach(t=>{const h=SX?SX.hash(t):t;const v=old[h]||(unstamped.has(h)?'':now);if(v)next[h]=v;});w.noteTimes=next;return next;}
-function noteTime(times,text){const v=times[SX?SX.hash(text):text];if(!v)return '';const d=new Date(v);if(isNaN(d))return '';const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return d.getDate()+' '+months[d.getMonth()]+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
-
 function choose(id,keepFocus){if(!id)return;selected=id;chosen=id;busyStatus='';renderScouting(true);if(!keepFocus)document.querySelector('.rosterRow.liveSelected')?.scrollIntoView({block:'nearest'});}
 function step(delta){const list=walkList();if(!list.length)return;if(document.activeElement?.classList.contains('rosterRow'))document.activeElement.blur();const i=list.findIndex(p=>p.id===selected);choose(list[(i<0?0:i+delta+list.length)%list.length].id);}
 function otherSide(){if(document.activeElement?.classList.contains('rosterRow'))document.activeElement.blur();const s=STATE.scouting,cur=rosterPlayers().find(p=>p.id===selected);if(!cur)return;const from=canonKey(s.a)===cur._liveClub?'a':'b',to=from==='a'?'b':'a';const mine=(liveRoster(s[from])?.players||[]).filter(p=>visible(p,from)),theirs=(liveRoster(s[to])?.players||[]).filter(p=>visible(p,to));if(!theirs.length)return;choose(theirs[Math.min(Math.max(0,mine.findIndex(p=>p.id===selected)),theirs.length-1)].id);}
@@ -62,7 +57,7 @@ function headerHTML(p){const lv=levelBand(p),g=statGradeOverall(p),photo=photoOf
  const bits=[p.country?'<span class="mx-flag">'+flagEmoji(p.country)+'</span> '+esc(p.country):'',p.born?esc(p.born)+(p.age!=null?' ('+esc(p.age)+')':' ('+(new Date().getFullYear()-p.born)+')'):(p.age!=null?esc(p.age)+' y':''),p.height?esc(p.height)+' cm':'',p.weight?esc(p.weight)+' kg':'',esc(posLabel(p))].filter(Boolean);
  return '<div class="livePlayer mx-player"><span class="liveAvatar mx-avatar">'+(photo?'<img src="'+escAttr(photo)+'" alt="">':esc(initials(p.name)))+(num?'<em>#'+esc(num)+'</em>':'')+'</span>'+
   '<div class="mx-id"><h2>'+esc(p.name)+' <button type="button" class="mx-star'+(isWatched(p)?' on':'')+'" id="mxWatch" aria-pressed="'+isWatched(p)+'" title="Watchlist">'+(isWatched(p)?'★':'☆')+'</button></h2><div class="mx-bio">'+bits.join('<i>|</i>')+'</div><div class="mx-club">'+clubBadge(liveRoster(p._liveClub)?.club,18)+esc(liveRoster(p._liveClub)?.t.name||'')+'</div></div>'+
-  '<div class="mx-rate">'+'<div class="mx-level"><small>Estimated level'+(lv&&!lv.manual?' · auto':'')+'</small>'+(editable()?'<select id="mxLevel" aria-label="Estimated level"><option value="">'+(lv&&!lv.manual?esc(lv.label)+' (auto)':'Auto')+'</option>'+LEVEL_BANDS.map((name,i)=>({name,i})).reverse().map(({name,i})=>'<option value="'+i+'"'+(lv&&lv.manual&&lv.i===i?' selected':'')+'>'+esc(name)+'</option>').join('')+'</select>':'<b>'+esc(lv?lv.label:'—')+'</b>')+'<span class="mx-segs">'+[0,1,2,3,4].map(i=>'<i class="'+(lv&&i<=lv.i?'on':'')+'"></i>').join('')+'</span></div>'+(g!=null?'<div class="mx-grade"><small>Grade</small><b>'+Number(g).toFixed(1)+'</b></div>':'')+'</div>'+
+  '<div class="mx-rate">'+'<div class="mx-level"><small>Estimated level'+(lv&&!lv.manual?' · auto':'')+'</small>'+(editable()?'<select id="mxLevel" aria-label="Estimated level"><option value="">'+(lv&&!lv.manual?esc(lv.label):'Auto')+'</option>'+LEVEL_BANDS.map((name,i)=>({name,i})).reverse().map(({name,i})=>'<option value="'+i+'"'+(lv&&lv.manual&&lv.i===i?' selected':'')+'>'+esc(name)+'</option>').join('')+'</select>':'<b>'+esc(lv?lv.label:'—')+'</b>')+'<span class="mx-segs">'+[0,1,2,3,4].map(i=>'<i class="'+(lv&&i<=lv.i?'on':'')+'"></i>').join('')+'</span></div>'+(g!=null?'<div class="mx-grade"><small>Grade</small><b>'+Number(g).toFixed(1)+'</b></div>':'')+'</div>'+
   '<div class="mx-buttons"><button type="button" class="btn ghost sm" id="liveProfile">Open profile ↗</button><button type="button" class="btn ghost sm" id="liveNumber">Jersey #'+esc(num||'—')+'</button><button type="button" class="btn ghost sm" id="mxLogs">View logs</button>'+
   (a?'<span class="mx-stock" role="group" aria-label="Stock"><button type="button" class="btn ghost sm'+(stock==='up'?' on':'')+'" data-stock="up" aria-pressed="'+(stock==='up')+'" title="Stock up">▲ Up</button><button type="button" class="btn ghost sm'+(stock==='down'?' on':'')+'" data-stock="down" aria-pressed="'+(stock==='down')+'" title="Stock down">▼ Down</button></span>':'')+
   '<span class="mx-spacer"></span><button type="button" class="btn ghost sm" id="mxPrev">← Prev</button><button type="button" class="btn ghost sm" id="mxNext">Next →</button></div></div>';}
@@ -117,37 +112,48 @@ function wireNotebook(p,rep){
  document.querySelector('#mxPrev').onclick=()=>step(-1);document.querySelector('#mxNext').onclick=()=>step(1);
  document.querySelector('#mxWatch').onclick=()=>{if(!editable())return;toggleTag(p.id,WATCH_TAG).then(()=>renderScouting(true));};
  document.querySelectorAll('.mx-stock [data-stock]').forEach(b=>b.onclick=()=>{SX.setStock(p,b.dataset.stock);renderScouting(true);refreshMarks();});
- document.querySelectorAll('[data-cat]').forEach(el=>el.onclick=()=>{category=el.dataset.cat;renderScouting(true)});
+ let dragged=null;
+ document.querySelectorAll('[data-cat]').forEach(el=>{el.onclick=()=>{category=el.dataset.cat;renderScouting(true)};if(el.dataset.cat==='all')return;el.ondragover=e=>{if(!dragged||dragged.field===el.dataset.cat)return;e.preventDefault();el.classList.add('drop');};el.ondragleave=()=>el.classList.remove('drop');el.ondrop=e=>{if(!dragged)return;e.preventDefault();const d=dragged;dragged=null;moveNote(d.field,d.text,el.dataset.cat);};});
  document.querySelector('#mxSimilar').onclick=()=>{showSimilar=!showSimilar;renderScouting(true);};
 
  const host=document.querySelector('#liveBullets'),related=document.querySelector('#liveRelated'),similarN=document.querySelector('#mxSimilarN');
  const tokens=t=>new Set(fold(t).split(/[^a-z0-9]+/).filter(w=>w.length>3).map(w=>/^(shoot|shot|shooting|shooter)/.test(w)?'shoot':/^(defen)/.test(w)?'defense':w.replace(/(ing|ers|es|s)$/,'')));
- const times={...((rep._workflow||{}).noteTimes||{})},unstamped=new Set();for(const [k]of cats)bulletParse(rep[k]||'').forEach(t=>{const h=SX?SX.hash(t):t;if(!times[h])unstamped.add(h);});
+ 
  function counts(){const r=effectiveReport(p);document.querySelectorAll('[data-cat]').forEach(button=>{const k=button.dataset.cat,label=k==='all'?'All notes':cats.find(c=>c[0]===k)[1];button.textContent=label+' ('+(k==='all'?cats.reduce((n,[f])=>n+bulletParse(r[f]||'').length,0):bulletParse(r[k]||'').length)+')'});document.querySelectorAll('[data-count]').forEach(el=>{const n=bulletParse(r[el.dataset.count]||'').length;el.textContent=n+' note'+(n===1?'':'s');});}
  /* Similar notes stay out of the way: the count is always there, the list only on request. */
  function suggestions(text,current){const words=tokens(text),matches=[];related.replaceChildren();if(words.size){const report=effectiveReport(p);for(const [key,label]of cats)bulletParse(report[key]||'').forEach((note,index)=>{if(key===current.key&&index===current.index)return;const other=tokens(note),score=[...words].filter(w=>other.has(w)).length;if(score)matches.push({key,label,note,index,score})});matches.sort((a,b)=>b.score-a.score);}
   similarN.textContent=matches.length?'('+matches.length+')':'';related.hidden=!showSimilar||!matches.length;if(related.hidden)return;
   const title=document.createElement('div');title.textContent='Similar notes · open one to edit it instead of repeating yourself';related.append(title);
   for(const m of matches.slice(0,4)){const button=document.createElement('button');button.className='btn ghost';button.textContent=m.label+': '+m.note;button.type='button';button.onclick=()=>{category=m.key;renderScouting(true);const row=document.querySelectorAll('#liveBullets .bl-txt')[m.index];row?.scrollIntoView({block:'nearest'});row?.focus()};related.append(button);}}
- function decorate(list){list.querySelectorAll('.bl-item').forEach(row=>{const text=row.querySelector('.bl-txt')?.textContent.trim()||'';let t=row.querySelector('.mx-time');if(!t){t=document.createElement('span');t.className='mx-time';row.querySelector('.bl-del')?.before(t);}t.textContent=noteTime(times,text);});}
+ /* Move a note to another category: the ⇄ button on the row, Alt + the category's
+    letter while typing in it, or drag the row's handle onto a category tab. */
+ function moveNote(from,text,to){text=String(text||'').trim();if(!text||from===to||!cats.some(c=>c[0]===to))return;const r=effectiveReport(p),src=bulletParse(r[from]||''),i=src.indexOf(text);if(i<0)return;src.splice(i,1);r[from]=src.map(t=>'\u2022 '+t).join('\n');r[to]=bulletParse(r[to]||'').concat([text]).map(t=>'\u2022 '+t).join('\n');busyStatus='Moved to '+cats.find(c=>c[0]===to)[1]+'.';saveRec(p,{report:JSON.stringify(r)}).then(()=>refreshMarks()).catch(()=>{});renderScouting(true);}
+ window.__mxMove=(to)=>{const row=document.activeElement?.closest?.('#liveBullets .bl-item');if(!row)return false;moveNote(row.closest('[data-note-section]').dataset.noteSection,row.querySelector('.bl-txt').textContent,to);return true;};
+ function closeMoveMenu(){document.querySelector('.mx-movemenu')?.remove();}
+ function decorate(list,field){list.querySelectorAll('.bl-item').forEach(row=>{if(row.querySelector('.mx-move'))return;const b=document.createElement('button');b.type='button';b.className='mx-move';b.title='Move to another category';b.setAttribute('aria-label','Move note to another category');b.textContent='\u21c4';
+   b.onclick=e=>{e.stopPropagation();const open=row.querySelector('.mx-movemenu');closeMoveMenu();if(open)return;const text=row.querySelector('.bl-txt').textContent;if(!text.trim())return;const m=document.createElement('div');m.className='mx-movemenu';m.setAttribute('role','menu');const t=document.createElement('small');t.textContent='Move to';m.append(t);cats.filter(c=>c[0]!==field).forEach(([k,label])=>{const o=document.createElement('button');o.type='button';o.setAttribute('role','menuitem');o.textContent=label;o.onclick=()=>moveNote(field,text,k);m.append(o);});row.append(m);m.querySelector('button').focus();};
+   row.querySelector('.bl-del')?.before(b);});}
  for(const [field,label]of cats.filter(([k])=>category==='all'||k===category)){
   const section=document.createElement('section');section.dataset.noteSection=field;
   const head=document.createElement('div');head.className='mx-sechead';const title=document.createElement('h3');title.textContent=label;const n=document.createElement('span');n.dataset.count=field;head.append(title,n);section.append(head);
   const list=document.createElement('div');section.append(list);host.append(section);
   if(!editable()){list.innerHTML='<ul class="mx-readonly">'+bulletParse(rep[field]||'').map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>';continue;}
-  let editor=makeBulletList(list,rep[field]||'','Write an observation…',()=>{if(SX?.active()&&chosen!==p.id){chosen=p.id;SX.select(p,p._liveClub);}const r=effectiveReport(p);r[field]=editor.serialize();const a=SX?.active();
+  let editor=makeBulletList(list,rep[field]||'','Write an observation…',()=>{/* An editor that has been redrawn away must never write its stale rows back. */if(!list.isConnected)return;if(SX?.active()&&chosen!==p.id){chosen=p.id;SX.select(p,p._liveClub);}const r=effectiveReport(p);r[field]=editor.serialize();const a=SX?.active();
    logViewing(r,a?[a.a.name,a.b.name].filter(Boolean).join(' vs '):['a','b'].map(k=>liveRoster(s[k])?.t.name).filter(Boolean).join(' vs '),s.noteDate||date,a?a.gameDate:(s.gameDate||date));
-   {const next=stampNotes(r,unstamped);Object.keys(times).forEach(h=>delete times[h]);Object.assign(times,next);}counts();
+   if(r._workflow?.noteTimes){r._workflow={...r._workflow};delete r._workflow.noteTimes;}counts();
    saveRec(p,{report:JSON.stringify(r)}).then(ok=>{counts();refreshMarks();const st=document.querySelector('#liveStatus');if(st)st.textContent=ok===false?'Saved locally; cloud sync failed.':'✓ Saved to player profile';}).catch(()=>{const st=document.querySelector('#liveStatus');if(st)st.textContent='Could not sync changes.'});});
   const addRow=list.querySelector('.bl-addrow');list.prepend(addRow);const addButton=addRow.querySelector('button');addButton.textContent='+  Add note';addButton.dataset.addNote=field;
   addButton.onclick=()=>{const ul=list.querySelector('.bl-ul');[...ul.children].slice(0,-1).forEach(li=>{if(!li.querySelector('.bl-txt').textContent.trim())li.remove();});const row=ul.lastElementChild;ul.prepend(row);row.querySelector('.bl-txt')?.focus();row.scrollIntoView({block:'nearest'});};
-  decorate(list);
+  decorate(list,field);
   list.addEventListener('input',e=>{if(!e.target.matches('.bl-txt'))return;const index=[...list.querySelectorAll('.bl-txt')].indexOf(e.target);suggestions(e.target.textContent,{key:field,index})});
-  list.addEventListener('focusout',()=>setTimeout(()=>decorate(list),0));
+  list.addEventListener('focusout',()=>setTimeout(()=>decorate(list,field),0));
+  list.addEventListener('dragstart',e=>{const row=e.target.closest?.('.bl-item');dragged=row?{field,text:row.querySelector('.bl-txt').textContent}:null;});list.addEventListener('dragend',()=>setTimeout(()=>{dragged=null;document.querySelectorAll('.mx-cat.drop').forEach(x=>x.classList.remove('drop'));},0));
  }
  counts();
  document.querySelector('#liveSearch').oninput=e=>{const q=fold(e.target.value);host.querySelectorAll('.bl-item').forEach(row=>row.hidden=!!q&&!fold(row.textContent).includes(q));host.querySelectorAll('section').forEach(section=>section.hidden=!!q&&![...section.querySelectorAll('.bl-item')].some(row=>!row.hidden));};
 }
+
+document.addEventListener('click',e=>{if(!e.target.closest?.('.mx-movemenu,.mx-move'))document.querySelector('.mx-movemenu')?.remove();});
 
 /* ── keyboard ──────────────────────────────────────────── */
 const K=window.MTShortcuts;
@@ -161,6 +167,7 @@ if(K){
  add('side','Jump to the other team','ArrowRight',otherSide);
  add('sideBack','Jump to the other team (left)','ArrowLeft',otherSide);
  [['all','All notes','L'],['nAth','Athleticism','A'],['nOff','Offense','O'],['nDef','Defense','D'],['nIntel','Intel','I'],['nProj','Projection','P']].forEach(([k,l,key])=>add('cat.'+k,'Category: '+l,key,()=>{category=k;renderScouting(true);}));
+ [['nAth','Athleticism','Alt+A'],['nOff','Offense','Alt+O'],['nDef','Defense','Alt+D'],['nIntel','Intel','Alt+I'],['nProj','Projection','Alt+P']].forEach(([k,l,key])=>add('move.'+k,'Move the note you are in to '+l,key,()=>window.__mxMove?.(k),{allowInInput:true}));
  add('note','New note','N',()=>document.querySelector('#liveBullets [data-add-note]')?.click());
  add('noteTyping','New note (while typing)','Alt+N',()=>document.querySelector('#liveBullets [data-add-note]')?.click(),{allowInInput:true});
  add('leave','Leave the note you are typing','Escape',()=>document.activeElement?.blur(),{allowInInput:true,when:()=>inMatchup()&&!!document.activeElement?.closest?.('#liveBullets,.liveNoteTools,.mx-col')});

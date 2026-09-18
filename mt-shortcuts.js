@@ -32,6 +32,8 @@
     var k = e.key;
     if (!k || k === 'Control' || k === 'Alt' || k === 'Shift' || k === 'Meta' || k === 'Dead') return '';
     if (k === ' ') k = 'Space';
+    /* With Alt held, macOS reports the accented character (Alt+O gives ø); the physical key is what was meant. */
+    if (e.altKey && /^Key[A-Z]$/.test(e.code || '')) k = e.code.slice(3);
     if (k.length === 1) k = k.toUpperCase();
     var out = [];
     if (e.ctrlKey) out.push('Ctrl');
