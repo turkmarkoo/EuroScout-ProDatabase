@@ -11,11 +11,28 @@ const NOT_EUROPE=new Set(['nba','gleague','cebl','bsn','cba','jbl','kbl','pba','
 const lines=p=>{const g=gid(p);return allPlayersEvery().filter(x=>gid(x)===g&&x.league!=='sl');};
 function next(p){try{return effective26keys(p,next26Get(),next26bGet()).map(canonKey).filter(k=>k&&!String(k).startsWith('__'));}catch(e){return [];}}
 const isEuropeClub=k=>!NOT_EUROPE.has(String(k).split('|')[0]);
+/* Where a 2026/27 signing came from, read off the transfer list: most college and
+   overseas players have no stat line here, but their transfer names the last club. */
+const fold=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+/* "Joseph Girard III" and "Joseph Girard" are one man. */
+const nameKey=s=>fold(s).replace(/\b(jr|sr|ii|iii|iv)\b/g,'').replace(/\s+/g,' ').trim();
+let origins=null,byName=null;
+function index(){
+ if(byName&&byName.n===(STATE.data.transfers||[]).length)return;
+ const o=window.EUROSCOUT_SIGNAL_ORIGINS||{};origins={college:new Set(o.college||[]),usPro:new Set(o.usPro||[]),other:new Set(o.otherNonEurope||[])};
+ byName=new Map();byName.n=(STATE.data.transfers||[]).length;
+ (STATE.data.transfers||[]).forEach(t=>{if(t.status==='retired'||!t.from||/^(nba|g ?league)$/i.test(t.league||''))return;const k=nameKey(t.player);if(!byName.has(k))byName.set(k,[]);byName.get(k).push(t);});
+}
+function origin(p){
+ index();const hits=(byName.get(nameKey(p.name))||[]).filter(t=>!t.birth_year||!p.born||Number(t.birth_year)===Number(p.born));
+ for(const t of hits){const f=fold(t.from);if(origins.college.has(f))return 'college';if(origins.usPro.has(f)||origins.other.has(f))return 'overseas';}
+ return '';
+}
 const RULES=[
- {key:'college',label:'Coming out of college',title:'Played college basketball in 2025/26 and is signed in Europe for 2026/27',
-  test:(p,c)=>c.lines.length>0&&c.lines.every(x=>COLLEGE.has(x.league))&&c.next.some(isEuropeClub)},
- {key:'rookie',label:'Rookie in Europe',title:'No European club in 2025/26; first European season in 2026/27',
-  test:(p,c)=>c.lines.length>0&&c.lines.every(x=>NOT_EUROPE.has(x.league))&&!c.lines.every(x=>COLLEGE.has(x.league))&&c.next.some(isEuropeClub)},
+ {key:'college',label:'Coming out of NCAA',title:'Played college basketball in 2025/26 and signed in Europe for 2026/27',
+  test:(p,c)=>!c.europe&&(c.origin==='college'||(c.lines.length>0&&c.lines.every(x=>COLLEGE.has(x.league))&&c.next.some(isEuropeClub)))},
+ {key:'rookie',label:'EU rookie',title:'Arrives from the NBA, G League or another league outside Europe, with no European club in 2025/26. Limited to players 26 or younger — the database cannot see earlier European seasons.',
+  test:(p,c)=>{if(c.europe||c.origin==='college')return false;const born=Number(p.born)||0;if(born&&born<SEASON_START-26)return false;const overseasLine=c.lines.length>0&&c.lines.every(x=>NOT_EUROPE.has(x.league))&&!c.lines.every(x=>COLLEGE.has(x.league))&&c.next.some(isEuropeClub);return c.origin==='overseas'||overseasLine;}},
  {key:'newteam',label:'New team',title:'Signed for 2026/27 with a club he did not play for in 2025/26',
   test:(p,c)=>c.next.length>0&&c.lines.some(x=>!NOT_EUROPE.has(x.league))&&!c.next.some(k=>c.current.has(k))},
  {key:'breakout',label:'Breakout season',title:'Production jumped compared with the previous season',
@@ -29,7 +46,7 @@ const RULES=[
 ];
 function of(p){
  if(!p)return [];
- let c;try{const ls=lines(p);c={lines:ls,next:next(p),current:new Set(ls.map(x=>canonKey(x.league+'|'+x.team))),status:careerStatus(p)};}catch(e){return [];}
+ let c;try{const ls=lines(p);c={lines:ls,next:next(p),current:new Set(ls.map(x=>canonKey(x.league+'|'+x.team))),status:careerStatus(p),origin:origin(p),europe:ls.some(x=>!NOT_EUROPE.has(x.league))};}catch(e){return [];}
  const out=[];for(const r of RULES){try{if(r.test(p,c))out.push({key:r.key,label:r.label,title:r.title});}catch(e){}if(out.length>=MAX)break;}
  return out;
 }

@@ -400,9 +400,7 @@ function timeline(p) {
   const r = parseReport(recOf(p).report), w = r._workflow || {}, out = [];
   (w.viewings || []).filter(v => !v.removed).forEach(v => out.push({ at: (v.gameDate || v.date || '') + 'T' + (v.updatedAt || '').slice(11, 19), date: v.gameDate || v.date, kind: 'viewing',
     title: v.event || 'Viewing', status: v.status || (v.source === 'matchup' ? 'notes' : ''), meta: [v.competition, v.mode, v.date && v.date !== v.gameDate ? 'watched ' + fmtDate(v.date) : '', nameOf(v.author)].filter(Boolean).join(' · '), text: v.notes || '', sessionId: v.sessionId || '' }));
-  const days = new Map();
-  (r._history || []).forEach(h => { const d = String(h.savedAt || '').slice(0, 10); if (!d) return; const x = days.get(d) || { n: 0, who: new Set(), at: h.savedAt }; x.n++; if (h.author) x.who.add(nameOf(h.author)); if (h.savedAt > x.at) x.at = h.savedAt; days.set(d, x); });
-  days.forEach((x, d) => out.push({ at: x.at, date: d, kind: 'notes', title: 'Notes revised', status: '', meta: [x.n > 1 ? x.n + ' saves' : '', [...x.who].join(', ')].filter(Boolean).join(' · '), text: '' }));
+  /* Only the games. "Updated Notes" on a game already says the notes changed. */
   return out.sort((x, y) => String(y.at).localeCompare(String(x.at)));
 }
 function timelineHTML(p) {
