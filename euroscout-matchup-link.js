@@ -49,6 +49,15 @@ const initial=location.hash;
 window.addEventListener('hashchange',()=>{if(typeof STATE!=='undefined'&&STATE.data)fromHash();});
 window.addEventListener('message',e=>{if(e.origin!==HUB||e.source!==parent||!e.data||e.data.type!=='hub:goto'||e.data.view!=='matchup')return;if(typeof STATE==='undefined'||!STATE.data)return;open({a:e.data.a,b:e.data.b,date:e.data.date});});
 
+/* Inside DragonsHub: say when the app is ready, which two teams are up and whether
+   a session is running, so the hub's dashboard card and its "open without
+   reloading" path have something to go on. Only names leave this page. */
+if(parent!==window){let sent='';setInterval(()=>{if(typeof STATE==='undefined'||!STATE.data||!document.querySelector('#app')?.children.length)return;
+ const name=k=>{const c=k&&clubByKey(canonKey(k));return c?{name:c.name}:null;},a=window.ESSessions?.active();
+ const msg={type:'euroscout:matchup',ready:true,teams:STATE.scouting.a&&STATE.scouting.b?{a:name(STATE.scouting.a),b:name(STATE.scouting.b)}:null,
+  session:a?{a:{name:a.a.name},b:{name:a.b.name},competition:a.competition?.name||'',gameDate:a.gameDate||''}:null};
+ const sig=JSON.stringify(msg);if(sig===sent)return;sent=sig;try{parent.postMessage(msg,HUB);}catch(e){}},2000);}
+
 const isAdmin=()=>window.ESAccess?!!(ESAccess.internal&&ESAccess.owner):true;
 window.MTShortcuts?.register({id:'app.matchupAdmin',label:'Scouting matchup from anywhere (administrator)',keys:'Ctrl+M',group:'Everywhere in EuroScout',scope:'global',allowInInput:true,when:isAdmin,run:()=>open({})});
 window.ESMatchupLink={open,link,findClub};

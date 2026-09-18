@@ -30,6 +30,8 @@ function clock(sec) { sec = Math.max(0, Math.floor(sec)); return pad(Math.floor(
 function daysSince(v) { const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return Infinity; return Math.floor((Date.now() - new Date(+m[1], +m[2] - 1, +m[3]).getTime()) / 86400000); }
 function hash(s) { let h = 5381; s = String(s || ''); for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0; return h.toString(36); }
 function me() { try { if (Store.user && Store.user.email) return Store.user.email; } catch (e) { /* Store is a lexical global */ } return (window.ESAccess && ESAccess.user && ESAccess.user.email) || 'Local editor'; }
+const nameOf = v => window.ESWorkspace ? ESWorkspace.nameOf(v) : String(v || '').split('@')[0];
+const workspace = () => window.ESWorkspace ? ESWorkspace.visible() : canEdit();
 function canEdit() { try { return Store.canEdit(); } catch (e) { return false; } }
 function club(key) { try { return clubByKey(canonKey(key)); } catch (e) { return null; } }
 function clubName(key) { const c = club(key); return c ? c.name : ''; }
@@ -397,8 +399,10 @@ function openFinish(done) {
 function timeline(p) {
   const r = parseReport(recOf(p).report), w = r._workflow || {}, out = [];
   (w.viewings || []).filter(v => !v.removed).forEach(v => out.push({ at: (v.gameDate || v.date || '') + 'T' + (v.updatedAt || '').slice(11, 19), date: v.gameDate || v.date, kind: 'viewing',
-    title: v.event || 'Viewing', status: v.status || (v.source === 'matchup' ? 'notes' : ''), meta: [v.competition, v.mode, v.date && v.date !== v.gameDate ? 'watched ' + fmtDate(v.date) : '', v.author].filter(Boolean).join(' · '), text: v.notes || '', sessionId: v.sessionId || '' }));
-  (r._history || []).forEach(h => out.push({ at: h.savedAt, date: h.savedAt, kind: 'notes', title: 'Notes revised', status: '', meta: [fmtTime(h.savedAt), h.author].filter(Boolean).join(' · '), text: '' }));
+    title: v.event || 'Viewing', status: v.status || (v.source === 'matchup' ? 'notes' : ''), meta: [v.competition, v.mode, v.date && v.date !== v.gameDate ? 'watched ' + fmtDate(v.date) : '', nameOf(v.author)].filter(Boolean).join(' · '), text: v.notes || '', sessionId: v.sessionId || '' }));
+  const days = new Map();
+  (r._history || []).forEach(h => { const d = String(h.savedAt || '').slice(0, 10); if (!d) return; const x = days.get(d) || { n: 0, who: new Set(), at: h.savedAt }; x.n++; if (h.author) x.who.add(nameOf(h.author)); if (h.savedAt > x.at) x.at = h.savedAt; days.set(d, x); });
+  days.forEach((x, d) => out.push({ at: x.at, date: d, kind: 'notes', title: 'Notes revised', status: '', meta: [x.n > 1 ? x.n + ' saves' : '', [...x.who].join(', ')].filter(Boolean).join(' · '), text: '' }));
   return out.sort((x, y) => String(y.at).localeCompare(String(x.at)));
 }
 function timelineHTML(p) {
@@ -424,7 +428,7 @@ function openTeamLog(key) {
     '<div class="sx-stats">' + stat(t.games.length, 'games watched') + stat(fmtDate(t.first), 'first watched') + stat(fmtDate(t.last), 'last watched') + stat(t.viewed.length + (t.rosterSize ? ' <small>/ ' + t.rosterSize + '</small>' : ''), 'players viewed') + stat(t.shortlisted.length, 'on watchlist') + stat(t.reports.length, 'reports written') + '</div>' +
     '<p class="sx-hint">Competitions watched: ' + (t.competitions.length ? esc(t.competitions.join(' · ')) : '—') + '</p>' +
     '<div class="sx-cols"><section><h4 class="sx-sub">Recent games</h4>' + (t.games.length ? '<ol class="sx-timeline">' + t.games.slice(0, 8).map(s => gameLine(s, key)).join('') + '</ol>' : '<p class="sx-hint">No games watched yet.</p>') + '</section>' +
-    '<section><h4 class="sx-sub">Recent scouting sessions</h4>' + (t.sessions.length ? '<ol class="sx-timeline">' + t.sessions.slice(0, 8).map(s => '<li><span class="sx-tl-date">' + fmtDate((s.startedAt || s.gameDate || '').slice(0, 10)) + '</span><div><b>' + s.players.length + ' player' + (s.players.length === 1 ? '' : 's') + '</b><small>' + esc([s.a.name + ' vs ' + s.b.name, s.by].filter(Boolean).join(' · ')) + '</small></div></li>').join('') + '</ol>' : '<p class="sx-hint">No sessions yet.</p>') + '</section></div>' +
+    '<section><h4 class="sx-sub">Recent scouting sessions</h4>' + (t.sessions.length ? '<ol class="sx-timeline">' + t.sessions.slice(0, 8).map(s => '<li><span class="sx-tl-date">' + fmtDate((s.startedAt || s.gameDate || '').slice(0, 10)) + '</span><div><b>' + s.players.length + ' player' + (s.players.length === 1 ? '' : 's') + '</b><small>' + esc([s.a.name + ' vs ' + s.b.name, nameOf(s.by)].filter(Boolean).join(' · ')) + '</small></div></li>').join('') + '</ol>' : '<p class="sx-hint">No sessions yet.</p>') + '</section></div>' +
     (next.length ? '<h4 class="sx-sub">Next games</h4><ol class="sx-timeline">' + next.map(g => '<li><span class="sx-tl-date">' + fmtDate(g.date) + '</span><div><b>' + esc(g.home.name) + ' vs ' + esc(g.away.name) + '</b><small>' + esc([g.time, g.compName, 'Round ' + g.round, g.venue].filter(Boolean).join(' · ')) + '</small></div></li>').join('') + '</ol>' : '') +
     '<h4 class="sx-sub">Players viewed</h4>' + people(t.viewed, 'Nobody from this team has been viewed in a session yet.') +
     '<h4 class="sx-sub">On the watchlist</h4>' + people(t.shortlisted.map(p => ({ id: gid(p), pid: p.id, name: p.name })), 'No 2026/27 roster player is on the watchlist.') +
@@ -594,7 +598,7 @@ function openSession(id) {
   const s = everything().find(x => x.id === id); if (!s) return;
   const watched = (s.watchedOn || []).length ? 'watched ' + s.watchedOn.map(fmtDate).join(', ') : '';
   const score = s.scoreA !== '' && s.scoreA != null && s.scoreB !== '' && s.scoreB != null ? s.scoreA + '–' + s.scoreB : '';
-  const box = modal('<h3>' + esc(s.a.name) + ' vs ' + esc(s.b.name) + (score ? ' · ' + esc(score) : '') + '</h3><p class="sx-hint">' + esc([fmtDate(s.gameDate), s.competition && s.competition.name, s.stage, s.mode, watched, s.venue, s.by].filter(Boolean).join(' · ')) + '</p>' +
+  const box = modal('<h3>' + esc(s.a.name) + ' vs ' + esc(s.b.name) + (score ? ' · ' + esc(score) : '') + '</h3><p class="sx-hint">' + esc([fmtDate(s.gameDate), s.competition && s.competition.name, s.stage, s.mode, watched, s.venue, nameOf(s.by)].filter(Boolean).join(' · ')) + '</p>' +
     (s.note ? '<p>' + esc(s.note) + '</p>' : '') +
     (s.players.length ? '<div class="sx-reviewlist">' + s.players.map(x => '<button type="button" class="sx-reviewrow sx-click" data-open="' + escAttr(x.pid) + '"><span class="sx-rname"><b>' + esc(x.name) + '</b><small>' + esc(clubName(x.club)) + '</small></span>' + statusChip(x.status) + '</button>').join('') + '</div>' : '<p class="sx-hint">No players were reviewed in this session.</p>') +
     '<div class="sx-actions">' + (canEdit() ? '<button type="button" class="btn primary" id="sxEditBtn">Edit</button><button type="button" class="btn ghost" id="sxMergeBtn">Merge with…</button>' : '') + '<button type="button" class="btn ghost" data-teamlog="' + escAttr(s.a.key) + '"' + (s.a.key ? '' : ' hidden') + '>' + esc(s.a.name) + ' log</button><button type="button" class="btn ghost" data-teamlog="' + escAttr(s.b.key) + '"' + (s.b.key ? '' : ' hidden') + '>' + esc(s.b.name) + ' log</button><span style="flex:1"></span>' + (canEdit() ? '<button type="button" class="btn ghost" id="sxRemove">Delete</button>' : '') + '</div>', true);
@@ -608,6 +612,7 @@ function openSession(id) {
 /* ── wiring into the app ───────────────────────────────── */
 const renderBase = render;
 render = function () {
+  if (STATE.view === 'scoutlog' && !workspace()) STATE.view = 'dashboard';
   if (STATE.view === 'scoutlog') {
     renderLog();
     document.querySelectorAll('#tabs [data-view]').forEach(b => { const on = b.dataset.view === 'scoutlog'; b.classList.toggle('active', on); b.setAttribute('aria-current', on ? 'page' : 'false'); });
@@ -616,19 +621,26 @@ render = function () {
   renderBase();
 };
 function addNav() {
-  const tabs = document.getElementById('tabs'); if (!tabs || tabs.querySelector('[data-view=scoutlog]')) return;
+  const tabs = document.getElementById('tabs'); if (!tabs) return;
+  const have = tabs.querySelector('[data-view=scoutlog]');
+  if (!workspace()) { if (have) have.remove(); return; }
+  if (have) return;
   const b = document.createElement('button'); b.type = 'button'; b.dataset.view = 'scoutlog'; b.textContent = 'Scouting log';
   b.onclick = () => { STATE.view = 'scoutlog'; render(); };
   const after = tabs.querySelector('[data-view=scouting]'); if (after) after.after(b); else tabs.appendChild(b);
 }
 addNav();
+window.addEventListener('euroscout-workspace', addNav);
 
 /* Player profile → Reports: the scouting history, above the older viewing log. */
 const profileBase = renderProfile;
 renderProfile = function () {
   profileBase();
   try {
-    const p = player(CURRENT), host = document.getElementById('es-panel-Reports'); if (!p || !host || host.querySelector('.sx-history')) return;
+    const p = player(CURRENT), host = document.getElementById('es-panel-Reports'); if (!p || !host) return;
+    /* Scouting history replaces the older viewing log. */
+    host.querySelectorAll('h3').forEach(h => { if (/^viewing log/i.test(h.textContent.trim())) (h.closest('.panel, section, .es-panel') || h.parentElement).remove(); });
+    if (!workspace() || host.querySelector('.sx-history')) return;
     const card = document.createElement('section'); card.className = 'panel es-panel sx-history';
     card.innerHTML = '<h3>Scouting history</h3>' + timelineHTML(p);
     host.prepend(card);
@@ -640,7 +652,7 @@ const teamBase = renderTeam;
 renderTeam = function () {
   teamBase();
   try {
-    const L = STATE.league, h = document.querySelector('#app h1'); if (!L || !h || typeof CURRENT_TEAM === 'undefined' || document.getElementById('sxTeamLogBtn')) return;
+    const L = STATE.league, h = document.querySelector('#app h1'); if (!workspace() || !L || !h || typeof CURRENT_TEAM === 'undefined' || document.getElementById('sxTeamLogBtn')) return;
     const key = canonKey(L.meta.id + '|' + CURRENT_TEAM), t = teamLog(key);
     const b = document.createElement('button'); b.type = 'button'; b.id = 'sxTeamLogBtn'; b.className = 'btn ghost sm sx-teamlogbtn';
     b.textContent = 'Team log · ' + (t.games.length ? t.games.length + ' game' + (t.games.length === 1 ? '' : 's') + ' · familiarity ' + t.score : 'not watched yet');

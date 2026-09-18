@@ -2252,7 +2252,7 @@ const Store = (()=>{
   const enabled = !!(window.ESAccess || (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY));
   let sb=null, user=null, role=null, member=false, cache={};
   const LKEY="euroscout:records";
-  const APP_KEYS=["euroscout:sessions:v1","euroscout:shortcuts:v1","euroscout:watchAlertsSeen:v1","euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1","euroscout:market:v1"];
+  const APP_KEYS=["euroscout:sessions:v1","euroscout:shortcuts:v1","euroscout:names:v1","euroscout:watchAlertsSeen:v1","euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1","euroscout:market:v1"];
   const local = {
     all(){try{return JSON.parse(localStorage.getItem(LKEY))||{}}catch(e){return{}}},
     set(o){localStorage.setItem(LKEY,JSON.stringify(o))}
@@ -3213,7 +3213,7 @@ function applyRoleClass(){
   document.body.classList.toggle("role-editor",Store.enabled && Store.canEdit());
 }
 function renderHeaderAuth(){
-  if(window.ESAccess&&ESAccess.internal){const host=document.getElementById('authBtn');if(host){host.textContent='Internal';host.title=ESAccess.user.email;host.onclick=()=>toast('Authenticated through DragonsHub · '+ESAccess.user.email);}return;}
+  if(window.ESAccess&&ESAccess.internal){const host=document.getElementById('authBtn');if(host){host.textContent='Internal';host.title=window.ESWorkspace?ESWorkspace.me():'Signed in';host.onclick=()=>toast('Signed in through DragonsHub'+(window.ESWorkspace?' · '+ESWorkspace.me():''));}return;}
   const b=$("#authBtn"); if(!b)return;
   if(!Store.enabled){ b.classList.add("syncpill"); Sync.renderPill(); b.onclick=()=>Sync.openSettings(); return; }
   b.classList.remove("syncpill","s-ok","s-err","s-sync","s-off","s-dirty");
@@ -7443,8 +7443,8 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260914-bbl"></script>
-<script src="euroscout-workflow.js?v=20260910-3"></script>
+<script src="euroscout-ui.js?v=20260920-1"></script>
+<script src="euroscout-workflow.js?v=20260920-1"></script>
 
 <script src="euroscout-market-records.js?v=16"></script>
 <script src="euroscout-market.js?v=20260913-batch"></script>
@@ -7458,4 +7458,4 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/aba-rosters-2026.js?v=20260910-1"></script>
 <script src="euroscout-aba-rosters.js?v=20260910-1"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260914-bclq-release"></script>
 <script>esSetup();boot();</script>
-<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260919-2"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-sessions.js?v=20260919-1"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260919-2"><script src="euroscout-live-notes.js?v=20260919-2"></script><script src="euroscout-shortcuts.js?v=20260918-1"></script><script src="euroscout-matchup-link.js?v=20260919-1"></script></body></html>
+<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-sessions.js?v=20260920-1"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260920-1"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260920-1"><script src="euroscout-signals.js?v=20260920-1"></script><script src="euroscout-quickstats.js?v=20260920-1"></script><script src="euroscout-live-notes.js?v=20260920-1"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>

@@ -22,7 +22,7 @@
   if (window.MTShortcuts) return;
 
   var actions = [];                 // registration order is display order
-  var cfg = { app: 'app', account: function () { return ''; }, load: null, save: null };
+  var cfg = { app: 'app', account: function () { return ''; }, accountLabel: null, load: null, save: null };
   var custom = null;                // { actionId: combo } — only the changed ones
   var capturing = null;             // action id waiting for a key press
 
@@ -189,7 +189,7 @@
     var head = el('div', 'mtsc-head'); head.appendChild(el('h2', null, editable ? 'Customise shortcuts' : 'Keyboard shortcuts'));
     var x = el('button', 'mtsc-btn', 'Close'); x.type = 'button'; x.onclick = close; head.appendChild(x); box.appendChild(head);
     box.appendChild(el('p', null, editable
-      ? 'Choose Change, then press the new key. Backspace clears a shortcut, Esc cancels. Saved for ' + (cfg.account() || 'this device') + '.'
+      ? 'Choose Change, then press the new key. Backspace clears a shortcut, Esc cancels. Saved for ' + ((cfg.accountLabel && cfg.accountLabel()) || 'this device') + '.'
       : 'Single-letter shortcuts work when you are not typing in a field — press Esc to leave a note first.'));
 
     if (pendingClash) {
