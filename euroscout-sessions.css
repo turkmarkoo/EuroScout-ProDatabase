@@ -1,0 +1,73 @@
+/* Scouting sessions: dialogs, scouting log, team log, player history. */
+.sx-mask{position:fixed;inset:0;z-index:120;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px;background:rgba(10,14,12,.6)}
+.sx-dialog{position:relative;margin:auto;width:min(480px,100%);box-sizing:border-box;padding:24px;background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:14px;font:13px/1.5 var(--body)}
+.sx-dialog.sx-wide{width:min(820px,100%)}
+.sx-dialog h3{margin:0 34px 4px 0;font:700 22px var(--disp)}
+.sx-dialog .sx-x{position:absolute;top:12px;right:12px;width:34px;height:34px;min-height:0;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:15px;cursor:pointer}
+.sx-dialog .sx-x:hover{background:var(--chip)}
+.sx-hint{margin:4px 0 12px;font-size:12px;color:var(--muted)}
+.sx-sub{margin:18px 0 8px;font:700 15px var(--disp)}
+.sx-form{display:grid;gap:12px}
+.sx-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sx-dialog label{display:grid;gap:5px;font-size:12px;color:var(--muted);min-width:0}
+.sx-dialog input,.sx-dialog select{box-sizing:border-box;width:100%;min-width:0;min-height:40px;padding:8px 10px;font:14px var(--body);color:var(--txt);background:var(--panel2);border:1px solid var(--line);border-radius:8px}
+.sx-dialog .sx-score{display:flex;align-items:center;gap:8px}
+.sx-dialog .sx-score input{width:64px;text-align:center}
+.sx-dialog .sx-score i{font-style:normal;color:var(--muted)}
+.sx-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:18px}
+.sx-dialog .btn.primary,.sx-log .btn.primary{background:#176348;color:#fff;box-shadow:none}
+.sx-reviewlist{display:grid;gap:5px;max-height:46vh;overflow:auto;padding-right:2px}
+.sx-reviewrow{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;padding:7px 10px;text-align:left;color:var(--txt);background:var(--panel2);border:1px solid var(--line);border-radius:8px;font:13px var(--body)}
+button.sx-reviewrow{cursor:pointer}button.sx-reviewrow:hover{border-color:#176348}
+.sx-rname{flex:1;min-width:0}.sx-rname b{display:block}.sx-rname small{color:var(--muted);font-size:11.5px}
+.sx-stockbtns{display:flex;gap:4px;flex:none}
+.sx-dialog .sx-mini{width:32px;height:30px;min-height:0;padding:0;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--muted);cursor:pointer}
+.sx-dialog .sx-mini[data-stock=up].on{background:#2f8f4e;border-color:#2f8f4e;color:#fff}
+.sx-dialog .sx-mini[data-stock=down].on{background:#c2503f;border-color:#c2503f;color:#fff}
+.sx-status{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap;vertical-align:middle}
+.sx-status.sx-none{background:var(--chip);color:var(--muted)}
+.sx-status.sx-notes{background:color-mix(in srgb,#176348 14%,var(--panel));color:#176348}
+.sx-status.sx-up{background:color-mix(in srgb,#2f8f4e 18%,var(--panel));color:#237a3f}
+.sx-status.sx-down{background:color-mix(in srgb,#c2503f 16%,var(--panel));color:#a63f30}
+html[data-theme=dark] .sx-status.sx-notes,html[data-theme=dark] .sx-status.sx-up{color:#9fd4b6}
+html[data-theme=dark] .sx-status.sx-down{color:#eaa79b}
+
+.sx-timeline{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.sx-timeline li{display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--line-soft,var(--line))}
+.sx-timeline li:first-child{border-top:0}
+.sx-tl-date{flex:0 0 78px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;padding-top:1px}
+.sx-timeline small{display:block;margin-top:2px;font-size:11.5px;color:var(--muted)}
+.sx-timeline p{margin:5px 0 0;font-size:12.5px;color:var(--txt);white-space:pre-wrap}
+.sx-tl-notes b{font-weight:500;color:var(--muted)}
+
+.sx-famrow{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:8px 0 14px}
+.sx-fam{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.sx-fam-track{display:inline-block;width:90px;height:7px;border-radius:4px;background:var(--line);overflow:hidden}
+.sx-fam-track i{display:block;height:100%;background:#176348;border-radius:4px}
+.sx-fam b{font:700 14px var(--disp)}.sx-fam small{font-size:11.5px;color:var(--muted)}
+.sx-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.sx-stat{padding:10px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:9px}
+.sx-stat b{display:block;font:700 19px var(--disp)}.sx-stat b small{font-size:12px;color:var(--muted);font-weight:500}
+.sx-stat>small{font-size:11px;color:var(--muted)}
+.sx-cols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.sx-people{display:flex;flex-wrap:wrap;gap:6px}
+.sx-dialog .sx-person{min-height:0;padding:6px 10px;font:12.5px var(--body);color:var(--txt);background:var(--panel2);border:1px solid var(--line);border-radius:99px;cursor:pointer}
+.sx-dialog .sx-person:hover{border-color:#176348}.sx-person small{color:var(--muted)}
+
+.sx-log{padding-bottom:40px}
+.sx-loghead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.sx-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.sx-log .sx-tab{padding:9px 14px;font:600 13px var(--body);color:var(--txt);background:var(--panel);border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.sx-log .sx-tab.on{background:#176348;border-color:#176348;color:#fff}
+.sx-tablewrap{max-width:100%;overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.sx-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.sx-table th{padding:11px 12px;text-align:left;font-family:var(--body);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap;border-bottom:1px solid var(--line)}
+.sx-table td{text-align:left;font-family:var(--body);padding:10px 12px;border-bottom:1px solid var(--line-soft,var(--line));white-space:nowrap;vertical-align:middle}
+.sx-table tr:last-child td{border-bottom:0}
+.sx-table tr.sx-click{cursor:pointer}.sx-table tr.sx-click:hover td,.sx-table tr.sx-click:focus td{background:var(--chip)}
+.sx-table .sx-hint{margin:0}
+.sx-check{display:inline-flex;align-items:center;gap:8px;margin:0 0 12px;font-size:12.5px;color:var(--muted)}
+.sx-check input{min-height:0;width:16px;height:16px}
+.sx-teamlogbtn{display:inline-block;margin:6px 0 12px}
+.sx-history .sx-hint{margin-top:0}
+@media(max-width:700px){.sx-two,.sx-cols{grid-template-columns:1fr}.sx-dialog{padding:18px}.sx-dialog input,.sx-dialog select{font-size:16px}.sx-tl-date{flex-basis:70px}}
