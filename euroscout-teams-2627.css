@@ -1,9 +1,10 @@
 /* Teams · 2026/27 — competition picker, team table, roster preview (euroscout-teams-2627.js) */
-.tm27-grid{display:grid;grid-template-columns:250px minmax(0,1fr) 300px;gap:16px;align-items:start;margin-top:14px}
+.tm27-grid{display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;align-items:start;margin-top:14px}
 .tm27-card{background:var(--panel,#fff);border:1px solid var(--line,#e3e7e4);border-radius:14px;padding:14px 16px}
 .tm27-card h3{margin:0 0 10px;font-size:17px}
 .tm27-search input,.tm27-filters input,.tm27-filters select{width:100%;padding:9px 12px;border:1px solid var(--line,#dfe4e1);border-radius:10px;background:var(--panel,#fff);color:inherit;font:inherit;font-size:14px}
-.tm27-comps{display:flex;flex-direction:column;gap:2px;margin:10px -6px 0;padding:0 6px;max-height:calc(100vh - 290px);min-height:320px;overflow:auto}
+.tm27-left{position:sticky;top:12px}
+.tm27-comps{display:flex;flex-direction:column;gap:2px;margin:10px -6px 0;padding:0 6px;max-height:calc(100vh - 330px);min-height:320px;overflow:auto}
 .tm27-gh{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#6b7a72);margin:12px 6px 4px}
 .tm27-comp{flex:none;display:flex;align-items:center;gap:10px;width:100%;height:auto!important;min-height:0!important;line-height:1.3!important;white-space:normal!important;letter-spacing:normal!important;text-transform:none!important;border:1px solid transparent;background:none;text-align:left;padding:8px 10px;border-radius:10px;font:inherit;font-size:14px;color:inherit;cursor:pointer}
 .tm27-comp:hover{background:rgba(0,0,0,.04)}
@@ -19,7 +20,7 @@
 .tm27-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;margin-bottom:8px}.tm27-filters input{grid-column:1/-1}
 .tm27-sort{border:1px solid var(--line,#dfe4e1);background:var(--panel,#fff);border-radius:10px;padding:0 12px;font:inherit;font-size:13px;cursor:pointer;color:inherit;white-space:nowrap}
 .tm27-meta{font-size:12.5px;opacity:.75;margin:4px 2px 8px}
-.tm27-tw{border:1px solid var(--line,#e3e7e4);border-radius:12px;overflow:hidden}
+.tm27-tw{border:1px solid var(--line,#e3e7e4);border-radius:12px}
 .tm27-table{width:100%!important;min-width:0!important;table-layout:fixed;border-collapse:collapse;font-size:14px;font-family:inherit}.tm27-table td,.tm27-table th{white-space:normal!important;text-align:left}.tm27-table td.n,.tm27-table th.n{text-align:right}.tm27-tw{overflow-x:auto}.tm27-table b,.tm27-table td{font-family:inherit!important;letter-spacing:normal}
 .tm27-table th{text-align:left;font-size:12px;font-weight:700;opacity:.75;background:rgba(0,0,0,.03);padding:9px 12px;border-bottom:1px solid var(--line,#e3e7e4)}
 .tm27-table td{padding:8px 12px;border-bottom:1px solid var(--line,#eef1ef);vertical-align:middle}
@@ -44,5 +45,11 @@
 .tm27-go{width:100%;margin-top:12px;padding:10px}
 .tm27-empty{text-align:center;padding:28px 18px}.tm27-ei{font-size:34px}.tm27-empty p{font-size:13px;opacity:.7}
 .tm27-checks{text-align:left;margin-top:14px;font-size:12.5px}.tm27-checks summary{cursor:pointer;font-weight:600}.tm27-checks .membership-review{max-height:360px;overflow:auto;border:0;padding:0;margin:8px 0 0}
-@media(max-width:1200px){.tm27-grid{grid-template-columns:240px minmax(0,1fr)}.tm27-right{grid-column:1/-1;position:static}}
+
 @media(max-width:780px){.tm27-grid{grid-template-columns:1fr}.tm27-comps{max-height:240px;min-height:0}.tm27-filters{grid-template-columns:1fr 1fr}.tm27-filters input{grid-column:1/-1}.tm27-table th:nth-child(3),.tm27-table td:nth-child(3){display:none}}
+/* one full list: header stays visible while scrolling */
+.tm27-table thead th{position:sticky;top:0;z-index:1;background:var(--panel,#fff);box-shadow:inset 0 -1px 0 var(--line,#e3e7e4)}
+.tm27-tw{overflow:visible!important}
+.tm27-left .tm27-checks{margin-top:10px;font-size:12px}.tm27-left .tm27-checks .membership-review{max-height:300px}
+.tm27-old{display:block;width:100%;margin-top:12px;border:0;border-top:1px solid var(--line,#e3e7e4);background:none;padding:10px 2px 0;text-align:left;font:inherit;font-size:12.5px;color:var(--muted,#6b7a72);cursor:pointer}.tm27-old:hover{color:#d58c4a}
+@media(max-width:780px){.tm27-left{position:static}}

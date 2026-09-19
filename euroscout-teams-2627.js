@@ -1,5 +1,6 @@
 /* Teams · 2026/27 — competition picker, team table, roster preview.
-   Replaces the list view of the 2026/27 Teams page (renderTeamsNext). The club
+   Replaces the list view of the 2026/27 Teams page (renderTeamsNext). The 2025/26
+   view stays reachable from a small link under the competition list. The club
    page itself (renderNextRoster), assignments and data are unchanged.
    Load after the main app script:  <script src="euroscout-teams-2627.js"></script>
    and the stylesheet:              <link rel="stylesheet" href="euroscout-teams-2627.css"> */
@@ -58,17 +59,18 @@
         return true;
       });
       rows.sort(function (a, b) { return st.sort === 'az' ? a.name.localeCompare(b.name) : ((byTeam.get(b.key) || []).length - (byTeam.get(a.key) || []).length) || a.name.localeCompare(b.name); });
-      var pages = Math.max(1, Math.ceil(rows.length / PER)); if (st.page > pages) st.page = pages;
-      var pageRows = rows.slice((st.page - 1) * PER, st.page * PER);
+      var pages = 1, pageRows = rows;
       var cq = fold(st.cq);
       var visComps = comps.filter(function (c) { return !cq || fold(c.name + ' ' + c.country + ' ' + c.id).indexOf(cq) >= 0; });
       var group = function (type, label) { var g = visComps.filter(function (c) { return c.type === type; }); if (!g.length) return ''; return '<div class="tm27-gh">' + label + '</div>' + g.map(function (c) { return '<button type="button" class="tm27-comp' + (c.value === sel ? ' on' : '') + '" data-tm27-comp="' + escAttr(c.value) + '"><span class="tm27-ci">' + (type === 'domestic' ? '🏀' : type === 'regional' ? '🗺️' : '🌍') + '</span><span class="tm27-cn">' + e(c.name) + (c.status !== 'Verified' ? ' <i title="' + e(c.status) + '">*</i>' : '') + '<small>' + e([c.country, c.count + ' clubs'].filter(Boolean).join(' · ')) + '</small></span></button>'; }).join(''); };
       var left = '<aside class="tm27-card tm27-left"><h3>Competition</h3><div class="tm27-search"><input id="tm27Cq" placeholder="Search competition…" autocomplete="off" value="' + escAttr(st.cq) + '"></div><div class="tm27-comps">' +
         '<button type="button" class="tm27-comp' + (!sel ? ' on' : '') + '" data-tm27-comp=""><span class="tm27-ci">🔎</span><span class="tm27-cn">All competitions<small>' + clubs.length + ' clubs</small></span></button>' +
-        group('europe', 'Europe') + group('regional', 'Regional') + group('domestic', 'Domestic') + '</div><p class="tm27-note">* provisional or awaiting a verified entry list</p></aside>';
+        group('europe', 'Europe') + group('regional', 'Regional') + group('domestic', 'Domestic') + '</div><p class="tm27-note">* provisional or awaiting a verified entry list</p>' +
+        (window.EuroScoutMemberships ? '<details class="tm27-checks"><summary>All league entry checks</summary>' + window.EuroScoutMemberships.reviewHTML(STATE.data, '').replace(/^<div class="membership-review">[\s\S]*?<details>/, '<div class="membership-review"><details open>') + '</details>' : '') +
+        '<button type="button" class="tm27-old" data-tmode="current">Teams 2025/26 (previous season) ›</button></aside>';
       var entry = '';
       if (comp) { var r = comp.raw || {}; entry = '<div class="tm27-entry"><span class="tm27-st ' + (comp.status === 'Verified' ? 'ok' : 'prov') + '">' + e(comp.status) + '</span><span>' + (r.teams ? r.teams.length : comp.count) + ' listed</span>' + (r.checked ? '<span>Checked ' + e(r.checked) + '</span>' : '') + (r.note ? '<span class="tm27-en">' + e(r.note) + '</span>' : '') + (/^https:\/\//.test(r.source || '') ? '<a href="' + escAttr(r.source) + '" target="_blank" rel="noopener noreferrer">Entry source ↗</a>' : '') + '</div>'; }
-      var prev = clubs.find(function (c) { return c.key === st.preview; }) || null;
+      var prev = null;
       var mid = '<section class="tm27-card tm27-mid"><div class="tm27-mh"><h3>' + e(comp ? comp.name : 'All competitions') + '</h3>' + entry + '</div>' +
         '<div class="tm27-filters"><input id="rbClubQ" placeholder="Search team or city… (e.g. Batumi, Vienna)" value="' + escAttr(STATE.next26Q || '') + '" autocomplete="off">' +
         '<select id="tm27Country"><option value="">All countries</option>' + countries.map(function (c) { return '<option' + (st.country === c ? ' selected' : '') + '>' + e(c) + '</option>'; }).join('') + '</select>' +
@@ -79,19 +81,8 @@
           var n = (byTeam.get(c.key) || []).length, stg = stageOf(c, sel);
           return '<tr class="' + (prev && prev.key === c.key ? 'on' : '') + '" data-tm27-row="' + escAttr(c.key) + '"><td><span class="tm27-team">' + clubBadge(c, 28) + '<b>' + e(c.name) + '</b>' + (stg === 'Q' ? '<em class="tm27-q">Q</em>' : '') + '</span></td><td class="tm27-nat">' + e(c.country || '—') + '</td><td><div class="tm27-tagw">' + compactTeamTags(c) + '</div></td><td class="n">' + (n ? n : '<span class="tm27-mute">0</span>') + '</td><td class="tm27-open"><button type="button" class="tm27-btn" data-club="' + escAttr(c.key) + '" title="Open the club page">›</button></td></tr>';
         }).join('') + '</tbody></table></div>' : '<div class="empty" style="margin-top:16px">No verified clubs match. If this league’s entries are not published yet, use the previous-season view for historical teams.</div>') +
-        (pages > 1 ? '<div class="tm27-pager"><button type="button" data-tm27-page="' + (st.page - 1) + '"' + (st.page <= 1 ? ' disabled' : '') + '>‹</button>' + Array.from({ length: pages }, function (_, i) { return i + 1; }).filter(function (n) { return n <= 2 || n > pages - 1 || Math.abs(n - st.page) <= 1; }).reduce(function (acc, n, i, arr) { if (i && n - arr[i - 1] > 1) acc.push('<span>…</span>'); acc.push('<button type="button" class="' + (n === st.page ? 'on' : '') + '" data-tm27-page="' + n + '">' + n + '</button>'); return acc; }, []).join('') + '<button type="button" data-tm27-page="' + (st.page + 1) + '"' + (st.page >= pages ? ' disabled' : '') + '>›</button><span class="tm27-grow"></span><span class="tm27-mute">Showing ' + ((st.page - 1) * PER + 1) + '–' + Math.min(rows.length, st.page * PER) + ' of ' + rows.length + '</span></div>' : '') + '</section>';
-      var right;
-      if (prev) {
-        var ros = (typeof clubRoster2627 === 'function' ? clubRoster2627(prev) : (byTeam.get(prev.key) || []));
-        right = '<aside class="tm27-card tm27-right"><div class="tm27-ph">' + clubBadge(prev, 44) + '<div><h3>' + e(prev.name) + '</h3><small>' + e([prev.country, (prev.teams[0] || {}).city].filter(Boolean).join(' · ')) + '</small></div></div><div class="tm27-tagw">' + compactTeamTags(prev) + '</div>' +
-          '<div class="tm27-rh"><b>Roster 2026/27</b><span>' + ros.length + ' player' + (ros.length === 1 ? '' : 's') + '</span></div>' +
-          (ros.length ? '<div class="tm27-ros">' + ros.slice(0, 16).map(function (p) { return '<button type="button" class="tm27-p" data-pid="' + escAttr(p.id) + '"><span class="tm27-pi' + (p.img ? '' : ' noimg') + '">' + (p.img ? '<img src="' + escAttr(p.img) + '" loading="lazy" alt="" onerror="this.parentNode.classList.add(\'noimg\');this.remove()">' : e((p.name || '?').split(/\s+/).map(function (w) { return w[0]; }).slice(0, 2).join(''))) + '</span><span class="tm27-pn"><b>' + e(p.name) + '</b><small>' + e([p.pos || p.role || '', p.born ? 'b. ' + p.born : p.age ? p.age + ' y' : '', p.height ? p.height + ' cm' : ''].filter(Boolean).join(' · ')) + '</small></span></button>'; }).join('') + (ros.length > 16 ? '<p class="tm27-mute">+ ' + (ros.length - 16) + ' more</p>' : '') + '</div>' : '<p class="tm27-mute">No players placed on this 2026/27 roster yet.</p>') +
-          '<button type="button" class="tm27-go" data-club="' + escAttr(prev.key) + '">Open full roster →</button></aside>';
-      } else {
-        right = '<aside class="tm27-card tm27-right tm27-empty"><div class="tm27-ei">🏀</div><b>Pick a team</b><p>Click a row to preview its 2026/27 roster here. › (or a double click) opens the full club page.</p>' +
-          (window.EuroScoutMemberships ? '<details class="tm27-checks"><summary>All league entry checks</summary>' + window.EuroScoutMemberships.reviewHTML(STATE.data, '').replace(/^<div class="membership-review">[\s\S]*?<details>/, '<div class="membership-review"><details open>') + '</details>' : '') + '</aside>';
-      }
-      $('#app').innerHTML = '<div class="view tm27"><h1 class="title">Teams · 2026/27</h1><div class="sub" style="margin-bottom:14px">Pick a competition, then a team to see this season’s roster. <b>' + placed + '</b> players placed so far.</div>' + teamsModeToggle() + '<div class="tm27-grid">' + left + mid + right + '</div></div>';
+        '</section>';
+      $('#app').innerHTML = '<div class="view tm27"><h1 class="title">Teams · 2026/27</h1><div class="sub" style="margin-bottom:14px">Pick a competition, then click a team to open its 2026/27 roster. <b>' + placed + '</b> players placed so far.</div><div class="tm27-grid">' + left + mid + '</div></div>';
       wireRosterCommon(); if (typeof wireTransferInbox === 'function') wireTransferInbox();
       var app = $('#app');
       app.querySelectorAll('[data-tm27-comp]').forEach(function (b) { b.onclick = function () { STATE.next26Lg = b.getAttribute('data-tm27-comp'); st.page = 1; st.country = ''; st.stage = ''; st.preview = ''; renderTeams(); }; });
@@ -100,7 +91,8 @@
       var ss = $('#tm27Stage'); if (ss) ss.onchange = function () { st.stage = ss.value; st.page = 1; renderTeams(); };
       var so = $('#tm27Sort'); if (so) so.onclick = function () { st.sort = st.sort === 'az' ? 'roster' : 'az'; renderTeams(); };
       app.querySelectorAll('[data-tm27-page]').forEach(function (b) { b.onclick = function () { st.page = Number(b.getAttribute('data-tm27-page')); renderTeams(); }; });
-      app.querySelectorAll('[data-tm27-row]').forEach(function (tr) { tr.onclick = function (ev) { if (ev.target.closest('[data-club]')) return; st.preview = tr.getAttribute('data-tm27-row'); renderTeams(); }; tr.ondblclick = function () { STATE.nextTeam = tr.getAttribute('data-tm27-row'); renderTeams(); try { window.scrollTo(0, 0); } catch (x) {} }; });
+      app.querySelectorAll('[data-tm27-row]').forEach(function (tr) { tr.onclick = function (ev) { if (ev.target.closest('[data-club]')) return; STATE.nextTeam = tr.getAttribute('data-tm27-row'); renderTeams(); try { window.scrollTo(0, 0); } catch (x) {} }; });
+      app.querySelectorAll('.tm27-old[data-tmode]').forEach(function (b) { b.onclick = function () { STATE.teamsMode = 'current'; STATE.curTeam = null; renderTeams(); try { window.scrollTo(0, 0); } catch (x) {} }; });
       app.querySelectorAll('[data-club]').forEach(function (b) { b.onclick = function (ev) { ev.stopPropagation(); STATE.nextTeam = b.getAttribute('data-club'); renderTeams(); try { window.scrollTo(0, 0); } catch (x) {} }; });
       app.querySelectorAll('.tm27-p[data-pid]').forEach(function (b) { b.onclick = function () { openProfile(b.getAttribute('data-pid')); }; });
     } catch (err) {
