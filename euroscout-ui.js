@@ -3,6 +3,7 @@ const ES_ORDER='euroscout:dashboardOrder:v1';
 const ES={role:'Guard',metric:'pir',rankLimit:5,noteLimit:5,statLimit:5,arrange:false,tab:'Overview',profile:null,returnPlayer:null};
 function esEl(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
 function esButton(text,fn,cls='es-button'){const b=esEl('button',cls,text);b.type='button';b.onclick=fn;return b;}
+function stepProjLevel(id,delta){const p=player(id);if(!p||!Store.canEdit())return;const band=levelBand(p);const cur=band?band.i:2;const next=Math.max(0,Math.min(LEVEL_BANDS.length-1,cur+delta));const key=gid(p)||id;ovrSaveLocal({bio:{[key]:{projLevel:next}}});renderProfile();}
 function esPanel(title){const n=esEl('section','panel es-panel');n.appendChild(esEl('h3',null,title));return n;}
 function esOrdinal(n){n=Math.round(n);const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
 function esReadOrder(){try{return JSON.parse(localStorage.getItem(ES_ORDER))||{};}catch(e){return {};}}
@@ -64,16 +65,13 @@ if(pill){pill.innerHTML='';pill.appendChild(esEl('span','es-profile-meta',[posLa
 flagNode?.remove();
 const nameRow=$('#drawer .ph-nrow');
 const follow=$('#drawer #watchToggle');
-if(follow&&nameRow){follow.classList.add('es-follow-btn');follow.classList.toggle('on',isWatched(p));follow.innerHTML=isWatched(p)?'✓ Following':'+ Follow';nameRow.appendChild(follow);}
+if(follow&&nameRow){follow.classList.add('es-follow-btn');follow.classList.toggle('on',isWatched(p));nameRow.appendChild(follow);}
 const heroBand=levelBand(p);
-if(heroBand&&nameRow){const badge=esEl('span','es-level-pill',heroBand.label);if(heroBand.manual)badge.title='Your assessment — open Scouting to change it';nameRow.appendChild(badge);}
 const my=$('#drawer .ph-myrate');
 const grade=$('#drawer .ph-grade .ph-rval');
 $('#drawer .ph-rating')?.remove();
 const actions=$('#drawer .ph-actions');
-try{if(window.EuroScoutMarket){const ev=EuroScoutMarket.evidence(p,next26Get());if(ev&&ev.label){const statusBox=esEl('div','es-status-box');statusBox.appendChild(esEl('small',null,'Status'));statusBox.appendChild(esEl('b',null,ev.label+(ev.club?' — '+ev.club:'')));$('#drawer .ph-id')?.appendChild(statusBox);}}}catch(eStatus){}
 if(actions){const overflow=esEl('details','es-actions-more');overflow.appendChild(esEl('summary',null,'More ▾'));const menu=esEl('div','es-overflow-menu');Array.from(actions.children).forEach(n=>menu.appendChild(n));overflow.appendChild(menu);actions.appendChild(overflow);actions.classList.add('es-hero-actions');}
-const scoutZone=esEl('div','es-scout-zone');if(follow)scoutZone.appendChild(follow);if(heroBand){const badgeEl=$('#drawer .es-level-pill');if(badgeEl)scoutZone.appendChild(badgeEl);}const statusEl=$('#drawer .es-status-box');if(statusEl)scoutZone.appendChild(statusEl);const phId=$('#drawer .ph-id');if(phId&&scoutZone.children.length)phId.appendChild(scoutZone);
 const factsRow=esEl('div','es-facts-row');
 [['Position',posLabel(p)],['Height',p.height?p.height+' cm':'—'],['Age',ageStr(p)||'—'],['Nationality',countryTxt||'—'],['Club',clubTxt||'—'],['League',leagueOf(p).meta.name]].forEach(([flab,fval])=>{const cell=esEl('div');cell.appendChild(esEl('small',null,flab));cell.appendChild(esEl('b',null,fval));factsRow.appendChild(cell);});
 $('#drawer .ph-top')?.after(factsRow);
@@ -82,6 +80,19 @@ const crestBlock=esEl('div','es-crest-block');
 if(teamObj&&teamObj.logo){const cimg=esEl('img');cimg.src=teamObj.logo;cimg.alt='';cimg.loading='lazy';crestBlock.appendChild(cimg);}
 crestBlock.appendChild(esEl('b',null,clubTxt||'—'));
 if(countryTxt)crestBlock.appendChild(esEl('small',null,countryTxt));
+if(heroBand){
+  const lvlBox=esEl('div','es-level-box');
+  lvlBox.appendChild(esEl('small',null,'Estimated Level'));
+  const lvlRow=esEl('div','es-level-row');
+  const canStep=Store.canEdit();
+  const dn=esButton('▾',()=>stepProjLevel(p.id,-1),'es-lvl-step');dn.disabled=!canStep||heroBand.i<=0;dn.title='Lower the estimated level';
+  const lab=esEl('b',null,heroBand.label);
+  const up=esButton('▴',()=>stepProjLevel(p.id,1),'es-lvl-step');up.disabled=!canStep||heroBand.i>=LEVEL_BANDS.length-1;up.title='Raise the estimated level';
+  lvlRow.append(dn,lab,up);
+  lvlBox.appendChild(lvlRow);
+  lvlBox.appendChild(esEl('small','es-lvl-sub',heroBand.manual?'Your assessment':'Automatic estimate'));
+  crestBlock.appendChild(lvlBox);
+}
 if(actions)crestBlock.appendChild(actions);
 $('#drawer .prohero')?.appendChild(crestBlock);const top=$('#drawer .ph-top');if(top)Array.from(top.children).filter(n=>!n.matches('.ph-photo,.ph-id,.ph-rating')).forEach(n=>panesLater.push(n));
  const tabs=esEl('nav','es-profile-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Player profile sections');hero.after(tabs);const panes={};['Overview','Notes','Reports','Stats','Timeline','Career','Media'].forEach((name,i,all)=>{const b=esButton(name,()=>esSelectTab(name),'es-tab');b.dataset.tab=name;b.dataset.icon=({Overview:'⌂',Notes:'▤',Reports:'▧',Stats:'▥',Timeline:'◷',Career:'↗',Media:'▣'})[name]||'•';b.id='es-tab-'+name;b.setAttribute('role','tab');b.setAttribute('aria-controls','es-panel-'+name);b.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const ix=e.key==='Home'?0:e.key==='End'?all.length-1:(i+(e.key==='ArrowRight'?1:-1)+all.length)%all.length;esSelectTab(all[ix]);$('#es-tab-'+all[ix]).focus();}};tabs.appendChild(b);const pane=esEl('section','es-tabpanel');pane.dataset.tab=name;pane.id='es-panel-'+name;pane.setAttribute('role','tabpanel');pane.setAttribute('aria-labelledby',b.id);root.appendChild(pane);panes[name]=pane;});
@@ -141,7 +152,7 @@ if(eurobasketA){const a=esEl('a',null,'↗ Find on Eurobasket.com');a.href=eurob
 try{if(window.EuroScoutMarket){const ev=EuroScoutMarket.evidence(p,next26Get());if(ev&&ev.url){const a=esEl('a',null,'↗ '+(ev.source||'Source'));a.href=ev.url;a.target='_blank';a.rel='noopener';mediaLinks.appendChild(a);}}}catch(eMediaLink){}
 if(mediaLinks.children.length){mediaLinks.classList.add('es-stack');const linksHead=esEl('h4',null,'External links');mediaPanel.appendChild(linksHead);mediaPanel.appendChild(mediaLinks);}
 panes.Media.appendChild(mediaPanel);
- const summary=root.querySelector('.statsum');if(summary){summary.classList.add('es-stat-summary');main.appendChild(summary);}Array.from(root.children).filter(n=>n!==nav&&n!==hero&&n!==tabs&&!n.classList.contains('es-tabpanel')).forEach(n=>panes.Stats.appendChild(n));esSelectTab(ES.tab);$('#drawer').prepend(nav);hero.after(tabs);esProjection(p);if(!Store.canEdit()){$$('#drawer .phstar,#drawer #rating button').forEach(b=>b.disabled=true);$('#drawer .biopanel-edit')?.setAttribute('hidden','');$('#drawer #saveBtn')?.setAttribute('hidden','');}
+ const summary=root.querySelector('.statsum');if(summary){summary.classList.add('es-stat-summary');main.appendChild(summary);}Array.from(root.children).filter(n=>n!==nav&&n!==hero&&n!==tabs&&!n.classList.contains('es-tabpanel')).forEach(n=>panes.Stats.appendChild(n));esSelectTab(ES.tab);$('#drawer').prepend(nav);hero.after(tabs);if(!Store.canEdit()){$$('#drawer .phstar,#drawer #rating button').forEach(b=>b.disabled=true);$('#drawer .biopanel-edit')?.setAttribute('hidden','');$('#drawer #saveBtn')?.setAttribute('hidden','');}
 }
 const esProfileBase=renderProfile;renderProfile=function(){if(STATE.data?.leagues)applyOverrides();esProfileBase();const p=player(CURRENT);if(p)esProfileLayout(p);};
 const esJumpBase=drawerJump;drawerJump=function(id){const n=document.getElementById(id),pane=n?.closest('.es-tabpanel');if(pane)esSelectTab(pane.dataset.tab);esJumpBase(id);};
