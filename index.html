@@ -693,6 +693,8 @@ body.drawer-lock{overflow:hidden}
 .drawer .profnav .inscope{margin-left:10px}
 /* ===== Scout board ===== */
 .scoutwrap{display:grid;grid-template-columns:236px 1fr;gap:22px;max-width:1320px;margin:0 auto;padding:20px 22px 60px}
+.scout-more{margin:20px auto 0;padding:14px 16px;text-align:center;color:var(--muted);font-size:12.5px;border:1px dashed var(--line);border-radius:10px;background:var(--panel2)}
+.scout-more.done{border-style:solid;color:var(--muted2);background:transparent}
 .scoutmain{min-width:0}
 .scoutrail{position:sticky;top:120px;align-self:start;display:flex;flex-direction:column;gap:18px;max-height:calc(100vh - 140px);overflow-y:auto;padding-right:4px}
 /* Filter rail: toggle button, collapse (desktop), off-canvas drawer (touch/narrow) */
@@ -2123,7 +2125,7 @@ const STATE = {data:null, league:null, view:"dashboard", allLeagues:false,
   compare:{slots:[null,null,null,null]}, fit:{role:"",arch:"",ageMax:"",levelMin:"",contract:"",minGrade:0,wStyle:50,wProd:30,wAge:20}, scouting:{a:null,b:null}, watchSort:"rating", profileScope:"league", statMode:"pg",
   charts:{type:"scatter", x:"pts40", y:"ts", dist:"pir", colorBy:"league", fLeague:null, fTeam:"", fCountry:"", fRole:"", hi:null, size:600},
   sim:{stat:0.4,pos:0.35,arch:0.25},
-  scout:{q:"",leagues:new Set(),roles:new Set(),tags:new Set(),status:"all",sort:"grade",riserOnly:false,simRef:null,simAgeMax:null,simLevelMin:null,simFreeOnly:false,arch:null,filters:[],level:null,next26:null,view:"table",tsort:{key:"grade",dir:-1},railHidden:true,railOpen:false,ratingMin:null}};
+  scout:{q:"",leagues:new Set(),roles:new Set(),tags:new Set(),status:"all",sort:"grade",riserOnly:false,simRef:null,simAgeMax:null,simLevelMin:null,simFreeOnly:false,arch:null,filters:[],level:null,next26:null,view:"table",tsort:{key:"grade",dir:-1},railHidden:true,railOpen:false,ratingMin:null,visibleCount:null}};
 
 /* Tag vocabulary — "Watchlist" is a tag so flagged players surface in the board.
    Curated archetype/skill tags a scout reaches for; free tags still allowed on the card. */
@@ -3538,7 +3540,7 @@ function renderPlayers(){
     const profileMeta=[p.role||p.pos,p.height?p.height+' cm':'',p.born||''].filter(Boolean).join(' · ');
     const attention=[];
     if(isWatched(p))attention.push('<span class="badge">★ Watchlist</span>');
-    const band=manualLevelBand(p);if(band)attention.push('<span class="badge">'+esc(band.label)+'</span>');
+    const band=levelBand(p);if(band)attention.push('<span class="badge">'+esc(band.label)+'</span>');
     return `<tr data-id="${p.id}">
       <td class="l" style="color:var(--muted)">${i+1}</td>
       <td class="l"><span class="player-cell"><span class="tavatar-wrap">${p.img?`<img class="tavatar" src="${escAttr(p.img)}" loading="lazy" onerror="this.remove()"/>`:''}<span class="tavatar-fallback">${esc(initials(p.name))}</span></span><span class="player-copy"><span class="pname">${esc(p.name)} ${p.multiTeam?'<span class="badge">2TM</span>':''}</span><span class="player-meta">${esc(profileMeta||'Profile details unavailable')}${p.country?' · '+esc(countryLabel(p.country)||p.country):''}<span class="player-flags">${attention.join('')}</span></span></span></span></td>
@@ -6438,6 +6440,12 @@ function renderScout(){
     try{const r=localStorage.getItem(RAIL_KEY);if(r!=null)s.railHidden=(r==="1");}catch(e){}
     s._viewInit=1;}
   KBD_SEL=-1;
+  /* Scroll for more rather than a hard 180/300 cutoff. A filter/sort/search
+     change is a new list -- reset to the top of it; the load-more observer
+     below re-renders with a bigger visibleCount for the same list, which
+     this signature check leaves alone. */
+  {const sig=JSON.stringify([s.q,[...s.leagues],[...s.roles],[...s.tags],s.status,s.riserOnly,s.ratingMin,s.level,s.next26,s.arch,s.filters,s.sort,s.view,s.tsort,s.simRef,s.season,s.competition,s.statsSeason]);
+    if(s._lastSig!==sig||s.visibleCount==null){s.visibleCount=SCOUT_PAGE;s._lastSig=sig;}}
   const simP=s.simRef?player(s.simRef):null; if(s.simRef&&!simP)s.simRef=null;
   let pool=scoutSeasonPool(s);
   if(simP){const rg=gid(simP);pool=pool.filter(p=>gid(p)!==rg);}
@@ -6622,8 +6630,8 @@ function renderScout(){
       ${simP?"":viewsBar}
       ${simP?"":recentRow}
       ${simP?"":activeChipsHTML(s)}
-      ${s.view==="table"?scoutTable(pool.slice(0,300),s):`<div class="board">${pool.slice(0,180).map(scoutCard).join("")}</div>`}
-      ${pool.length>(s.view==="table"?300:180)?`<div class="sub" style="text-align:center;margin-top:16px">Showing first ${s.view==="table"?300:180} — narrow with filters to see more.</div>`:""}
+      ${s.view==="table"?scoutTable(pool.slice(0,s.visibleCount),s):`<div class="board">${pool.slice(0,s.visibleCount).map(scoutCard).join("")}</div>`}
+      ${pool.length>s.visibleCount?`<div class="scout-more" id="scoutLoadMore" role="status">Loading more players…</div>`:pool.length?`<div class="scout-more done" role="status">All ${pool.length} player${pool.length===1?"":"s"} loaded</div>`:""}
       ${!pool.length?'<div class="empty">No players match. Loosen the filters on the left.</div>':""}
     </section>
   </div>`;
@@ -6702,6 +6710,19 @@ function renderScout(){
     if(e.target.closest(".eststar")){e.stopPropagation();toggleTag(row.dataset.id,WATCH_TAG).then(renderScout);return;}
     openProfile(row.dataset.id);});
   updateKbdSelection();
+  // load more as the bottom marker scrolls into view, keeping scroll position steady
+  (function(){
+    const more=$("#scoutLoadMore"); if(!more)return;
+    const io=new IntersectionObserver(es=>{
+      if(!es.some(x=>x.isIntersecting))return;
+      io.disconnect();
+      const y=window.scrollY;
+      s.visibleCount+=SCOUT_PAGE;
+      renderScout();
+      window.scrollTo(0,y);
+    },{rootMargin:"600px"});
+    io.observe(more);
+  })();
 }
 // keyboard navigation highlight on the board
 function boardCards(){return $$(".board .scoutcard");}
@@ -6846,6 +6867,7 @@ function topArch(p,n){if(!p.arch)return [];
     .map(x=>({idx:x.i,w:x.w,lab:archLabel(x.i,p),c:(ARCHETYPES[x.i]||{}).c||"var(--accent)"}));}
 /* ---------- Scout TABLE view (dense, sortable list) ---------- */
 const SCOUT_VIEW_KEY="euroscout:scoutView";
+const SCOUT_PAGE=60; // players added per infinite-scroll batch
 /* ---------- Filter rail: collapse on desktop, off-canvas drawer on touch/narrow ---------- */
 const RAIL_KEY="euroscout:railHidden";
 function railIsNarrow(){try{return window.matchMedia("(max-width:1000px)").matches;}catch(e){return false;}}
@@ -6966,7 +6988,7 @@ function scoutTable(pool,s){
       <td class="estrk c1">${i+1}</td>
       <td class="estadd c2"><button class="estcmp ${inCompare(p.id)?"on":""}" data-cmp="${p.id}" title="${inCompare(p.id)?"In compare \u2014 click to remove":"Add to compare"}" aria-label="Toggle compare">\u21c6</button></td>
       <td class="estplayer l c3"><span class="estp">${statusDotsHTML(p)}<span class="estav${_ph?"":" noimg"}">${_ph?`<img src="${_ph}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name)}</span>${p.country?`<span class="estflag" title="${escAttr(p.country)}">${flagEmoji(p.country)||isoOf(p.country)||""}</span>`:""}<span class="estname">${esc(p.name)}${formArrowHTML(p)}</span></span></td>
-      <td class="estdim">${p.born!=null?p.born:"\u2014"}</td>
+      <td class="estdim">${p.born!=null?p.born+(p.age!=null?" ("+p.age+")":""):"\u2014"}</td>
       <td><span class="estpos" style="color:${rc};background:${rc}1e">${posLabel(p)}</span></td>
       <td class="estdim">${p.height!=null?p.height:"\u2014"}</td>
       <td class="estclubcell l"><span class="estclub">${esc(p._seasonClub||p.teamName||"—")}</span><span class="estcomp">${esc(p._seasonContext||"")}<br>${esc(p._seasonLabel||lg?.meta?.name||"")}</span></td>
