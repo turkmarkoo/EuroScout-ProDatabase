@@ -2901,8 +2901,10 @@ async function loadCoreData(){
   if(window.EUROSCOUT_INLINE)return window.EUROSCOUT_INLINE;
   return new Promise(resolve=>{
     const script=document.createElement("script");script.src="data/data.js";
-    script.onload=()=>resolve(window.EUROSCOUT_INLINE||null);
-    script.onerror=()=>resolve(null);document.head.appendChild(script);
+    let settled=false,timer=0;const finish=value=>{if(settled)return;settled=true;clearTimeout(timer);resolve(value);};
+    timer=setTimeout(()=>finish(null),12000);
+    script.onload=()=>finish(window.EUROSCOUT_INLINE||null);
+    script.onerror=()=>finish(null);document.head.appendChild(script);
   });
 }
 async function boot(){
@@ -2911,14 +2913,14 @@ async function boot(){
   // Private state is still applied only after ESAccess has verified the session.
   const rawPromise=loadCoreData();
   const storePromise=Store.initSB().catch(e=>console.warn("Access initialization delayed",e));
-  const raw=await rawPromise;
+  const raw=await Promise.race([rawPromise,new Promise(resolve=>setTimeout(()=>resolve(null),30000))]);
   await Promise.race([storePromise,new Promise(resolve=>setTimeout(resolve,13000))]); // longer than euroscout-access.js's own 12s embedded-handshake fallback, so this never wins the race before that resolves
   if(!ESAccess.internal){
     ESAccess.external(raw);
     return;
   }
-  if(!raw || !Array.isArray(raw.leagues) || !raw.leagues.length){ $("#app").innerHTML='<div class="empty">Could not load data. Make sure '+
-    '<code>data/data.json</code> (or <code>data/data.js</code>) is present — see README.</div>'; return; }
+  if(!raw || !Array.isArray(raw.leagues) || !raw.leagues.length){ $("#app").innerHTML='<div class="empty"><strong>EuroScout data could not be loaded.</strong><br>'+
+    'Check that <code>data/data.json</code> or <code>data/data.js</code> is present in the repository, then reload.</div>'; return; }
   try{
   for(const L of raw?.leagues||[])for(const p of L.players||[])if(p.img&&!isPlayerPhoto(p.img))p.img=null;
   window.EuroScoutABA?.apply(raw);
