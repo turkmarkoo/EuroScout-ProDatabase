@@ -15,6 +15,7 @@ function apply(raw){
  for(const t of data.teams){const id='bbl-2026-'+t.id;if(!directory.some(x=>x.id===id))directory.push({id,name:t.name,country:'Germany',league:'Germany BBL',aliases:t.aliases,source:t.url,checked:data.checked});}
  for(const league of raw.leagues)for(const p of league.players){const r=byId.get(p.id);if(!r)continue;
   p._bblRoster={season:data.season,teamId:r.teamId,teamName:r.teamName,number:r.number,source:r.source,profile:r.profile,checked:data.checked};
+  p.currentRosterSeason=data.season;p.currentClub=r.teamName;p.currentRosterSource=r.source;p.currentRosterProfile=r.profile;
   if(r.img)p.img=r.img;
   if(!p.born||r.match==='Official BBL profile birth date and career history reviewed')p.born=r.born;
   if(!p.height)p.height=r.height;if(!p.weight)p.weight=r.weight;
