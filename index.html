@@ -31,7 +31,7 @@ document.addEventListener('click',function(e){var b=e.target.closest('#esTheme,#
 <link rel="apple-touch-icon-precomposed" href="apple-touch-icon.png">
 <link rel="mask-icon" href="euroscout-mask.svg" color="#0F2C45">
 <link rel="manifest" href="site.webmanifest">
-<meta name="theme-color" content="#0F2C45">
+<meta name="theme-color" content="#0F6C37">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -79,8 +79,8 @@ header{position:sticky;top:0;z-index:90;background:var(--bg);border-bottom:1px s
 .logo{display:flex;align-items:center;gap:11px;font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:.02em;cursor:pointer;user-select:none;line-height:1}
 .logo:hover{opacity:.92}
 .logo:hover .mark{transform:rotate(-4deg)}
-.logo .mark{width:34px;height:34px;border-radius:9px;background:#0F2C45;overflow:hidden;
-  display:grid;place-items:center;color:#1c130b;font-family:var(--disp);font-weight:800;font-size:20px;box-shadow:var(--shadow);transition:transform .15s}
+.logo .mark{width:34px;height:34px;background:transparent;display:grid;place-items:center;transition:transform .15s}
+.logo .mark img{width:100%;height:100%;object-fit:contain;display:block}
 .logo b{color:var(--accent);font-weight:800}
 nav.tabs{display:flex;gap:2px;flex-wrap:wrap}
 nav.tabs button{background:transparent;border:1px solid transparent;color:var(--muted);padding:7px 13px;border-radius:9px;font-size:13.5px;font-weight:600;transition:.13s}
@@ -110,7 +110,8 @@ nav.tabs button:hover{color:var(--txt)}
 .authgate.hidden{display:none}
 .agbox{width:100%;max-width:400px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:30px 28px;box-shadow:var(--shadow)}
 .aglogo{display:flex;align-items:center;gap:8px;font-family:var(--disp);font-size:20px;font-weight:800;margin-bottom:18px}
-.aglogo .mark{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:#0F2C45;overflow:hidden}
+.aglogo .mark{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:transparent}
+.aglogo .mark img{width:100%;height:100%;object-fit:contain;display:block}
 .agbox h2{font-size:20px;margin:0 0 8px}
 .agbox p{font-size:13.5px;color:var(--muted);line-height:1.55;margin:0 0 16px}
 .agbox input{width:100%;box-sizing:border-box;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--panel2);color:var(--txt);margin-bottom:12px}
@@ -1742,7 +1743,7 @@ body.drawer-lock{overflow:hidden}
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=3Y7lXbDvH8pAG9lPBacTPclY0DT0LplrHz1eTf5OXUo-1789284776.9266841-1.2.1.1-x5DFik2ap6VDH42hUPVphw8tQy6FKPoLaH5riZbc2q_ycdpGCOE2dg20ikdH7sb." aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
-    <div class="logo" id="homeLogo" title="Back to players" role="button" tabindex="0"><span class="mark"><svg viewBox="0 0 112 112" width="100%" height="100%" style="display:block" aria-hidden="true"><rect width="112" height="112" fill="#0F2C45"/><circle cx="56" cy="56" r="30" fill="none" stroke="#7FA8C9" stroke-width="5"/><g stroke="#7FA8C9" stroke-width="5" stroke-linecap="round"><line x1="56" y1="9" x2="56" y2="29"/><line x1="56" y1="83" x2="56" y2="103"/><line x1="9" y1="56" x2="29" y2="56"/><line x1="83" y1="56" x2="103" y2="56"/></g><circle cx="56" cy="56" r="16" fill="#EE7A3C"/><g fill="none" stroke="#0F2C45" stroke-width="3.2" stroke-linecap="round"><path d="M40 56H72"/><path d="M56 40V72"/><path d="M45 46q11 10 22 0"/><path d="M45 66q11 -10 22 0"/></g></svg></span><span class="logotext">Euro<b>Scout</b></span></div>
+    <div class="logo" id="homeLogo" title="Back to players" role="button" tabindex="0"><span class="mark"><img src="cedevita-olimpija.png" alt="" width="34" height="34"></span><span class="logotext">Euro<b>Scout</b></span></div>
     <nav class="tabs" id="tabs">
       <button data-view="scout" class="active">Players</button>
       <button data-view="teams">Teams</button>
@@ -2824,6 +2825,11 @@ const Sync = (()=>{
     else{b.textContent="\u21c5 Synced";b.classList.add("s-ok");b.title=lastPush?("Last push "+new Date(lastPush).toLocaleTimeString()):"Ready";}
   }
   function bootPull(){
+    /* The shared Supabase backend supersedes this personal per-device gist sync;
+       running both risks an old private gist quietly overwriting the shared notes
+       a Front Office viewer is reading, and its own status pill (#esSyncButton) is
+       not part of the header in that mode anyway. */
+    if(Store.enabled)return;
     renderPill();
     if(configured())pull();
     document.addEventListener("visibilitychange",()=>{
@@ -3257,7 +3263,7 @@ function startPendingPoll(){
 let AG_MODE="signin"; // 'signin' | 'signup'
 function renderAuthGate(){
   const box=$("#agBox"); if(!box)return;
-  const logo=`<div class="aglogo"><span class="mark"><svg viewBox="0 0 112 112" width="100%" height="100%" style="display:block" aria-hidden="true"><rect width="112" height="112" fill="#0F2C45"/><circle cx="56" cy="56" r="30" fill="none" stroke="#7FA8C9" stroke-width="5"/><g stroke="#7FA8C9" stroke-width="5" stroke-linecap="round"><line x1="56" y1="9" x2="56" y2="29"/><line x1="56" y1="83" x2="56" y2="103"/><line x1="9" y1="56" x2="29" y2="56"/><line x1="83" y1="56" x2="103" y2="56"/></g><circle cx="56" cy="56" r="16" fill="#EE7A3C"/><g fill="none" stroke="#0F2C45" stroke-width="3.2" stroke-linecap="round"><path d="M40 56H72"/><path d="M56 40V72"/><path d="M45 46q11 10 22 0"/><path d="M45 66q11 -10 22 0"/></g></svg></span><span>Euro<b>Scout</b></span></div>`;
+  const logo=`<div class="aglogo"><span class="mark"><img src="cedevita-olimpija.png" alt="" width="34" height="34"></span><span>Euro<b>Scout</b></span></div>`;
   if(Store.user && !Store.member){
     const em=(Store.user.email||"").toLowerCase();
     let wasMember=false; try{wasMember=localStorage.getItem("es:wasmember:"+em)==="1";}catch(e){}
