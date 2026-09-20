@@ -1741,7 +1741,7 @@ body.drawer-lock{overflow:hidden}
 
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
-<link rel="stylesheet" href="euroscout-ui.css?v=20260913-search">
+<link rel="stylesheet" href="euroscout-ui.css?v=20260920-3">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
 <style>.membership-review{margin:12px 0 18px;padding:12px 16px;background:var(--card,#fff);border:1px solid var(--border,#d9e3df);border-radius:12px;color:var(--text,#193442);font-size:13px}.membership-review details{margin-top:8px}.membership-review summary{cursor:pointer}.membership-review-row{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 0;align-items:baseline}.membership-review-row>span{flex:1 1 250px}.membership-review-row>a{white-space:nowrap}.membership-review details[open]{max-height:340px;overflow:auto}.rbFilters>select{min-width:min(320px,100%);max-width:100%;height:auto;min-height:44px;padding:10px 36px 10px 12px}</style>
 <link rel="stylesheet" href="euroscout-team-cards.css?v=20260914">
@@ -2912,13 +2912,14 @@ async function boot(){
   const rawPromise=loadCoreData();
   const storePromise=Store.initSB().catch(e=>console.warn("Access initialization delayed",e));
   const raw=await rawPromise;
-  await Promise.race([storePromise,new Promise(resolve=>setTimeout(resolve,8000))]);
+  await Promise.race([storePromise,new Promise(resolve=>setTimeout(resolve,13000))]); // longer than euroscout-access.js's own 12s embedded-handshake fallback, so this never wins the race before that resolves
   if(!ESAccess.internal){
     ESAccess.external(raw);
     return;
   }
   if(!raw || !Array.isArray(raw.leagues) || !raw.leagues.length){ $("#app").innerHTML='<div class="empty">Could not load data. Make sure '+
     '<code>data/data.json</code> (or <code>data/data.js</code>) is present — see README.</div>'; return; }
+  try{
   for(const L of raw?.leagues||[])for(const p of L.players||[])if(p.img&&!isPlayerPhoto(p.img))p.img=null;
   window.EuroScoutABA?.apply(raw);
   window.EuroScoutFEB?.apply(raw);window.EuroScoutFEB?.applyCurrentRoster(raw);
@@ -2976,6 +2977,11 @@ async function boot(){
     Object.keys(m).forEach(k=>{const p=player(k);if(!p)return;const g=gid(p);
       if(g&&g!==k){if(!m[g])m[g]=m[k];delete m[k];changed=true;}});
     if(changed)next26Set(m);}catch(e){}})();
+  }catch(bootErr){
+    console.error("EuroScout failed to finish loading",bootErr);
+    $("#app").innerHTML='<div class="empty">EuroScout hit a problem while loading and could not continue.<br><span style="font-size:12px;color:var(--muted)">'+escAttr(bootErr&&bootErr.message||String(bootErr))+'</span><br><button class="btn" style="margin-top:12px" onclick="location.reload()">Reload</button></div>';
+    return;
+  }
   try{ render(); }catch(e){ console.error("initial render failed",e); }
   // keep other open tabs in step: roster/transfer edits made elsewhere refresh this view
   window.addEventListener("storage",e=>{
@@ -7497,7 +7503,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260920-1"></script>
+<script src="euroscout-ui.js?v=20260920-3"></script>
 <script src="euroscout-workflow.js?v=20260920-1"></script>
 
 <script src="euroscout-market-records.js?v=16"></script>
