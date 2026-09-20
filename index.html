@@ -667,6 +667,8 @@ body.drawer-lock{overflow:hidden}
 /* ===== Scout board ===== */
 .scoutwrap{display:grid;grid-template-columns:236px 1fr;gap:22px;max-width:1320px;margin:0 auto;padding:20px 22px 60px}
 .scoutmain{min-width:0}
+.scout-more{margin:22px auto 4px;padding:12px 16px;text-align:center;color:var(--muted);font-size:12px;border:1px dashed var(--line);border-radius:10px;background:var(--panel2)}
+.scout-more.done{border-style:solid;color:var(--muted2);background:transparent}
 .scoutrail{position:sticky;top:120px;align-self:start;display:flex;flex-direction:column;gap:18px;max-height:calc(100vh - 140px);overflow-y:auto;padding-right:4px}
 /* Filter rail: toggle button, collapse (desktop), off-canvas drawer (touch/narrow) */
 .headleft{display:flex;align-items:flex-start;gap:12px;min-width:0}
@@ -5238,7 +5240,6 @@ function renderProfile(){
               <button class="btn ghost sm" onclick="drawerJump('reportPanel')">Notes</button>
               <button class="btn ghost sm" onclick="toggleCompare('${p.id}')" title="${inCompare(p.id)?'In compare — click to remove':'Add this player to the comparison'}">\u21c6 ${inCompare(p.id)?'In compare':'Compare'}</button>
               <button class="btn ghost sm" onclick="copyPlayerLink('${p.id}',this)" title="Copy a shareable link to this player">🔗 Copy link</button>
-              <button class="btn ghost sm" onclick="exportPlayerReport('${p.id}')" title="Open a printable one-page report (Save as PDF or print)">🖨 Report</button>
               <a class="btn ghost sm" href="${eurobasketURL(p)}" target="_blank" rel="noopener" title="Find this player on Eurobasket.com">↗ Eurobasket</a>
               ${(p._ext&&!/eurobasket\.com/i.test(p._ext))?`<a class="btn ghost sm" href="${p._ext}" target="_blank" rel="noopener">↗ Profile link</a>`:''}
             </div>
@@ -6233,6 +6234,9 @@ function renderWatchlist(){
 
 function renderScout(){
   const s=STATE.scout;
+  // Load the database progressively as the user scrolls instead of stopping at
+  // an arbitrary 180/300-player cutoff.
+  if(!s.visibleCount||s.visibleCount<80)s.visibleCount=120;
   if(!s._viewInit){try{const v=localStorage.getItem(SCOUT_VIEW_KEY);if(v==="table"||v==="cards")s.view=v;}catch(e){}
     try{const r=localStorage.getItem(RAIL_KEY);if(r!=null)s.railHidden=(r==="1");}catch(e){}
     s._viewInit=1;}
@@ -6420,13 +6424,24 @@ function renderScout(){
       ${simP?"":viewsBar}
       ${simP?"":recentRow}
       ${simP?"":activeChipsHTML(s)}
-      ${s.view==="table"?scoutTable(pool.slice(0,300),s):`<div class="board">${pool.slice(0,180).map(scoutCard).join("")}</div>`}
-      ${pool.length>(s.view==="table"?300:180)?`<div class="sub" style="text-align:center;margin-top:16px">Showing first ${s.view==="table"?300:180} — narrow with filters to see more.</div>`:""}
+      ${s.view==="table"?scoutTable(pool.slice(0,s.visibleCount),s):`<div class="board">${pool.slice(0,s.visibleCount).map(scoutCard).join("")}</div>`}
+      ${pool.length>s.visibleCount?`<div class="scout-more" id="scoutLoadMore" role="status">Scroll for more players · showing ${Math.min(s.visibleCount,pool.length)} of ${pool.length}</div>`:`<div class="scout-more done" role="status">All ${pool.length} players loaded</div>`}
       ${!pool.length?'<div class="empty">No players match. Loosen the filters on the left.</div>':""}
     </section>
   </div>`;
 
   // rail interactions
+  if(!window.__esInfiniteScroll){
+    window.__esInfiniteScroll=true;
+    let loading=false;
+    window.addEventListener("scroll",()=>{
+      if(loading||STATE.view!=="scout")return;
+      const more=document.getElementById("scoutLoadMore");
+      if(!more||window.innerHeight+window.scrollY<document.documentElement.scrollHeight-700)return;
+      loading=true; STATE.scout.visibleCount=(STATE.scout.visibleCount||120)+120; renderScout();
+      requestAnimationFrame(()=>{loading=false;});
+    },{passive:true});
+  }
   const q=$("#scoutQ");if(q){q.oninput=()=>{s.q=q.value;const pos=q.selectionStart;renderScout();const nq=$("#scoutQ");if(nq){nq.focus();try{nq.setSelectionRange(pos,pos);}catch(e){}}};}
   $$("[data-lg]").forEach(b=>b.onclick=()=>{const id=b.dataset.lg;s.leagues.has(id)?s.leagues.delete(id):s.leagues.add(id);renderScout();});
   $$("[data-role]").forEach(b=>b.onclick=()=>{const r=b.dataset.role;s.roles.has(r)?s.roles.delete(r):s.roles.add(r);renderScout();});
