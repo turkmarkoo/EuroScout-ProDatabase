@@ -1750,7 +1750,7 @@ body.drawer-lock{overflow:hidden}
 
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
-<link rel="stylesheet" href="euroscout-ui.css?v=20260920-profile-reference">
+<link rel="stylesheet" href="euroscout-ui.css?v=20260920-sidebar-ia">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
 <script src="feb-data.js?v=20260913"></script><script src="feb-rosters-2026.js?v=20260920"></script><script src="euroscout-feb.js?v=20260920-fix"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260920-fix"></script><script src="membership-data.js?v=20260920-fix"></script><script src="euroscout-regional-rosters.js?v=20260920"></script><script src="euroscout-registry.js?v=20260920"></script>
 <script src="euroscout-memberships.js?v=20260913-expansion"></script>
@@ -4882,11 +4882,13 @@ function trOptions(){const all=pendingTransfers();
   return {lgs:srt(lgs),clubs:srt(clubs)};}
 function renderTransfers(){
   const f=trF(), total=pendingTransfers().length, list=trFiltered(), {lgs,clubs}=trOptions();
+  const verification=window.EuroScoutTransferVerification?.summary?.()||{auto_approved:0,needs_review:total,rejected:0};
   const handled=Object.keys(trHandledGet()).length;
   const CAP=200;
   $("#app").innerHTML=`<div class="view">
-    <h1 class="title">Transfers</h1>
-    <div class="sub" style="margin-bottom:14px">Approve a move to place the player on their 2026/27 roster. Players without a confirmed destination stay in Free agents and do not need transfer approval. <b id="trCount">${total}</b> waiting${handled?` \u00b7 ${handled} already handled`:""}.</div>
+    <h1 class="title">Transfer verification queue</h1>
+    <div class="trVerifySummary"><span class="trSummaryAuto">● ${verification.auto_approved} auto approved</span><span class="trSummaryReview">● ${verification.needs_review} needs review</span><span class="trSummaryReject">● ${verification.rejected} rejected / archived</span></div>
+    <div class="sub" style="margin-bottom:14px">Only transfers that need human judgement are shown. Open Evidence to inspect registry matches, sources and the decision trail. <b id="trCount">${total}</b> waiting${handled?` \u00b7 ${handled} already handled`:""}.</div>
     <div class="rbFilters">
       <select id="trLgSel"><option value="">All leagues (${total})</option>${lgs.map(l=>`<option value="${escAttr(l.key)}"${l.key===f.lg?" selected":""}>${esc(l.name)} (${l.n})</option>`).join("")}</select>
       <select id="trClubSel"><option value="">All clubs</option>${clubs.map(c=>`<option value="${escAttr(c.key)}"${c.key===f.club?" selected":""}>${esc(c.name)} (${c.n})</option>`).join("")}</select>
@@ -7531,13 +7533,14 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260920-1"></script>
+<script src="euroscout-ui.js?v=20260920-sidebar-ia"></script>
 <script src="euroscout-workflow.js?v=20260920-1"></script>
 
 <script src="euroscout-market-records.js?v=16"></script>
 <script src="euroscout-market.js?v=20260913-batch"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
 <script src="euroscout-transfer-confirmations.js?v=20260915-verified"></script>
+<script src="euroscout-transfer-verification.js?v=20260920-v1"></script>
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
 <script src="data/agency-research.js?v=20260907-13"></script>
 <script src="euroscout-agency-research.js?v=20260908-1"></script>
