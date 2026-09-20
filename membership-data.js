@@ -172,10 +172,10 @@ window.EUROSCOUT_MEMBERSHIPS={
       "id": "lkl",
       "name": "Lietuvos LKL",
       "season": "2026/27",
-      "checked": "2026-09-13",
+      "checked": "2026-09-20",
       "confirmed": true,
       "complete": true,
-      "source": "https://lkl.lt/komandos",
+      "source": "https://en.lkl.lt/komandos",
       "teams": [
         {
           "key": "lkl|GAR",
@@ -282,7 +282,7 @@ window.EUROSCOUT_MEMBERSHIPS={
       "id": "plk",
       "name": "Orlen Basket Liga",
       "season": "2026/27",
-      "checked": "2026-09-13",
+      "checked": "2026-09-20",
       "confirmed": true,
       "complete": true,
       "source": "https://plk.pl/druzyny",
@@ -5052,7 +5052,7 @@ window.EUROSCOUT_MEMBERSHIPS={
       "name": "Tauragė",
       "country": "Lithuania",
       "league": "Lietuvos LKL",
-      "source": "https://lkl.lt/komandos",
+      "source": "https://en.lkl.lt/komandos",
       "aliases": []
     },
     {
@@ -5435,3 +5435,4 @@ window.EUROSCOUT_MEMBERSHIPS={
     ]
   ]
 };
+
