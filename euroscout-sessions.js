@@ -623,7 +623,7 @@ function addNav() {
   const have = tabs.querySelector('[data-view=scoutlog]');
   if (!workspace()) { if (have) have.remove(); return; }
   if (have) return;
-  const b = document.createElement('button'); b.type = 'button'; b.dataset.view = 'scoutlog'; b.textContent = 'Scouting log';
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.view = 'scoutlog'; b.textContent = 'Scouting log'; b.dataset.navIcon = '▦'; b.title = 'Scouting log';
   b.onclick = () => { STATE.view = 'scoutlog'; render(); };
   const after = tabs.querySelector('[data-view=scouting]'); if (after) after.after(b); else tabs.appendChild(b);
 }

@@ -156,6 +156,7 @@ body.es-redesign .es-profile-tabs{position:static!important;top:auto!important}.
 /* Final sidebar polish: expanded by default, no horizontal overflow, DragonHub palette. */
 .es-redesign{--es-nav:292px;overflow-x:hidden}
 .es-redesign .es-sidebar{width:292px;background:#102a25;color:#e8f3ed;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.es-redesign.es-nav-collapsed .es-sidebar{width:72px}
 .es-redesign .es-sidebar::-webkit-scrollbar{width:0;height:0}
 .es-redesign .es-sidebar nav.tabs{width:100%;min-width:0}
 .es-redesign .es-sidebar nav.tabs button{width:100%;box-sizing:border-box;flex:0 0 44px;overflow:hidden;white-space:nowrap}
