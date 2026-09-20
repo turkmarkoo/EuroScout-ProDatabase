@@ -14,10 +14,12 @@
   };
 
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+  const optionalTeam = value => { const text = clean(value); return text === '-' ? '' : text; };
   const slug = value => clean(value).toLowerCase().normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const yearFrom = value => { const m = clean(value).match(/(19|20)\d{2}/); return m ? Number(m[0]) : null; };
   const heightFrom = value => { const m = clean(value).match(/(\d{2,3})\s*cm/i); return m ? Number(m[1]) : null; };
+  const weightFrom = value => { const m = clean(value).match(/(\d{2,3})\s*kg/i); return m ? Number(m[1]) : null; };
   const sourceId = (league, name, href) => {
     const m = clean(href).match(/\/(?:zaidejai|zawodnicy)\/([^/?#]+)/i);
     return `${league}|${m ? m[1] : slug(name)}`;
@@ -26,17 +28,24 @@
   function parseLkl(document) {
     return Array.from(document.querySelectorAll('table tbody tr')).map(row => {
       const cells = Array.from(row.querySelectorAll('td'));
-      const player = row.querySelector('a[href*="/zaidejai/"]');
+      const player = Array.from(row.querySelectorAll('a[href*="/zaidejai/"]'))
+        .find(link => clean(link.textContent)) || row.querySelector('a[href*="/zaidejai/"]');
       const team = row.querySelector('a[href*="/komandos/"]');
       if (!player || cells.length < 5) return null;
       const name = clean(player.textContent);
-      const born = yearFrom(cells[1].textContent);
+      const texts = cells.map(cell => clean(cell.textContent));
+      const birthCell = texts.find(text => /(?:19|20)\d{2}-\d{2}-\d{2}/.test(text)) || '';
+      const heightCell = texts.find(text => /\d{2,3}\s*cm/i.test(text)) || '';
+      const weightCell = texts.find(text => /\d{2,3}\s*kg/i.test(text)) || '';
+      const positionCell = texts.find(text => /^(guard|forward|center)$/i.test(text)) || '';
+      const photo = row.querySelector('img');
       return {
         id: sourceId('lkl', name, player.getAttribute('href')),
         sourceId: sourceId('lkl', name, player.getAttribute('href')),
-        name, league: 'lkl', teamName: clean(team && team.textContent),
-        born, height: heightFrom(cells[2].textContent), pos: clean(cells[4].textContent),
-        country: clean(cells[1].textContent).replace(/(19|20)\d{2}.*$/s, '').trim(),
+        name, league: 'lkl', teamName: optionalTeam(team && team.textContent),
+        born: yearFrom(birthCell), height: heightFrom(heightCell), weight: weightFrom(weightCell), pos: positionCell,
+        country: birthCell.replace(/(?:19|20)\d{2}-\d{2}-\d{2}/, '').replace(/\([^)]*\)/g, '').trim(),
+        img: photo && (photo.getAttribute('src') || photo.getAttribute('data-src')) || '',
         profile: new URL(player.getAttribute('href'), SOURCES.lkl.url).href,
         source: SOURCES.lkl.url, rosterSeason: SOURCES.lkl.season,
         _rosterOnly: true, _strictIdentity: true

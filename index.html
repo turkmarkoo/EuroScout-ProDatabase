@@ -22,8 +22,8 @@ document.addEventListener('click',function(e){var b=e.target.closest('#esTheme,#
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="euroscout-build" content="20260920-profile-blueprint-1" />
-<meta name="euroscout-commit" content="224c238+working-tree" />
+<meta name="euroscout-build" content="20260920-profile-rosters-stats-1" />
+<meta name="euroscout-commit" content="profile-rosters-stats" />
 <meta name="euroscout-deployed-at" content="2026-09-20" />
 <title>EuroScout · European Basketball Scouting</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -1753,9 +1753,9 @@ body.drawer-lock{overflow:hidden}
 
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
-<link rel="stylesheet" href="euroscout-ui.css?v=20260920-profile-dossier-v3-refine-2">
+<link rel="stylesheet" href="euroscout-ui.css?v=20260920-profile-rosters-stats-1">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
-<script src="feb-data.js?v=20260913"></script><script src="feb-rosters-2026.js?v=20260920"></script><script src="euroscout-feb.js?v=20260920-fix"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260920-fix"></script><script src="membership-data.js?v=20260920-fix"></script><script src="euroscout-regional-rosters.js?v=20260920"></script><script src="euroscout-registry.js?v=20260920"></script>
+<script src="feb-data.js?v=20260913"></script><script src="feb-rosters-2026.js?v=20260920"></script><script src="euroscout-feb.js?v=20260920-fix"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260920-fix"></script><script src="membership-data.js?v=20260920-fix"></script><script src="euroscout-regional-rosters.js?v=20260920-restore-1"></script><script src="euroscout-registry.js?v=20260920-restore-1"></script>
 <script src="euroscout-memberships.js?v=20260913-expansion"></script>
 <style>.membership-review{margin:12px 0 18px;padding:12px 16px;background:var(--card,#fff);border:1px solid var(--border,#d9e3df);border-radius:12px;color:var(--text,#193442);font-size:13px}.membership-review details{margin-top:8px}.membership-review summary{cursor:pointer}.membership-review-row{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 0;align-items:baseline}.membership-review-row>span{flex:1 1 250px}.membership-review-row>a{white-space:nowrap}.membership-review details[open]{max-height:340px;overflow:auto}.rbFilters>select{min-width:min(320px,100%);max-width:100%;height:auto;min-height:44px;padding:10px 36px 10px 12px}</style>
 <link rel="stylesheet" href="euroscout-team-cards.css?v=20260914">
@@ -2421,7 +2421,8 @@ const Store = (()=>{
     }catch(e){console.warn('Shared refresh unavailable:',e.message);}
   }
   window.addEventListener('es-access-role',()=>{applyRoleClass();renderHeaderAuth();if(STATE.league)render();});
-  setInterval(refreshPrivate,60000);document.addEventListener('visibilitychange',refreshPrivate);
+  window.addEventListener('storage',e=>{if(e.key!==LKEY||privateDirty)return;cache=local.all();if(DRAWER_OPEN&&CURRENT)renderProfile();else if(STATE.league)render();});
+  setInterval(refreshPrivate,10000);document.addEventListener('visibilitychange',refreshPrivate);window.addEventListener('focus',refreshPrivate);
   // first-run migration: if the shared DB is empty and this editor has local work, push it up
   async function migrateLocalUp(){
     if(!sb||!user||!canEdit())return;
@@ -3024,6 +3025,7 @@ async function boot(){
   // keep other open tabs in step: roster/transfer edits made elsewhere refresh this view
   window.addEventListener("storage",e=>{
     if(!e.key)return;
+    if(e.key===OVR_KEY){OVR=ovrMerged();rebuildLinks();applyOverrides();if(DRAWER_OPEN&&CURRENT)renderProfile();else render();return;}
     if(e.key===NEXT26_KEY||e.key===NEXT26B_KEY||e.key===TR_HANDLED_KEY){
       updateTransferBadge();
       if(STATE.view==="teams")renderTeams();
@@ -4000,7 +4002,7 @@ window.addEventListener("load",scheduleSticky);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(scheduleSticky);
 function toggleTheme(){}
 /* ---------- profile ranking helpers + leaderboards ---------- */
-const STAT_FMT={ppg:1,rpg:1,apg:1,spg:1,bpg:1,topg:1,mpg:1,pir:1,eff:1,usg:1,
+const STAT_FMT={ppg:1,rpg:1,apg:1,spg:1,bpg:1,topg:1,mpg:1,pir:1,eff:1,usg:1,f2p:'%',
   pts40:1,reb40:1,ast40:1,stl40:1,blk40:1,tov40:1,g:0,
   fgp:'%',f3p:'%',ftp:'%',ts:'%',efg:'%'};
 const LOWER_BETTER=new Set(["topg","tov40"]);
@@ -5588,7 +5590,7 @@ function renderProfile(){
   let wfDirty=false;
   const saveReport=async(msg)=>{clearTimeout(tmr);wfDirty=false;await saveRec(p,{report:JSON.stringify(gather())});const ss=$("#saveState");if(ss)ss.textContent="✓ "+(msg||"saved")+" "+new Date().toLocaleTimeString();};
   window.wfFlushReport=()=>wfDirty?saveReport('saved'):Promise.resolve();
-  const markDirty=()=>{wfDirty=true;const ss=$("#saveState");if(ss)ss.textContent="editing…";clearTimeout(tmr);tmr=setTimeout(()=>saveReport("autosaved"),1200);};
+  const markDirty=()=>{wfDirty=true;const ss=$("#saveState");if(ss)ss.textContent="editing…";clearTimeout(tmr);tmr=setTimeout(()=>saveReport("autosaved"),500);};
   const canEditRep=Store.canEdit();
   NKEYS.forEach(k=>{const host=$("#"+k);if(host){const init=(k==="nProj"?(rep.nProj||rep.overall):rep[k])||"";
     bulletEditors[k]=makeBulletList(host,init,host.dataset.ph||"",markDirty);
@@ -7535,7 +7537,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260920-profile-dossier-v3-refine-2"></script>
+<script src="euroscout-ui.js?v=20260920-profile-rosters-stats-1"></script>
 <script src="euroscout-diagnostics.js?v=20260920-diagnostics-1"></script>
 <script src="euroscout-workflow.js?v=20260920-profile-dossier-v3"></script>
 

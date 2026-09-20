@@ -362,3 +362,21 @@ body.es-redesign.es-nav-collapsed .es-nav-foot{width:100%!important;padding:16px
 @media(max-width:600px){
   .es-redesign #drawer .es-dossier-details{grid-template-columns:1fr}
 }
+
+/* Profile refinement: clearer navigation, current-roster identity, and actionable stats. */
+.es-redesign #drawer .es-dossier-header{position:relative}
+.es-redesign #drawer .es-dossier-edit{right:16px;top:16px;z-index:3}
+.es-redesign #drawer .es-dossier-club-card{position:static}
+.es-redesign #drawer .es-dossier-tabs{display:grid;grid-template-columns:repeat(7,minmax(104px,1fr));gap:4px;height:60px;padding:0 18px;overflow:visible}
+.es-redesign #drawer .es-dossier-tabs .es-tab{width:100%;height:60px;min-height:60px!important;justify-content:center;padding:0 12px;font-size:13px;font-weight:650}
+.es-redesign #drawer .es-dossier-stat{appearance:none;width:100%;padding:8px;color:#102842;cursor:pointer;font-family:inherit}
+.es-redesign #drawer .es-dossier-stat:hover{border-color:#8fc9ae;background:#f4fbf7;transform:translateY(-1px)}
+.es-redesign #drawer .es-dossier-stat:focus-visible{outline:3px solid rgba(18,130,75,.22);outline-offset:2px}
+.es-redesign #drawer .es-dossier-projection{display:grid;gap:5px;margin-top:14px;padding:12px 14px;border:1px solid #dbe7e1;border-radius:9px;background:#f7faf8}
+.es-redesign #drawer .es-dossier-projection small{color:#718078;font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.es-redesign #drawer .es-dossier-projection b{color:#102842;font-size:13px}
+.es-redesign #drawer .es-stat-summary{margin:0!important}
+@media(max-width:900px){
+  .es-redesign #drawer .es-dossier-tabs{display:flex;height:56px;overflow-x:auto}
+  .es-redesign #drawer .es-dossier-tabs .es-tab{min-width:126px;height:56px;min-height:56px!important}
+}
