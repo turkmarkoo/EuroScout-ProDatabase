@@ -297,3 +297,44 @@ body.es-redesign .es-profile-tabs{position:static!important;top:auto!important}.
   .es-redesign #drawer .es-dossier-details{gap:0 18px}
   .es-redesign #drawer .es-dossier-field-copy small{flex-basis:76px}
 }
+
+/* Profile polish: stable icon rail, readable facts, and separate level control. */
+body.es-redesign.es-nav-collapsed{--es-nav:72px!important;padding-left:72px!important}
+body.es-redesign.es-nav-collapsed .es-sidebar{display:flex!important;width:72px!important;padding:18px 10px!important;transform:none!important;overflow:hidden!important;align-items:center}
+body.es-redesign.es-nav-collapsed .drawer.fullpage{left:72px!important;width:calc(100% - 72px)!important}
+body.es-redesign.es-nav-collapsed .es-sidebar .logotext,
+body.es-redesign.es-nav-collapsed .es-sidebar .logo small,
+body.es-redesign.es-nav-collapsed .es-sidebar .es-nav-label,
+body.es-redesign.es-nav-collapsed .es-sidebar nav.tabs button{font-size:0!important}
+body.es-redesign.es-nav-collapsed .es-sidebar nav.tabs{width:100%!important}
+body.es-redesign.es-nav-collapsed .es-sidebar nav.tabs button{width:52px!important;justify-content:center!important;padding:8px!important;margin:0 auto!important}
+body.es-redesign.es-nav-collapsed .es-sidebar nav.tabs button::before{font-size:20px!important}
+body.es-redesign.es-nav-collapsed .es-nav-foot{width:100%!important;padding:16px 0 0!important}
+
+.es-redesign #drawer .es-dossier-field-wide{grid-column:1/-1}
+.es-redesign #drawer .es-dossier-field-wide .es-dossier-field-copy small{flex-basis:88px}
+.es-redesign #drawer .es-dossier-club{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:12px;padding:0;border:0;border-radius:0;background:transparent}
+.es-redesign #drawer .es-dossier-club-card{position:relative;display:flex;min-height:0;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18px;border:1px solid #e0e8e4;border-radius:12px;background:#fcfdfc;text-align:center}
+.es-redesign #drawer .es-dossier-club-card h3{margin:0;color:#102842;font:600 21px var(--disp)}
+.es-redesign #drawer .es-dossier-level{display:grid;grid-template-columns:1fr;gap:7px;padding:10px 12px;border:1px solid #dfe8e3;border-radius:10px;background:#f7faf8;text-align:left}
+.es-redesign #drawer .es-dossier-level>span{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.es-redesign #drawer .es-dossier-level b{color:#102842;font-size:11px}
+.es-redesign #drawer .es-dossier-level small{color:#7b8982;font-size:9px;text-transform:uppercase;letter-spacing:.06em}
+.es-redesign #drawer .es-dossier-level select{width:100%;height:36px;min-height:36px!important;padding:5px 28px 5px 9px;border:1px solid #d3dfd9;border-radius:7px;background:#fff;color:#102842;font-size:11px;font-weight:700}
+.es-redesign #drawer .es-dossier-links{display:grid;grid-template-columns:auto repeat(4,minmax(118px,142px));justify-content:start;gap:8px}
+.es-redesign #drawer .es-dossier-links>span{align-self:center;margin-right:6px}
+.es-redesign #drawer .es-dossier-links button,.es-redesign #drawer .es-dossier-links a{width:100%;min-height:36px;justify-content:center;padding:7px 12px;border-color:#d8e4de;border-radius:999px;background:#f7faf8;color:#163b2e}
+.es-redesign #drawer .es-dossier-links button:hover,.es-redesign #drawer .es-dossier-links a:hover{background:#eaf5ef;border-color:#bcd8ca}
+@media(max-width:900px){
+  .es-redesign #drawer .es-dossier-club{grid-column:1/-1;grid-template-columns:1fr minmax(190px,260px);grid-template-rows:auto;align-items:stretch}
+  .es-redesign #drawer .es-dossier-level{align-content:center}
+  .es-redesign #drawer .es-dossier-links{display:flex}
+  .es-redesign #drawer .es-dossier-links button,.es-redesign #drawer .es-dossier-links a{width:132px}
+}
+@media(max-width:600px){
+  body.es-redesign.es-nav-collapsed{padding-left:0!important}
+  body.es-redesign.es-nav-collapsed .es-sidebar{transform:translateX(-100%)!important}
+  body.es-redesign.es-nav-collapsed .drawer.fullpage{left:0!important;width:100%!important}
+  .es-redesign #drawer .es-dossier-club{grid-template-columns:1fr}
+  .es-redesign #drawer .es-dossier-field-wide{grid-column:auto}
+}
