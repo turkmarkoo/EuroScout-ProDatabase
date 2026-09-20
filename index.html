@@ -709,6 +709,11 @@ body.drawer-lock{overflow:hidden}
 @media(min-width:821px){
   .scoutwrap.rail-hidden{grid-template-columns:1fr}
   .scoutwrap.rail-hidden .scoutrail{display:none}
+  .scoutwrap.rail-hidden .seasonFilters,
+  .scoutwrap.rail-hidden .filterbar,
+  .scoutwrap.rail-hidden .naStrip,
+  .scoutwrap.rail-hidden .viewsBar,
+  .scoutwrap.rail-hidden .recentRow{display:none}
 }
 .railsearch input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-family:var(--body);font-size:13px;color:var(--txt)}
 .railsearch input:focus{outline:none;border-color:var(--gold)}
@@ -920,6 +925,12 @@ body.drawer-lock{overflow:hidden}
   .raildim{display:none;position:fixed;inset:0;background:rgba(20,20,25,.4);z-index:150}
   .scoutwrap.rail-open .raildim{display:block}
   .railsec{min-width:0}
+  .seasonFilters,.filterbar,.naStrip,.viewsBar,.recentRow{display:none}
+  .scoutwrap.rail-open .seasonFilters,
+  .scoutwrap.rail-open .filterbar,
+  .scoutwrap.rail-open .naStrip,
+  .scoutwrap.rail-open .viewsBar,
+  .scoutwrap.rail-open .recentRow{display:block}
 }
 /* eye-grade sliders in profile */
 .eyegrid{display:flex;flex-direction:column;gap:9px;margin-top:4px}
