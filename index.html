@@ -3591,7 +3591,7 @@ function renderPlayers(){
     const profileMeta=[p.role||p.pos,p.height?p.height+' cm':'',p.born||''].filter(Boolean).join(' · ');
     const attention=[];
     if(isWatched(p))attention.push('<span class="badge">★ Watchlist</span>');
-    const band=manualLevelBand(p);if(band)attention.push('<span class="badge">'+esc(band.label)+'</span>');
+    const band=levelBand(p);if(band)attention.push('<span class="badge">'+esc(band.label)+'</span>');
     return `<tr data-id="${p.id}">
       <td class="l" style="color:var(--muted)">${i+1}</td>
       <td class="l"><span class="player-cell"><span class="tavatar-wrap${p.img?' hasimg':''}">${p.img?`<img class="tavatar" src="${escAttr(p.img)}" loading="lazy" onerror="this.remove();this.parentNode.classList.remove('hasimg');this.parentNode.classList.add('noimg')"/>`:''}<span class="tavatar-fallback">${esc(initials(p.name))}</span></span><span class="player-copy"><span class="pname">${esc(p.name)} ${p.multiTeam?'<span class="badge">2TM</span>':''}</span><span class="player-meta">${esc(profileMeta||'Profile details unavailable')}${p.country?' · '+esc(countryLabel(p.country)||p.country):''}<span class="player-flags">${attention.join('')}</span></span></span></span></td>
