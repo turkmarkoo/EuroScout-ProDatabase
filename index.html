@@ -693,8 +693,6 @@ body.drawer-lock{overflow:hidden}
 .drawer .profnav .inscope{margin-left:10px}
 /* ===== Scout board ===== */
 .scoutwrap{display:grid;grid-template-columns:236px 1fr;gap:22px;max-width:1320px;margin:0 auto;padding:20px 22px 60px}
-.scout-more{margin:20px auto 0;padding:14px 16px;text-align:center;color:var(--muted);font-size:12.5px;border:1px dashed var(--line);border-radius:10px;background:var(--panel2)}
-.scout-more.done{border-style:solid;color:var(--muted2);background:transparent}
 .scoutmain{min-width:0}
 .scoutrail{position:sticky;top:120px;align-self:start;display:flex;flex-direction:column;gap:18px;max-height:calc(100vh - 140px);overflow-y:auto;padding-right:4px}
 /* Filter rail: toggle button, collapse (desktop), off-canvas drawer (touch/narrow) */
@@ -1743,6 +1741,8 @@ body.drawer-lock{overflow:hidden}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260913-search">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
+<script src="feb-data.js?v=20260913"></script><script src="feb-rosters-2026.js?v=20260920"></script><script src="euroscout-feb.js?v=20260913"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260914"></script><script src="membership-data.js?v=20260913-entries"></script><script src="euroscout-regional-rosters.js?v=20260920"></script><script src="euroscout-registry.js?v=20260920"></script>
+<script src="euroscout-memberships.js?v=20260913-expansion"></script>
 <style>.membership-review{margin:12px 0 18px;padding:12px 16px;background:var(--card,#fff);border:1px solid var(--border,#d9e3df);border-radius:12px;color:var(--text,#193442);font-size:13px}.membership-review details{margin-top:8px}.membership-review summary{cursor:pointer}.membership-review-row{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 0;align-items:baseline}.membership-review-row>span{flex:1 1 250px}.membership-review-row>a{white-space:nowrap}.membership-review details[open]{max-height:340px;overflow:auto}.rbFilters>select{min-width:min(320px,100%);max-width:100%;height:auto;min-height:44px;padding:10px 36px 10px 12px}</style>
 <link rel="stylesheet" href="euroscout-team-cards.css?v=20260914">
 <style>
@@ -1780,8 +1780,6 @@ body.drawer-lock{overflow:hidden}
 <main id="app"><div class="empty">Loading data…</div></main>
 <div id="toast" class="toast"></div>
 <div id="authgate" class="authgate hidden"><div class="agbox" id="agBox"></div></div>
-<script src="feb-data.js?v=20260913"></script><script src="feb-rosters-2026.js?v=20260920"></script><script src="euroscout-feb.js?v=20260913"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260914"></script><script src="membership-data.js?v=20260913-entries"></script><script src="euroscout-regional-rosters.js?v=20260920"></script><script src="euroscout-registry.js?v=20260920"></script>
-<script src="euroscout-memberships.js?v=20260913-expansion"></script>
 
 <script src="data/club-directory.js?v=36"></script>
 <script src="euroscout-clubs.js?v=20260914-virtus-merge"></script>
@@ -2125,7 +2123,7 @@ const STATE = {data:null, league:null, view:"dashboard", allLeagues:false,
   compare:{slots:[null,null,null,null]}, fit:{role:"",arch:"",ageMax:"",levelMin:"",contract:"",minGrade:0,wStyle:50,wProd:30,wAge:20}, scouting:{a:null,b:null}, watchSort:"rating", profileScope:"league", statMode:"pg",
   charts:{type:"scatter", x:"pts40", y:"ts", dist:"pir", colorBy:"league", fLeague:null, fTeam:"", fCountry:"", fRole:"", hi:null, size:600},
   sim:{stat:0.4,pos:0.35,arch:0.25},
-  scout:{q:"",leagues:new Set(),roles:new Set(),tags:new Set(),status:"all",sort:"grade",riserOnly:false,simRef:null,simAgeMax:null,simLevelMin:null,simFreeOnly:false,arch:null,filters:[],level:null,next26:null,view:"table",tsort:{key:"grade",dir:-1},railHidden:true,railOpen:false,ratingMin:null,visibleCount:null}};
+  scout:{q:"",leagues:new Set(),roles:new Set(),tags:new Set(),status:"all",sort:"grade",riserOnly:false,simRef:null,simAgeMax:null,simLevelMin:null,simFreeOnly:false,arch:null,filters:[],level:null,next26:null,view:"table",tsort:{key:"grade",dir:-1},railHidden:true,railOpen:false,ratingMin:null}};
 
 /* Tag vocabulary — "Watchlist" is a tag so flagged players surface in the board.
    Curated archetype/skill tags a scout reaches for; free tags still allowed on the card. */
@@ -2576,7 +2574,7 @@ function mergeGroupRecords(){
       (r.tags||[]).forEach(t=>{base.tags=base.tags||[];if(!base.tags.includes(t)){base.tags.push(t);dirty=true;}});
       if(r.report&&r.report!==base.report){
         const a=parseReport(base.report||""),b=parseReport(r.report);
-        const keys=["nStrengths","nImprove","nAth","nOff","nDef","nIntel","nProj","nRecommend"];let ch=false;
+        const keys=["nAth","nOff","nDef","nIntel","nProj"];let ch=false;
         keys.forEach(k=>{const av=(a[k]||"").trim(),bv=(b[k]||"").trim();
           if(!av&&bv){a[k]=bv;ch=true;}
           else if(av&&bv&&av!==bv&&!av.includes(bv)){a[k]=av+"\n\u2014\n"+bv;ch=true;}});
@@ -2917,6 +2915,8 @@ async function boot(){
     ESAccess.external(raw);
     return;
   }
+  if(!raw || !Array.isArray(raw.leagues) || !raw.leagues.length){ $("#app").innerHTML='<div class="empty">Could not load data. Make sure '+
+    '<code>data/data.json</code> (or <code>data/data.js</code>) is present — see README.</div>'; return; }
   for(const L of raw?.leagues||[])for(const p of L.players||[])if(p.img&&!isPlayerPhoto(p.img))p.img=null;
   window.EuroScoutABA?.apply(raw);
   window.EuroScoutFEB?.apply(raw);window.EuroScoutFEB?.applyCurrentRoster(raw);
@@ -2925,9 +2925,10 @@ async function boot(){
   window.EuroScoutMemberships?.apply(raw);
   window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);
   if(window.ESAccess&&!ESAccess.internal){ESAccess.external(raw);return;}
-  if(!raw){ $("#app").innerHTML='<div class="empty">Could not load data. Make sure '+
-    '<code>data/data.json</code> (or <code>data/data.js</code>) is present — see README.</div>'; return; }
-  if(window.ESAccess?.internal)Object.assign(raw,ESAccess.state.core||{});
+  // A partially migrated private snapshot must never replace a valid public core.
+  // Only apply it when it contains a complete, non-empty league collection.
+  const privateCore=window.ESAccess?.internal ? ESAccess.state?.core : null;
+  if(privateCore && Array.isArray(privateCore.leagues) && privateCore.leagues.length)Object.assign(raw,privateCore);
   window.EuroScoutABA?.apply(raw);
   window.EuroScoutFEB?.apply(raw);window.EuroScoutFEB?.applyCurrentRoster(raw);
   window.EuroScoutElite2?.apply(raw);
@@ -3032,7 +3033,7 @@ function exportPlayerReport(id){
   const KEY=[["PTS","ppg"],["REB","rpg"],["AST","apg"],["STL","spg"],["BLK","bpg"],["MIN","mpg"],["TS%","ts"],["3P%","f3p"],["PIR","pir"]];
   const keyStats=KEY.map(([lab,k])=>{const v=p[k];return `<div class="ks"><div class="kv">${v!=null&&!isNaN(v)?(k.endsWith("p")||k==="ts"?fmt(v)+"%":fmt(v)):"—"}</div><div class="kk">${lab}</div></div>`;}).join("");
   const noteBlock=(lab,val)=>val?`<div class="nb"><div class="nbh">${lab}</div><div class="nbt">${esc(val).replace(/\n/g,"<br>")}</div></div>`:"";
-  const notesHtml=[["Strengths",rep.nStrengths],["Areas for Improvement",rep.nImprove],["Athleticism",rep.nAth],["Offense",rep.nOff],["Defense",rep.nDef],["Intel",rep.nIntel]].map(([l,v])=>noteBlock(l,v)).join("")||'<div class="hint">No written notes yet.</div>';
+  const notesHtml=[["Athleticism",rep.nAth],["Offense",rep.nOff],["Defense",rep.nDef],["Intel",rep.nIntel]].map(([l,v])=>noteBlock(l,v)).join("")||'<div class="hint">No written notes yet.</div>';
   const _rt=effRating(p);const stars=_rt?("★".repeat(_rt)+"☆".repeat(5-_rt)):"☆☆☆☆☆";
   const tags=(rec.tags||[]).filter(x=>x!==WATCH_TAG);
   const statSum=statSummary(p);
@@ -3546,7 +3547,7 @@ function renderPlayers(){
     const profileMeta=[p.role||p.pos,p.height?p.height+' cm':'',p.born||''].filter(Boolean).join(' · ');
     const attention=[];
     if(isWatched(p))attention.push('<span class="badge">★ Watchlist</span>');
-    const band=levelBand(p);if(band)attention.push('<span class="badge">'+esc(band.label)+'</span>');
+    const band=manualLevelBand(p);if(band)attention.push('<span class="badge">'+esc(band.label)+'</span>');
     return `<tr data-id="${p.id}">
       <td class="l" style="color:var(--muted)">${i+1}</td>
       <td class="l"><span class="player-cell"><span class="tavatar-wrap">${p.img?`<img class="tavatar" src="${escAttr(p.img)}" loading="lazy" onerror="this.remove()"/>`:''}<span class="tavatar-fallback">${esc(initials(p.name))}</span></span><span class="player-copy"><span class="pname">${esc(p.name)} ${p.multiTeam?'<span class="badge">2TM</span>':''}</span><span class="player-meta">${esc(profileMeta||'Profile details unavailable')}${p.country?' · '+esc(countryLabel(p.country)||p.country):''}<span class="player-flags">${attention.join('')}</span></span></span></span></td>
@@ -5460,17 +5461,13 @@ function renderProfile(){
           <div class="rating" id="rating">${[1,2,3,4,5].map(n=>`<button data-n="${n}" class="${effRating(p)>=n?"on":""}">\u2605</button>`).join("")}</div></div>
       </div>
       <div class="notesgrid">
-        ${noteSec("nStrengths","Strengths","Pick-and-roll creation, playmaking vision and timing, efficient scoring, competitive mentality\u2026",rep)}
-        ${noteSec("nImprove","Areas for Improvement","Strength to finish through contact, defensive consistency off the ball, turnovers under pressure\u2026",rep)}
         ${noteSec("nAth","Athleticism","Frame, length, wingspan, explosiveness, speed, motor, conditioning\u2026",rep)}
         ${noteSec("nOff","Offense","Shooting form & range, handle, finishing, shot creation, decisions, off-ball movement\u2026",rep)}
         ${noteSec("nDef","Defense","On-ball, screen navigation, help, rim protection, rebounding, effort & discipline\u2026",rep)}
         ${noteSec("nIntel","Intel","Role & minutes, coach trust, leadership, character, injuries, development timeline, off-court\u2026",rep)}
       </div>
-      <div style="margin-top:14px"><div class="nlab">Projection</div>
-        <div class="blist" id="nProj" data-ph="Role projection, ceiling & floor, fit, comparisons\u2026"></div></div>
-      <div style="margin-top:14px"><div class="nlab">Overall Recommendation</div>
-        <div class="blist" id="nRecommend" data-ph="Sign, monitor, pass \u2014 and why\u2026"></div></div>
+      <div style="margin-top:14px"><div class="nlab">Projection / verdict</div>
+        <div class="blist" id="nProj" data-ph="Role projection, ceiling & floor, fit, comparisons, overall verdict\u2026"></div></div>
       <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button class="btn" id="saveBtn">Save report</button>
         <button class="btn" id="txtSumBtn" title="Turn the bullets into a readable text version">Text version</button>
@@ -5519,7 +5516,7 @@ function renderProfile(){
       const host=$("#scoutRadarHost");if(host)host.innerHTML=scoutRadarSVG(p);
     };
   });
-  const NKEYS=["nStrengths","nImprove","nAth","nOff","nDef","nIntel","nProj","nRecommend"];
+  const NKEYS=["nAth","nOff","nDef","nIntel","nProj"];
   const bulletEditors={};
   let tmr;
   const readField=k=>bulletEditors[k]?bulletEditors[k].serialize():"";
@@ -5538,7 +5535,7 @@ function renderProfile(){
   const toSentence=b=>{b=(b||"").trim().replace(/^[\u2022\u2023\u2043\u25aa\u25cf\u00b7*\u2013\u2014\-]\s*/,"");if(!b)return"";b=b.charAt(0).toUpperCase()+b.slice(1);if(!/[.!?]$/.test(b))b+=".";return b;};
   const txtCard=$("#txtSumCard");
   function buildTextVersion(){
-    const secs=[["Strengths","nStrengths"],["Areas for Improvement","nImprove"],["Athleticism","nAth"],["Offense","nOff"],["Defense","nDef"],["Intel","nIntel"],["Projection","nProj"],["Overall Recommendation","nRecommend"]];
+    const secs=[["Athleticism","nAth"],["Offense","nOff"],["Defense","nDef"],["Intel","nIntel"],["Projection / verdict","nProj"]];
     const html=[],plain=[];
     secs.forEach(([lab,k])=>{const bl=bulletParse(readField(k));if(!bl.length)return;
       const prose=bl.map(toSentence).filter(Boolean).join(" ");
@@ -6218,7 +6215,7 @@ function playerTags(p){const r=recOf(p);return (r&&r.tags)||[];}
 // Concatenated lower-cased note text (all report sections + tags) for searching.
 function noteText(p){const r=recOf(p);if(!r)return "";
   let s="";const rep=r.report;
-  if(rep){if(typeof rep==="string"){s+=" "+rep;}else{["nStrengths","nImprove","nAth","nOff","nDef","nIntel","nProj","nRecommend","overall"].forEach(k=>{if(rep[k])s+=" "+rep[k];});}}
+  if(rep){if(typeof rep==="string"){s+=" "+rep;}else{["nAth","nOff","nDef","nIntel","nProj","overall"].forEach(k=>{if(rep[k])s+=" "+rep[k];});}}
   if(r.tags&&r.tags.length)s+=" "+r.tags.join(" ");
   return s.toLowerCase();}
 function isWatched(p){return playerTags(p).includes(WATCH_TAG);}
@@ -6450,12 +6447,6 @@ function renderScout(){
     try{const r=localStorage.getItem(RAIL_KEY);if(r!=null)s.railHidden=(r==="1");}catch(e){}
     s._viewInit=1;}
   KBD_SEL=-1;
-  /* Scroll for more rather than a hard 180/300 cutoff. A filter/sort/search
-     change is a new list -- reset to the top of it; the load-more observer
-     below re-renders with a bigger visibleCount for the same list, which
-     this signature check leaves alone. */
-  {const sig=JSON.stringify([s.q,[...s.leagues],[...s.roles],[...s.tags],s.status,s.riserOnly,s.ratingMin,s.level,s.next26,s.arch,s.filters,s.sort,s.view,s.tsort,s.simRef,s.season,s.competition,s.statsSeason]);
-    if(s._lastSig!==sig||s.visibleCount==null){s.visibleCount=SCOUT_PAGE;s._lastSig=sig;}}
   const simP=s.simRef?player(s.simRef):null; if(s.simRef&&!simP)s.simRef=null;
   let pool=scoutSeasonPool(s);
   if(simP){const rg=gid(simP);pool=pool.filter(p=>gid(p)!==rg);}
@@ -6640,8 +6631,8 @@ function renderScout(){
       ${simP?"":viewsBar}
       ${simP?"":recentRow}
       ${simP?"":activeChipsHTML(s)}
-      ${s.view==="table"?scoutTable(pool.slice(0,s.visibleCount),s):`<div class="board">${pool.slice(0,s.visibleCount).map(scoutCard).join("")}</div>`}
-      ${pool.length>s.visibleCount?`<div class="scout-more" id="scoutLoadMore" role="status">Loading more players…</div>`:pool.length?`<div class="scout-more done" role="status">All ${pool.length} player${pool.length===1?"":"s"} loaded</div>`:""}
+      ${s.view==="table"?scoutTable(pool.slice(0,300),s):`<div class="board">${pool.slice(0,180).map(scoutCard).join("")}</div>`}
+      ${pool.length>(s.view==="table"?300:180)?`<div class="sub" style="text-align:center;margin-top:16px">Showing first ${s.view==="table"?300:180} — narrow with filters to see more.</div>`:""}
       ${!pool.length?'<div class="empty">No players match. Loosen the filters on the left.</div>':""}
     </section>
   </div>`;
@@ -6720,19 +6711,6 @@ function renderScout(){
     if(e.target.closest(".eststar")){e.stopPropagation();toggleTag(row.dataset.id,WATCH_TAG).then(renderScout);return;}
     openProfile(row.dataset.id);});
   updateKbdSelection();
-  // load more as the bottom marker scrolls into view, keeping scroll position steady
-  (function(){
-    const more=$("#scoutLoadMore"); if(!more)return;
-    const io=new IntersectionObserver(es=>{
-      if(!es.some(x=>x.isIntersecting))return;
-      io.disconnect();
-      const y=window.scrollY;
-      s.visibleCount+=SCOUT_PAGE;
-      renderScout();
-      window.scrollTo(0,y);
-    },{rootMargin:"600px"});
-    io.observe(more);
-  })();
 }
 // keyboard navigation highlight on the board
 function boardCards(){return $$(".board .scoutcard");}
@@ -6877,7 +6855,6 @@ function topArch(p,n){if(!p.arch)return [];
     .map(x=>({idx:x.i,w:x.w,lab:archLabel(x.i,p),c:(ARCHETYPES[x.i]||{}).c||"var(--accent)"}));}
 /* ---------- Scout TABLE view (dense, sortable list) ---------- */
 const SCOUT_VIEW_KEY="euroscout:scoutView";
-const SCOUT_PAGE=60;
 /* ---------- Filter rail: collapse on desktop, off-canvas drawer on touch/narrow ---------- */
 const RAIL_KEY="euroscout:railHidden";
 function railIsNarrow(){try{return window.matchMedia("(max-width:1000px)").matches;}catch(e){return false;}}
@@ -6998,7 +6975,7 @@ function scoutTable(pool,s){
       <td class="estrk c1">${i+1}</td>
       <td class="estadd c2"><button class="estcmp ${inCompare(p.id)?"on":""}" data-cmp="${p.id}" title="${inCompare(p.id)?"In compare \u2014 click to remove":"Add to compare"}" aria-label="Toggle compare">\u21c6</button></td>
       <td class="estplayer l c3"><span class="estp">${statusDotsHTML(p)}<span class="estav${_ph?"":" noimg"}">${_ph?`<img src="${_ph}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name)}</span>${p.country?`<span class="estflag" title="${escAttr(p.country)}">${flagEmoji(p.country)||isoOf(p.country)||""}</span>`:""}<span class="estname">${esc(p.name)}${formArrowHTML(p)}</span></span></td>
-      <td class="estdim">${p.born!=null?p.born+(p.age!=null?" ("+p.age+")":""):"\u2014"}</td>
+      <td class="estdim">${p.born!=null?p.born:"\u2014"}</td>
       <td><span class="estpos" style="color:${rc};background:${rc}1e">${posLabel(p)}</span></td>
       <td class="estdim">${p.height!=null?p.height:"\u2014"}</td>
       <td class="estclubcell l"><span class="estclub">${esc(p._seasonClub||p.teamName||"—")}</span><span class="estcomp">${esc(p._seasonContext||"")}<br>${esc(p._seasonLabel||lg?.meta?.name||"")}</span></td>
