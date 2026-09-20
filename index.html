@@ -2,6 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<script>(function(){
+'use strict';
+var key='mts:theme:v1', root=document.documentElement, mq=matchMedia('(prefers-color-scheme: dark)'), origins=['https://dragonshub.mtscouting.com','https://nextgendb.mtscouting.com','https://euroscout.mtscouting.com','https://kzs.mtscouting.com'];
+function valid(v){return ['system','light','dark'].indexOf(v)>=0;}
+function read(){try{var c=document.cookie.match(/(?:^|; )mts_theme=(system|light|dark)(?:;|$)/);if(c)return c[1];var p=localStorage.getItem(key);return valid(p)?p:null;}catch(e){return null;}}
+var pref=new URLSearchParams(location.search).get('hubTheme');var saved=read();if(valid(saved))pref=saved;if(!valid(pref))pref='system';
+function apply(){var value=pref==='system'?(mq.matches?'dark':'light'):pref;if(root.dataset.theme!==value)root.dataset.theme=value;root.style.colorScheme=value;root.dataset.themePreference=pref;}
+function broadcast(){document.querySelectorAll('iframe').forEach(function(f){try{var o=new URL(f.src).origin;if(origins.includes(o))f.contentWindow.postMessage({type:'mts:theme',preference:pref},o);}catch(e){}});}
+function set(v){if(!valid(v))return;pref=v;try{localStorage.setItem(key,v);document.cookie='mts_theme='+v+'; Path=/; Max-Age=31536000; SameSite=Lax; Secure'+(/(^|\.)mtscouting\.com$/.test(location.hostname)?'; Domain=mtscouting.com':'');}catch(e){}apply();broadcast();window.dispatchEvent(new CustomEvent('mts:themechange',{detail:pref}));}
+window.MTSTheme={get:function(){return pref;},set:set,apply:apply,broadcast:broadcast};set(pref);
+new MutationObserver(apply).observe(root,{attributes:true,attributeFilter:['data-theme']});
+if(mq.addEventListener)mq.addEventListener('change',apply);else mq.addListener(apply);
+window.addEventListener('message',function(e){if(!origins.includes(e.origin)||!e.data)return;if(e.data.type==='mts:theme'&&e.source===parent)set(e.data.preference);});
+function check(){var v=read();if(valid(v)&&v!==pref){pref=v;apply();broadcast();window.dispatchEvent(new CustomEvent('mts:themechange',{detail:pref}));}}
+window.addEventListener('storage',check);document.addEventListener('visibilitychange',function(){if(!document.hidden)check();});setInterval(function(){if(!document.hidden)check();},2000);
+document.addEventListener('click',function(e){var b=e.target.closest('#esTheme,#btnTheme,#themeBtn');if(!b||location.hostname==='dragonshub.mtscouting.com'||document.getElementById('hubThemeSelect'))return;e.preventDefault();e.stopImmediatePropagation();set(['system','light','dark'][(['system','light','dark'].indexOf(pref)+1)%3]);b.title='Theme: '+pref;},true);
+})();
+</script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>EuroScout · European Basketball Scouting</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -166,9 +185,6 @@ tbody tr:hover{background:var(--panel2)}
 .pteam{color:var(--muted);font-size:11.5px;font-family:var(--mono)}
 .badge{display:inline-block;padding:2px 8px;border-radius:7px;font-size:10.5px;font-weight:600;font-family:var(--mono);background:var(--chip);color:var(--muted)}
 .badge.role{background:color-mix(in srgb,var(--sage) 20%, var(--panel));color:var(--sage)}
-.levelpill{display:inline-flex;align-items:center;min-height:22px;padding:3px 9px;border-radius:999px;font-family:var(--disp);font-size:10.5px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
-.levelpill.manual{background:color-mix(in srgb,#7562D9 16%,var(--panel));color:#5C4BB2;border:1px solid color-mix(in srgb,#7562D9 28%,var(--line))}
-.levelpill.empty{background:var(--panel2);color:var(--muted2);border:1px dashed var(--line)}
 .starbtn{background:none;border:0;font-size:16px;color:var(--muted2);padding:0 2px}
 .starbtn.on{color:var(--accent)}
 .qbadge{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--good)}
@@ -667,8 +683,6 @@ body.drawer-lock{overflow:hidden}
 /* ===== Scout board ===== */
 .scoutwrap{display:grid;grid-template-columns:236px 1fr;gap:22px;max-width:1320px;margin:0 auto;padding:20px 22px 60px}
 .scoutmain{min-width:0}
-.scout-more{margin:22px auto 4px;padding:12px 16px;text-align:center;color:var(--muted);font-size:12px;border:1px dashed var(--line);border-radius:10px;background:var(--panel2)}
-.scout-more.done{border-style:solid;color:var(--muted2);background:transparent}
 .scoutrail{position:sticky;top:120px;align-self:start;display:flex;flex-direction:column;gap:18px;max-height:calc(100vh - 140px);overflow-y:auto;padding-right:4px}
 /* Filter rail: toggle button, collapse (desktop), off-canvas drawer (touch/narrow) */
 .headleft{display:flex;align-items:flex-start;gap:12px;min-width:0}
@@ -937,7 +951,7 @@ body.drawer-lock{overflow:hidden}
 .waHead{font-family:var(--disp);font-weight:700;font-size:15px;margin-bottom:9px}
 .waList{display:flex;flex-direction:column;gap:5px}
 .waRow{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer;text-align:left;font:inherit;color:var(--txt);transition:.12s}
-.waRow:hover{border-color:var(--accent);transform:translateX(2px)}
+.waAlert{display:flex;align-items:stretch;gap:6px}.waAlert .waRow{flex:1;min-width:0}.waSeen{flex:0 0 40px;padding:8px;color:var(--green);font-size:18px}.waRow:hover{border-color:var(--accent);transform:translateX(2px)}
 .waIcon{font-size:14px;flex:0 0 auto}
 .waName{font-weight:700;font-size:13px;flex:0 0 auto}
 .waTxt{font-size:12.5px;color:var(--muted)}
@@ -1076,11 +1090,6 @@ body.drawer-lock{overflow:hidden}
 .tmGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
 .tmCard{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 15px;cursor:pointer;font:inherit;color:var(--txt);transition:.13s}
 .tmCard:hover{border-color:var(--accent);box-shadow:var(--shadow-lift);transform:translateY(-1px)}
-.tmCardHead{display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px}
-.tmStatus{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:color-mix(in srgb,var(--sage) 18%,var(--panel));color:#4a7a58}
-.tmStatus.future{background:color-mix(in srgb,#7562D9 14%,var(--panel));color:#5C4BB2}
-.tmFoot{display:flex;align-items:center;justify-content:space-between;width:100%;padding-top:4px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--muted)}
-.tmOpen{color:var(--accent-deep);font-weight:700}
 .tmName{font-family:var(--disp);font-size:15px;font-weight:800;line-height:1.2}
 .tmMeta{display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px}
 .tmLg{font-size:11px;color:var(--muted)}
@@ -1330,11 +1339,6 @@ body.drawer-lock{overflow:hidden}
 .agscore{font-family:var(--mono);color:var(--accent-deep)}
 .agencyCard{text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:15px 16px;cursor:pointer;transition:.14s;color:var(--txt);font:inherit}
 .agencyCard:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow-lift)}
-.agencyCard{display:flex;flex-direction:column;gap:9px}
-.acTop{display:flex;align-items:center;gap:10px}
-.acMark{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent-deep);font-family:var(--disp);font-weight:800}
-.acStats{display:flex;gap:6px;flex-wrap:wrap}
-.acStat{font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 8px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
 .acName{font-family:var(--disp);font-size:16px;font-weight:700;margin-bottom:5px;line-height:1.25}
 .acMeta{font-size:12.5px;color:var(--muted)}
 .filterbarHead{display:flex;align-items:center;gap:10px;margin-bottom:2px}
@@ -1724,9 +1728,18 @@ body.drawer-lock{overflow:hidden}
 
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
-<link rel="stylesheet" href="euroscout-ui.css?v=20260906-6">
-</head>
-<body>
+<link rel="stylesheet" href="euroscout-ui.css?v=20260913-search">
+<link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
+<script src="feb-data.js?v=20260913"></script><script src="euroscout-feb.js?v=20260913"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260914"></script><script src="membership-data.js?v=20260913-entries"></script>
+<script src="euroscout-memberships.js?v=20260913-expansion"></script>
+<style>.membership-review{margin:12px 0 18px;padding:12px 16px;background:var(--card,#fff);border:1px solid var(--border,#d9e3df);border-radius:12px;color:var(--text,#193442);font-size:13px}.membership-review details{margin-top:8px}.membership-review summary{cursor:pointer}.membership-review-row{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 0;align-items:baseline}.membership-review-row>span{flex:1 1 250px}.membership-review-row>a{white-space:nowrap}.membership-review details[open]{max-height:340px;overflow:auto}.rbFilters>select{min-width:min(320px,100%);max-width:100%;height:auto;min-height:44px;padding:10px 36px 10px 12px}</style>
+<link rel="stylesheet" href="euroscout-team-cards.css?v=20260914">
+<style>
+.seasonFilters{display:flex;flex-wrap:wrap;gap:14px;align-items:end;margin:16px 0;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.seasonFilters label{display:grid;gap:7px;color:var(--muted);font-size:12px;font-weight:600;flex:1 1 155px;min-width:0}.seasonFilters label:nth-child(2){flex:2 1 245px}
+.seasonFilters select{appearance:none;width:100%;min-height:46px;border:1px solid var(--line);border-radius:10px;padding:11px 36px 11px 14px;font:600 13px var(--body);color:var(--txt);background:var(--bg);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23ce8b50' stroke-width='2'/%3E%3C/svg%3E");background-position:right 14px center;background-repeat:no-repeat;cursor:pointer;box-sizing:border-box}.seasonFilters select:hover,.seasonFilters select:focus-visible{border-color:var(--accent);outline:2px solid color-mix(in srgb,var(--accent) 20%,transparent);outline-offset:1px}.seasonFilters .hint{line-height:1.5}
+</style></head>
+<body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=3Y7lXbDvH8pAG9lPBacTPclY0DT0LplrHz1eTf5OXUo-1789284776.9266841-1.2.1.1-x5DFik2ap6VDH42hUPVphw8tQy6FKPoLaH5riZbc2q_ycdpGCOE2dg20ikdH7sb." aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
   <div class="hwrap">
     <div class="logo" id="homeLogo" title="Back to players" role="button" tabindex="0"><span class="mark"><svg viewBox="0 0 112 112" width="100%" height="100%" style="display:block" aria-hidden="true"><rect width="112" height="112" fill="#0F2C45"/><circle cx="56" cy="56" r="30" fill="none" stroke="#7FA8C9" stroke-width="5"/><g stroke="#7FA8C9" stroke-width="5" stroke-linecap="round"><line x1="56" y1="9" x2="56" y2="29"/><line x1="56" y1="83" x2="56" y2="103"/><line x1="9" y1="56" x2="29" y2="56"/><line x1="83" y1="56" x2="103" y2="56"/></g><circle cx="56" cy="56" r="16" fill="#EE7A3C"/><g fill="none" stroke="#0F2C45" stroke-width="3.2" stroke-linecap="round"><path d="M40 56H72"/><path d="M56 40V72"/><path d="M45 46q11 10 22 0"/><path d="M45 66q11 -10 22 0"/></g></svg></span><span class="logotext">Euro<b>Scout</b></span></div>
@@ -1757,11 +1770,14 @@ body.drawer-lock{overflow:hidden}
 <div id="toast" class="toast"></div>
 <div id="authgate" class="authgate hidden"><div class="agbox" id="agBox"></div></div>
 
+<script src="data/club-directory.js?v=36"></script>
+<script src="euroscout-clubs.js?v=20260914-virtus-merge"></script>
+<script src="euroscout-countries.js?v=20260907-13"></script>
 <script src="config.js"></script>
-<script src="overrides.js"></script>
-<script src="data/data.js"></script>
+<script src="euroscout-access.js?v=20260913-batch"></script>
+<!-- Manual overrides are loaded from the authorized snapshot. -->
 <script src="data/exhibitions.js"></script>
-<script src="data/notion-import.js"></script>
+<!-- Scouting seeds are loaded from the authorized snapshot. -->
 <script>
 /* ============================ EuroScout app ============================ */
 /* Capture any deep-link hash (#p=<id>) before anything can wipe it. */
@@ -1773,14 +1789,21 @@ const fmt = (v,d=1)=> (v===undefined||v===null||isNaN(v))?"—":Number(v).toFixe
 const initials = n => n.split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase();
 const surnameOf = n => {const parts=(n||"").trim().split(/\s+/);const suf=/^(jr\.?|sr\.?|ii|iii|iv|v)$/i;let i=parts.length-1;if(i>0&&suf.test(parts[i]))i--;return parts[i]||n||"";};
 const posLabel = p => p.role||((p.pos&&p.pos!=="-")?p.pos:"\u2014");
-const photoOf = p => {if(!p)return null;if(p.img)return p.img;
-  const g=p._grp||[];for(const x of g){if(x.img)return x.img;}return null;};
+const isPlayerPhoto = src => !!src && !/(?:^|[\/])flags?[\/]|(?:flagcdn\.com|flagpedia\.net)/i.test(src);
+const photoOf = p => {if(!p)return null;const official=window.EuroScoutOfficialRosters?.current(p);if(official?.img)return official.img;const bbl=window.EuroScoutBBL?.current(p);if(bbl?.img)return bbl.img;if(isPlayerPhoto(p.img))return p.img;
+  const g=p._grp||[];for(const x of g){if(isPlayerPhoto(x.img))return x.img;}
+  const pro=[p,...g].find(x=>['nba','gleague'].includes(x.league)&&/^\d+$/.test(String(x._nbaId||x.code||'')));
+  if(pro)return 'https://cdn.nba.com/headshots/nba/latest/260x190/'+(pro._nbaId||pro.code)+'.png';
+  return ['nba','gleague'].includes(p.league)?'player-silhouette.svg':null;};
+document.addEventListener('error',function(e){const img=e.target;if(img.tagName==='IMG'&&(img.hasAttribute('data-player-portrait')||/^https:\/\/cdn\.nba\.com\/headshots\//.test(img.src))&&!img.dataset.silhouette){e.stopImmediatePropagation();img.dataset.silhouette='1';img.style.display='';img.src='player-silhouette.svg';}},true);
 
 /* ---------- 2026/27 transfers (live from euroball-tracker, same origin) ---------- */
 let TRANSFERS=new Map(), TRANSFERS_SUR=new Map(), TRANSFERS_LOADED=false, CLUB_LG=new Map();
-const normNm=s=>(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z ]/g,"").replace(/\s+/g," ").trim();
+const normNm=s=>searchFold(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z ]/g,"").replace(/\s+/g," ").trim();
 const normClub=s=>(s||"").toLowerCase().replace(/[\u0142]/g,"l").replace(/[\u0111]/g,"d").replace(/\u00df/g,"ss").replace(/[\u00f8]/g,"o").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[-\u2013\u2014\/&+.\u2019']/g," ").replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim();
 function buildTransferIndex(items){
+  items=window.EuroScoutTransferConfirmations?.clean(items)||items;
+  items=[...(items||[])].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
   TRANSFERS=new Map(); TRANSFERS_SUR=new Map(); CLUB_LG=new Map();
   (items||[]).forEach(it=>{if(!it||!it.player||!it.status)return;
     const n=normNm(it.player); if(!TRANSFERS.has(n))TRANSFERS.set(n,it);
@@ -1790,23 +1813,27 @@ function buildTransferIndex(items){
   TRANSFERS_LOADED=TRANSFERS.size>0;
 }
 const AUTO_APPLIED_KEY="euroscout:autoApplied:v1";
-function autoAppliedGet(){try{return JSON.parse(localStorage.getItem(AUTO_APPLIED_KEY)||"{}");}catch(e){return {};}}
+function autoAppliedGet(){try{return (JSON.parse(localStorage.getItem(AUTO_APPLIED_KEY)||"{}")||JSON.parse("{}"));}catch(e){return {};}}
 function autoAppliedSet(m){try{localStorage.setItem(AUTO_APPLIED_KEY,JSON.stringify(m));}catch(e){}
   try{Sync.stampKey(AUTO_APPLIED_KEY);}catch(e){} try{Store.pushAppKey(AUTO_APPLIED_KEY);}catch(e){}}
 // Applies transfers flagged autoApply:true directly into the 26/27 map.
 // Safe: never overrides a manual assignment, a rejected transfer, or one the user already handled;
 // only touches players it placed itself (tracked in AUTO_APPLIED_KEY) so user edits always win.
 function applyAutoTransfers(items){
+  window.EuroScoutTransferConfirmations?.repair();
+  items=window.EuroScoutTransferConfirmations?.clean(items)||items;
+  items=[...(items||[])].sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
   const handled=trHandledGet(), m=next26Get(), applied=autoAppliedGet();
   let changed=false, count=0;
   (items||[]).forEach(tr=>{
     const isRet=(tr.status==="retired");
-    if(!tr||!tr.autoApply||(!isRet&&tr.status!=="signed"&&tr.status!=="extended"))return;
+    if(!tr||!tr.autoApply||(!tr.playerId&&!tr.birth_year)||(!isRet&&tr.status!=="signed"&&tr.status!=="extended"))return;
     if(handled[tr.id]==="rejected")return;                 // respect an explicit reject
+    if(window.EuroScoutTransferConfirmations?.rejected(tr))return;
     const p=playerForTransfer(tr); if(!p)return;
     const key=gid(p);
     // skip if this person already has ANY 26/27 assignment that WE did not place
-    if(m[key]!=null && !applied[key])return;               // manual assignment wins
+    if([key,p.id,...(p._grp||[]).map(x=>x.id)].some(id=>m[id]!=null&&!applied[id]))return;
     if(isRet){ if(m[key]===STATUS_RETIRED)return;           // bake a career status, not a club
       set26(p.id,STATUS_RETIRED); applied[key]=tr.id; changed=true; count++; return; }
     const club=dbTeamForClub(tr.to); if(!club||!club.key)return;
@@ -1819,7 +1846,7 @@ function applyAutoTransfers(items){
 }
 async function loadTransfers(){
   // 1) transfers shipped with the dataset (e.g. the ACB market) — available immediately
-  const baked=(STATE.data&&Array.isArray(STATE.data.transfers))?STATE.data.transfers.slice():[];
+  const baked=(window.EuroScoutTransferConfirmations?.records||[]).concat((STATE.data&&Array.isArray(STATE.data.transfers))?STATE.data.transfers:[]);
   if(baked.length){buildTransferIndex(baked);try{applyAutoTransfers(baked);}catch(e){}try{updateTransferBadge();}catch(e){}}
   // 2) live tracker feed, merged in when it answers. Timed out so a slow feed can never
   //    stop the baked transfers from showing.
@@ -1839,6 +1866,7 @@ function nextOf(p){
   if(!it){const parts=normNm(p.name).split(" "),sur=parts[parts.length-1];const cands=TRANSFERS_SUR.get(sur)||[];
     it=cands.find(c=>c.birth_year&&p.born&&+c.birth_year===+p.born)||(cands.length===1?cands[0]:null);}
   if(!it)return null;
+  const matched=playerForTransfer(it);if(!matched||gid(matched)!==gid(p))return null;
   let kind=it.status, club=it.to;
   if(it.status==="left"){ if(!it.to||/free agent|unknown|^$/i.test(it.to)){kind="available";club=null;} else kind="signed"; }
   return {kind,club,from:it.from,contract:it.contract,source:it.source_name,url:it.source_url,league:it.league};
@@ -1853,21 +1881,27 @@ const NEXT26_KEY="euroscout:next26:v1";
 /* the 26/27 map normally holds club keys. Reserved values record a career status
    instead, so a retiring player leaves the free-agent pool without being signed anywhere. */
 const STATUS_RETIRED="__retired";
-const STATUSES={[STATUS_RETIRED]:{label:"Retired",short:"Retired",cls:"stRet"}};
+const STATUS_FREE="__free_agent";
+const STATUSES={[STATUS_FREE]:{label:"Free agent",short:"Free agent",cls:"stFa"},[STATUS_RETIRED]:{label:"Retired",short:"Retired",cls:"stRet"}};
 function isStatus(k){return !!(k&&STATUSES[k]);}
 function statusOf(p,m){const k=effective26(p,m);return isStatus(k)?k:null;}
 function statusLabel(k){return (STATUSES[k]||{}).label||"";}
-function next26Get(){try{return JSON.parse(localStorage.getItem(NEXT26_KEY)||"{}");}catch(e){return {};}}
+const assignmentReadCache=new Map();
+function readAssignmentMap(key){const raw=localStorage.getItem(key)||'{}',old=assignmentReadCache.get(key);if(old?.raw===raw)return old.value;let value;try{value=JSON.parse(raw)||{};}catch{value={};}assignmentReadCache.set(key,{raw,value});return value;}
+function next26Get(){return {...readAssignmentMap(NEXT26_KEY)};}
 function next26Set(m){try{localStorage.setItem(NEXT26_KEY,JSON.stringify(m));}catch(e){}
   try{Sync.stampKey(NEXT26_KEY);}catch(e){} try{Store.pushAppKey(NEXT26_KEY);}catch(e){}}
 function effective26(p,m){m=m||next26Get();
   const k=m[gid(p)]||m[p.id]||((p._grp||[]).map(x=>m[x.id]).find(Boolean));
-  return k?canonKey(k):null;}   // keyed per person, so it is shared across every competition he plays
+  const registered=window.EuroScoutOfficialRosters?.key(p)||window.EuroScoutBBL?.key(p)||window.EuroScoutTransferConfirmations?.key(p)||window.EuroScoutABA?.key(p)||window.EuroScoutElite2?.key(p)||window.EuroScoutExpansion?.key(p)||window.EuroScoutNCAA?.key(p);
+  if(registered&&k){const automated=readAssignmentMap(AUTO_APPLIED_KEY),ids=[gid(p),p.id,...(p._grp||[]).map(x=>x.id)];if(ids.some(id=>automated[id]))return registered;}
+  return k?canonKey(k):(registered||null);}   // keyed per person, so it is shared across every competition he plays
 function set26(pid,key){const m=next26Get();const p=player(pid);
   const ids=p?[gid(p),p.id].concat((p._grp||[]).map(x=>x.id)):[pid];
   [...new Set(ids)].forEach(k=>delete m[k]);          // clear every alias for this person
   if(key)m[p?gid(p):pid]=canonKey(key);
   next26Set(m);
+  const auto=autoAppliedGet();[...new Set(ids)].forEach(id=>delete auto[id]);autoAppliedSet(auto);
   // if a two-way secondary exists but is no longer a valid NBA<->G League pair with the new
   // primary (or the player is now unassigned), drop it so rosters stay consistent.
   try{const b=effective26b(p);if(b&&(!key||!isTwoWayPair(canonKey(key),b))){const mb=next26bGet();
@@ -1876,7 +1910,7 @@ function set26(pid,key){const m=next26Get();const p=player(pid);
 // Used for two-way contract players who appear on both an NBA and a G League roster at once.
 const NEXT26B_KEY="euroscout:next26b:v1";
 const TWOWAY_LEAGUES=new Set(["nba","gleague"]);
-function next26bGet(){try{return JSON.parse(localStorage.getItem(NEXT26B_KEY)||"{}");}catch(e){return {};}}
+function next26bGet(){return {...readAssignmentMap(NEXT26B_KEY)};}
 function next26bSet(m){try{localStorage.setItem(NEXT26B_KEY,JSON.stringify(m));}catch(e){}
   try{Sync.stampKey(NEXT26B_KEY);}catch(e){} try{Store.pushAppKey(NEXT26B_KEY);}catch(e){}}
 // league id a club key belongs to (from its DB teams)
@@ -1914,7 +1948,8 @@ function showsTeams(m){return !!(m&&!m.exhibition&&(
   || (m.teamsOnly&&ENTRANT_LEAGUES.has(m.id))));}                        // next-season entrants
 // stat-scope leagues: the ones that belong in stats filters/percentiles (never the browse-only ones)
 function isStatLeague(m){return !!(m&&!isOtherLeague(m)&&!m.teamsOnly);}
-function allDbTeams(){if(DBTEAM_LIST)return DBTEAM_LIST;const out=[];(STATE.data.leagues||[]).forEach(L=>{if(!showsTeams(L.meta))return;(L.teams||[]).forEach(t=>out.push({key:L.meta.id+"|"+t.code,name:t.name,city:t.city||"",country:t.country||"",lg:L.meta.id,lgName:L.meta.name,conf:t.conference||null,code:t.code,logo:t.logo||null}));});DBTEAM_LIST=out;DBTEAM_BYKEY=new Map(out.map(t=>[t.key,t]));buildClubs();return out;}
+function allDbTeams(){if(DBTEAM_LIST)return DBTEAM_LIST;const out=[];(STATE.data.leagues||[]).forEach(L=>{if(!showsTeams(L.meta))return;(L.teams||[]).forEach(t=>out.push({key:L.meta.id+"|"+t.code,name:t.name,city:t.city||"",country:t.country||"",lg:L.meta.id,lgName:L.meta.name,conf:t.conference||null,code:t.code,logo:t.logo||null}));});EuroScoutClubs.extend(out);
+  DBTEAM_LIST=out;DBTEAM_BYKEY=new Map(out.map(t=>[t.key,t]));buildClubs();EuroScoutClubs.linkAliases(DBTEAM_BYKEY,CLUB_BY_TEAMKEY);window.EuroScoutMemberships?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutBBL?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutOfficialRosters?.decorate(CLUBS,CLUB_BY_TEAMKEY);DOM27=null;NEXTCOMP=null;return out;}
 
 /* ---------- clubs: one entry per real club, tagged with every competition it plays ---------- */
 let CLUBS=null, CLUB_BY_TEAMKEY=null;
@@ -1924,34 +1959,20 @@ function clubTokens(name){return normClub(name).split(" ").filter(w=>(w.length>=
 function tokEq(a,b){if(a===b)return true;const m=Math.min(a.length,b.length);return m>=5&&(a.slice(0,m)===b.slice(0,m));}
 const CLUB_ALIAS={"barca":"fc barcelona","partizan mozzart bet":"partizan belgrade","buducnost voli":"buducnost podgorica","kids us manresa":"baxi manresa","besiktas gain":"besiktas istanbul","bahcesehir koleji":"bahcesehir college","aek bc":"aek athens","petrolina aek":"petrolina aek larnaca"};
 function clubCanon(n){return CLUB_ALIAS[n]||n;}
+const VERIFIED_CLUB_PAIRS=new Set(["euroleague|OLY~gbl|OLY","acb|VBC~euroleague|PAM","acb|RMB~euroleague|MAD","bsl|FEN~euroleague|ULK","euroleague|ZAL~lkl|ZAL","euroleague|HTA~il|HTA","euroleague|PAN~gbl|PAO","euroleague|MCO~lnb|MON","acb|BAR~euroleague|BAR","aba|CZV~euroleague|RED","aba|DUB~euroleague|DUB","euroleague|TEL~il|MTA","bbl|FCB~euroleague|MUN","euroleague|MIL~lba|MIO","aba|PAR~euroleague|PAR","euroleague|PRS~lnb|PAB","euroleague|VIR~lba|BOV","acb|BKN~euroleague|BAS","bsl|EFS~euroleague|IST","euroleague|ASV~lnb|VIL","bsl|BJK~eurocup|BES","eurocup|BOU~lnb|BOU","aba|BUD~eurocup|BUD","bsl|TTK~eurocup|TTK","eurocup|TRN~lba|TN","bbl|CHE~eurocup|NIN","bbl|ULM~eurocup|ULM","eurocup|LKB~lkl|LIE","eurocup|NIO~gbl|PAN","eurocup|JER~il|JER","bsl|BAH~eurocup|BAH","aba|COL~eurocup|LJU","eurocup|LJU~slo|CED","eurocup|VNC~lba|VE","acb|MAN~eurocup|MAN","aba|CLU~eurocup|CLU","eurocup|CLU~rou|CLJ","eurocup|ARI~gbl|ARI","eurocup|KLA~lkl|NEP","eurocup|WRO~plk|WŚW","bbl|HAM~eurocup|HAM","aba|SPR~kls|SPARTAKOFFICESHOES","aba|COL~slo|CED","aba|CLU~rou|CLJ","aba|MEG~kls|MEGASUPERBET","aba|FMP~kls|FMP","aba|KRK~slo|KRK","aba|ILI~slo|PER","aba|VIE~autbsl|BCV","aba|BOR~kls|BORACMOZZART","bcl|AEK~gbl|AEK","cyp|PA~fec|PA"]);
+for(const pair of [...(window.EUROSCOUT_MEMBERSHIPS?.identityPairs||[]),...(window.EUROSCOUT_EXPANSION_DATA?.identityPairs||[])])VERIFIED_CLUB_PAIRS.add([...pair].sort().join('~'));
+// Reviewed domestic/international identities; source records and seasons remain unchanged.
+const CROSS_COMPETITION_CLUB_GROUPS=[["plk|AW","fec|AW"],["bsl|PET","fec|AP"],["cyp|ANOR","fec|AF"],["denmark|rgteam-914","fec|BB"],["bbl|BRA","fec|BLB"],["kosovo|rgteam-1707","fec|BCB"],["elb|KAL","fec|KC"],["slovakia|rgteam-564","fec|BCP"],["kosovo|rgteam-1748","fec|BCT"],["bsl|BUR","bcl|BUR"],["acb|CAZ","fec|CZ"],["rou|VAL","fec|CSV"],["rou|BRA","fec|CB"],["rou|ORA","fec|RO"],["seriea2|lnp-9503","fec|DS"],["lnb|CHA","bcl|ELAN"],["hun|FEK","fec|FVE"],["por|FCP","fec|FCP"],["bnxt|OOS","bcl|OOST"],["lnb|DIJ","fec|JDB"],["gbl|KAR","bcl|KARD"],["aba|BOS","fec|BT","bosnia|rgteam-40"],["macedonia|rgteam-1273","fec|KKP"],["acb|LLT","bcl|LLTF"],["lnb|LEM","bcl|MSB"],["proa|proa-488","bcl|HDB"],["hun|NHS","bcl|OLAJ"],["lba|RE","fec|PR"],["lba|TSS","bcl|TS"],["gbl|PAOK","fec|PAO"],["slovakia|rgteam-977","bcl|LEV"],["gbl|PER","fec|PB"],["plk|PSL","fec|PSL"],["cze|BRN","fec|PBB"],["bbl|VEC","fec|RV"],["bul|RI1","fec|RS"],["bbl|HRO","fec|RS2"],["acb|SBB","fec|SBB"],["elb|TAR","fec|TUM"],["bsl|TOF","bcl|TOF"],["acb|UCM","fec|UM"],["bnxt|ANT","fec|WGA"],["hrv|ALK","enbl|ALK"],["hrv|DU1","enbl|DUB"],["hrv|DIN","enbl|DIN"],["gbl|IRA","enbl|IRA"],["elb|KEI","enbl|KEI"],["elb|VAL","enbl|VAL"],["bosnia|rgteam-2781","aba2|BAS"],["bosnia|rgteam-877","aba|IGO"],["bosnia|rgteam-249","aba|SIR","directory|aba-2026-6"],["montenegro|rgteam-67","aba|BUD"],["slo|ECE","aba2|ECE"],["slo|GGD","aba2|GGD"],["kls|HERCEGOVACALINGCONEL","aba2|HER"],["slo|KAN","aba2|KAN"],["macedonia|rgteam-2785","aba2|MAD"],["montenegro|rgteam-434","aba2|MOR"],["macedonia|rgteam-398","aba2|MZT"],["montenegro|rgteam-900","aba2|POD"],["montenegro|rgteam-899","aba2|PRI"],["montenegro|rgteam-1321","aba|SCD"],["montenegro|rgteam-487","aba2|SUT"],["macedonia|rgteam-2430","aba2|TFT"],["kls|VOJVODINAMTS","aba2|VOJ"],["kls|VRSACMERIDIANBET","aba2|VRŠ"],["hrv|ZAD","aba|ZAD"],["kls|ZLATIBORMOZZART","aba2|ZLA"],["lba|SCF","directory|italy-scafati-basket"],["swiss|rgteam-929","directory|entry-switzerland-lionsdegeneve"],["bosnia|rgteam-171","aba2|SLO"],["kls|SLOBODA","aba2|SL1"]];
+for(const group of CROSS_COMPETITION_CLUB_GROUPS)for(let i=0;i<group.length;i++)for(let j=i+1;j<group.length;j++)VERIFIED_CLUB_PAIRS.add([group[i],group[j]].sort().join('~'));
 function sameClub(a,b){
-  if(a.lg===b.lg)return false;                       // never merge inside one competition
-  const na=clubCanon(normClub(a.name)), nb=clubCanon(normClub(b.name));
-  if(!na||!nb)return false;
-  // 26/27 new-entrant leagues are pre-checked standalone clubs, so by default they don't merge.
-  // EXCEPTION: a promoted/relocated club we already track (e.g. Široki moving ABA2 -> ABA) should
-  // merge with its existing entry — but ONLY on an exact / whole-word-containment name match,
-  // never on fuzzy token overlap, so genuinely new clubs (e.g. Slovan Bratislava) stay standalone.
-  if(a.lg==="n2627"||b.lg==="n2627"){
-    if(na===nb)return true;
-    const wa2=" "+na+" ", wb2=" "+nb+" ";
-    return wa2.includes(wb2)||wb2.includes(wa2);
-  }
-  if(na===nb)return true;
-  const wa=" "+na+" ", wb=" "+nb+" ";
-  if(wa.includes(wb)||wb.includes(wa))return true;   // whole-word containment only ("Aris" must not match "Paris")
-  // stop-word-stripped subset: "AEK BC" vs "AEK Athens" ("BC" is noise)
-  const sa=na.split(" ").filter(w=>w.length>=3&&!CLUB_STOP.has(w)), sb=nb.split(" ").filter(w=>w.length>=3&&!CLUB_STOP.has(w));
-  if(sa.length&&sb.length){
-    const inb=sa.every(w=>sb.includes(w)), ina=sb.every(w=>sa.includes(w));
-    if((inb&&sa.length<sb.length)||(ina&&sb.length<sa.length))return true;
-  }
-  const ta=clubTokens(na), tb=clubTokens(nb);
-  if(!ta.length||!tb.length)return false;
-  let shared=0;ta.forEach(x=>{if(tb.some(y=>tokEq(x,y)))shared++;});
-  if(!shared)return false;
-  const union=new Set([...ta,...tb]).size;
-  return shared/union>=0.34;
+ if(['plk|ETS','fec|ETS'].includes(a.key)&&['plk|ETS','fec|ETS'].includes(b.key))return true;
+ if((window.EUROSCOUT_OFFICIAL_ROSTERS?.identityPairs||[]).some(pair=>pair.includes(a.key)&&pair.includes(b.key)))return true;
+ if(VERIFIED_CLUB_PAIRS.has([a.key,b.key].sort().join('~')))return true;
+ if(a.directoryOnly||b.directoryOnly)return false;
+ const country=x=>String(window.EuroScoutCountries?.canonical(x)||x||'').toLowerCase();
+ if(!a.country||!b.country||country(a.country)!==country(b.country))return false;
+ const names=t=>[t.name,...(t.searchAliases||[])].map(normClub).map(clubCanon).filter(Boolean);
+ return names(a).some(n=>names(b).includes(n));
 }
 function buildClubs(){
   const teams=DBTEAM_LIST;
@@ -1959,7 +1980,7 @@ function buildClubs(){
   const find=i=>{while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i];}return i;};
   const lgSet=teams.map(t=>new Set([t.lg]));   // a club can appear only once per competition
   const uni=(i,j)=>{const a=find(i),b=find(j);if(a===b)return;
-    for(const l of lgSet[b])if(lgSet[a].has(l))return;   // would duplicate a competition -> not the same club
+    /* Verified identity, including duplicate competition records. */   // would duplicate a competition -> not the same club
     parent[b]=a;lgSet[b].forEach(l=>lgSet[a].add(l));};
   const BROWSE=new Set(["nba","gleague","ncaam"]);
   const crossOK=(a,b)=>{const ab=BROWSE.has(a.lg),bb=BROWSE.has(b.lg);
@@ -1995,7 +2016,7 @@ function nextCompMap(){
     NEXTCOMP.get(ck).push({id,name:c.name,stage:t.stage||null});});});
   return NEXTCOMP;
 }
-const EURO_COMPS=new Set(["euroleague","eurocup","bcl"]);
+const EURO_COMPS=new Set(["euroleague","eurocup","bcl","fec","enbl"]);
 let DOM27=null;
 /* confirmed 2026/27 domestic fields (promotions + relegations). Leagues not yet
    verified fall back to this season's membership and are flagged provisional. */
@@ -2008,32 +2029,20 @@ function dom27Map(){
     const club=CLUB_BY_TEAMKEY?CLUB_BY_TEAMKEY.get(t.key):null;
     const ck=club?club.key:t.key;
     if(!DOM27.has(ck))DOM27.set(ck,[]);
-    DOM27.get(ck).push({id:lg,name:c.name});});});
+    DOM27.get(ck).push({id:lg,name:c.name,provisional:!c.confirmed,stage:t.stage||null});});});
   return DOM27;
 }
-function dom27Confirmed(lgId){const S=(STATE.data||{}).domestic2627;return !!(S&&S.leagues&&S.leagues[lgId]);}
-function domCompsOf(club){
-  if(!club)return [];
-  if(!CLUBS)allDbTeams();
-  const confirmed=dom27Map().get(club.key)||[];
-  const CLUBSONLY=new Set(((STATE.data||{}).leagues||[]).filter(L=>L.meta.teamsOnly).map(L=>L.meta.id));
-  const carried=(club.leagues||[]).filter(l=>!EURO_COMPS.has(l.id)&&l.id!=="n2627"&&!dom27Confirmed(l.id))
-    // college and similar clubs-only competitions have no promotion/relegation to verify
-    .map(l=>({id:l.id,name:l.name,provisional:!CLUBSONLY.has(l.id)}));
-  return confirmed.concat(carried);
-}
-/* what the club actually plays in 2026/27: its domestic league(s) carry over,
-   but the European entry is taken from next season’s confirmed lists, not last season’s */
+function dom27Confirmed(lgId){const c=STATE.data?.domestic2627?.leagues?.[lgId];return !!(c?.confirmed&&c?.complete);}
+function domCompsOf(club){if(!club)return [];if(!CLUBS)allDbTeams();return dom27Map().get(club.key)||[];}
+// Current entries never fall back to historical stats membership.
 function comps2627Label(club){
   const dom=domCompsOf(club).map(l=>l.name+(l.provisional?"*":""));
-  const eu=nextCompsOf(club).map(c=>c.name);
+  const eu=nextCompsOf(club).map(c=>c.name+(c.stage==="Q"?" (qualifying)":c.stage==="conditional"?" (conditional)":""));
   const all=dom.concat(eu);
-  return all.length?all.join(" \u00b7 "):"\u2014";
+  return all.length?all.join(" \u00b7 "):"Current league unverified";
 }
 function nextCompsOf(club){if(!club)return [];if(!CLUBS)allDbTeams();return nextCompMap().get(club.key)||[];}
-function nextCompBadges(club){const cs=nextCompsOf(club);if(!cs.length)return "";
-  const AB={euroleague:"EL",eurocup:"EC",bcl:"BCL"};
-  return cs.map(c=>`<span class="n27tag ${esc(c.id)}" title="${esc(c.name)} 2026/27${c.stage==="Q"?" \u2014 qualifying rounds":""}">${esc(AB[c.id]||c.name)}${c.stage==="Q"?"<i>Q</i>":""}</span>`).join("");}
+function nextCompBadges(club){return nextCompsOf(club).map(c=>{const stage=c.stage==='Q'?' · Q':c.stage==='conditional'?' · Conditional':'';return '<span class="n27tag '+esc(c.id)+'" title="'+escAttr(c.name+' 2026/27'+stage)+'">'+esc(({euroleague:'EL',eurocup:'EC',bcl:'BCL',fec:'FEC',enbl:'ENBL'})[c.id]||c.name)+esc(stage)+'</span>';}).join('');}
 function clubLogo(c){if(!c)return null;
   if(c.logo)return c.logo;
   const t=(c.teams||[]).find(x=>x.logo); if(t)return t.logo;
@@ -2046,15 +2055,15 @@ function canonKey(k){if(isStatus(k))return k;const c=clubForTeamKey(k);return c?
 function dbTeamByKey(k){if(!DBTEAM_BYKEY)allDbTeams();return DBTEAM_BYKEY.get(k)||null;}
 function openTeamPickerProfile(pid){openTeamPicker(pid,()=>{if(typeof openProfile==="function")openProfile(pid);});}
 function next26CellHTML(p){const k=effective26(p);
-  if(isStatus(k))return `<b class="stRet">${esc(statusLabel(k))}</b><div class="bisub">not seeking a club for 2026/27</div><span class="bioadd n26edit" onclick="event.stopPropagation();openTeamPickerProfile('${p.id}')" title="Change 26/27 status"><span class="bioaddhint">change</span></span>`;
+  if(isStatus(k))return `<b class="stRet">${esc(statusLabel(k))}</b><div class="bisub">${k===STATUS_FREE?"No club for 2026/27 · manually recorded":"not seeking a club for 2026/27"}</div><span class="bioadd n26edit" onclick="event.stopPropagation();openTeamPickerProfile('${p.id}')" title="Change 26/27 status"><span class="bioaddhint">change</span></span>`;
   const c=k?clubByKey(k):null;
   const bk=effective26b(p);const bc=bk?clubByKey(bk):null;
   const twoWayLine=bc?`<div class="bisub biTwoway">\u21c4 Two-way \u00b7 ${esc(bc.name)}</div>`:"";
-  if(c)return `<b>${esc(c.name)}</b><div class="bisub">${(c.leagues||[]).map(l=>esc(l.name)).join(" \u00b7 ")}</div>${twoWayLine}<span class="bioadd n26edit" onclick="event.stopPropagation();openTeamPickerProfile('${p.id}')" title="Change 26/27 team"><span class="bioaddhint">change</span></span>`;
+  if(c)return `<b>${esc(c.name)}</b><div class="bisub">${esc(comps2627Label(c))}</div>${twoWayLine}<span class="bioadd n26edit" onclick="event.stopPropagation();openTeamPickerProfile('${p.id}')" title="Change 26/27 team"><span class="bioaddhint">change</span></span>`;
   return `<span class="bioadd n26fa" onclick="event.stopPropagation();openTeamPickerProfile('${p.id}')" title="Assign a 26/27 team"><b>Free agent</b> <span class="bioaddhint">sign</span></span>`;}
 /* ---------- transfer approval inbox (review only, never auto-commit) ---------- */
 const TR_HANDLED_KEY="euroscout:trHandled:v1";
-function trHandledGet(){try{return JSON.parse(localStorage.getItem(TR_HANDLED_KEY)||"{}");}catch(e){return {};}}
+function trHandledGet(){try{return (JSON.parse(localStorage.getItem(TR_HANDLED_KEY)||"{}")||JSON.parse("{}"));}catch(e){return {};}}
 function trHandledSet(m){try{localStorage.setItem(TR_HANDLED_KEY,JSON.stringify(m));}catch(e){}
   try{Sync.stampKey(TR_HANDLED_KEY);}catch(e){} try{Store.pushAppKey(TR_HANDLED_KEY);}catch(e){}}
 let PLAYER_BY_NAME=null;
@@ -2062,10 +2071,15 @@ function playerNameIndex(){if(PLAYER_BY_NAME)return PLAYER_BY_NAME;PLAYER_BY_NAM
   // assignPool (not scoutPool) so NBA / G League / NCAA players can also be resolved as transfer
   // targets and placed on 26/27 rosters, not just European-league players.
   assignPool().forEach(p=>{const n=normNm(p.name);if(!PLAYER_BY_NAME.has(n))PLAYER_BY_NAME.set(n,[]);PLAYER_BY_NAME.get(n).push(p);});return PLAYER_BY_NAME;}
-function playerForTransfer(tr){const cands=playerNameIndex().get(normNm(tr.player))||[];
-  if(cands.length<=1)return cands[0]||null;
-  if(tr.birth_year){const byY=cands.find(p=>p.born&&+p.born===+tr.birth_year);if(byY)return byY;}
-  return cands[0];}
+function playerForTransfer(tr){
+  if(!tr||(window.EuroScoutTransferConfirmations&&!window.EuroScoutTransferConfirmations.clean([tr]).length))return null;
+  if(tr.playerId){const exact=STATE.data.leagues.flatMap(l=>l.players||[]).find(p=>p.id===tr.playerId);
+    return exact&&(!tr.birth_year||!exact.born||+exact.born===+tr.birth_year)?exact:null;}
+  let cands=playerNameIndex().get(normNm(tr.player))||[];
+  if(tr.birth_year)cands=cands.filter(p=>p.born&&+p.born===+tr.birth_year);
+  // Duplicate competition rows are one person; different identities are never guessed.
+  const identities=new Map(cands.map(p=>[gid(p),p]));
+  return identities.size===1?[...identities.values()][0]:null;}
 function dbTeamForClub(name){if(!name||/free agent/i.test(name))return null;const q=normClub(name);if(!q)return null;
   const teams=allDbTeams();let t=teams.find(x=>normClub(x.name)===q);if(t)return t;
   t=teams.find(x=>{const n=normClub(x.name);return (n.includes(q)||q.includes(n))&&Math.min(n.length,q.length)>=4;});return t||null;}
@@ -2235,15 +2249,24 @@ function esAuthStorage(){
 }
 const Store = (()=>{
   const cfg = window.EUROSCOUT_CONFIG||{};
-  const enabled = !!(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY);
+  const enabled = !!(window.ESAccess || (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY));
   let sb=null, user=null, role=null, member=false, cache={};
   const LKEY="euroscout:records";
-  const APP_KEYS=["euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1"];
+  const APP_KEYS=["euroscout:sessions:v1","euroscout:shortcuts:v1","euroscout:names:v1","euroscout:watchAlertsSeen:v1","euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1","euroscout:market:v1"];
   const local = {
     all(){try{return JSON.parse(localStorage.getItem(LKEY))||{}}catch(e){return{}}},
     set(o){localStorage.setItem(LKEY,JSON.stringify(o))}
   };
   async function initSB(){
+    if(window.ESAccess){
+      const access=await ESAccess.ready;
+      if(access.internal){user=access.user;member=true;role=access.owner?'editor':'viewer';
+        const state=access.state;cache=state.records;local.set(cache);
+        for(const k of APP_KEYS){if(Object.hasOwn(state.appData,k)&&state.appData[k]!=null)localStorage.setItem(k,JSON.stringify(state.appData[k]));else localStorage.removeItem(k);}
+        for(const [k,v] of Object.entries(state.seeds||{}))if(/^EUROSCOUT_[A-Z_]+$/.test(k)){if(k==='EUROSCOUT_AGENTS')window[k]={...(window[k]||{}),...v};else if(k==='EUROSCOUT_AGENCIES')window[k]=[...new Set([...(window[k]||[]),...v])];else window[k]=v;}
+      }
+      return;
+    }
     if(!enabled) return;
     await new Promise((res,rej)=>{const s=document.createElement("script");
       s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
@@ -2267,9 +2290,10 @@ const Store = (()=>{
       if(!error&&data){member=true;role=(data.role==="editor")?"editor":"viewer";
         try{localStorage.setItem("es:wasmember:"+(email||"").toLowerCase(),"1");}catch(e){}}}catch(e){}
   }
-  function canEdit(){ return !enabled ? true : (member && role==="editor"); }
+  function canEdit(){ if(window.ESAccess)return ESAccess.internal&&ESAccess.owner;return !enabled ? true : (member && role==="editor"); }
   // pull the whole shared dataset into the local cache
   async function load(){
+    if(window.ESAccess)return ESAccess.internal?cache:{};
     cache = local.all();                 // instant local cache first
     if(sb && user && member){
       try{const {data,error}=await sb.from("scouting").select("*");
@@ -2292,10 +2316,11 @@ const Store = (()=>{
         try{localStorage.setItem(r.k,typeof r.v==="string"?r.v:JSON.stringify(r.v));}catch(e){}}});
     }catch(e){}
   }
-  function get(id){return cache[id]||{report:"",rating:0,tags:[],watch:false,board:null,eye:{}};}
+  function get(id){if(window.ESAccess&&!ESAccess.internal)return {report:"",rating:0,tags:[],watch:false,board:null,eye:{}};return cache[id]||{report:"",rating:0,tags:[],watch:false,board:null,eye:{}};}
   async function save(id,rec){
     if(enabled && !canEdit()) return;    // viewers cannot write
     cache[id]={...get(id),...rec}; local.set(cache);
+    if(window.ESAccess){return await persistPrivate();}
     if(sb && user && canEdit()){
       const r=cache[id];
       try{await sb.from("scouting").upsert({player_id:id,report:r.report,rating:r.rating,
@@ -2308,6 +2333,7 @@ const Store = (()=>{
     if(!items||!items.length) return 0;
     items.forEach(it=>{cache[it.id]={...get(it.id),...it.rec};});
     local.set(cache);
+    if(window.ESAccess){await persistPrivate();return items.length;}
     if(sb && user && canEdit()){
       const rows=items.map(it=>{const r=cache[it.id];return{player_id:it.id,report:r.report,rating:r.rating,
         tags:r.tags,watch:r.watch,board:r.board,eye:r.eye,updated_at:new Date().toISOString(),updated_by:user.email};});
@@ -2316,11 +2342,31 @@ const Store = (()=>{
     return items.length;
   }
   async function pushAppKey(k){
+    if(window.ESAccess)return persistPrivate();
     if(!enabled)return true;
     if(!sb||!user||!canEdit())return false;
     let v=null;try{v=JSON.parse(localStorage.getItem(k));}catch(e){v=localStorage.getItem(k);}
     try{const {error}=await sb.from("appdata").upsert({k,v,updated_at:new Date().toISOString()},{onConflict:"k"});return !error;}catch(e){return false;}
   }
+  let privateTimer,privateWaiters=[],privateDirty=false;
+  function persistPrivate(){
+    if(!ESAccess.internal||!canEdit())return Promise.resolve(false);
+    privateDirty=true;clearTimeout(privateTimer);const promise=new Promise(resolve=>privateWaiters.push(resolve));
+    privateTimer=setTimeout(async()=>{const waiters=privateWaiters;privateWaiters=[];
+      const appData={};for(const k of APP_KEYS){try{appData[k]=JSON.parse(localStorage.getItem(k)||'null');}catch{}}
+      const snapshot={...ESAccess.state,records:cache,appData};
+      try{await ESAccess.saveState(snapshot);privateDirty=privateWaiters.length>0;waiters.forEach(r=>r(true));}
+      catch(e){toast('Cloud save failed: '+e.message+' Your local changes are retained.');waiters.forEach(r=>r(false));}
+    },500);return promise;
+  }
+  async function refreshPrivate(){
+    if(!window.ESAccess?.internal||privateDirty||document.visibilityState!=='visible'||document.activeElement?.matches('input,textarea,select,[contenteditable=true]')||document.querySelector('#modal.open'))return;
+    try{if(!await ESAccess.refresh())return;cache=ESAccess.state.records;local.set(cache);for(const k of APP_KEYS){if(Object.hasOwn(ESAccess.state.appData,k)&&ESAccess.state.appData[k]!=null)localStorage.setItem(k,JSON.stringify(ESAccess.state.appData[k]));else localStorage.removeItem(k);}
+      OVR=ovrMerged();rebuildLinks();applyOverrides();EuroScoutMarketRecords.refresh();render();if(CURRENT)renderProfile();
+    }catch(e){console.warn('Shared refresh unavailable:',e.message);}
+  }
+  window.addEventListener('es-access-role',()=>{applyRoleClass();renderHeaderAuth();if(STATE.league)render();});
+  setInterval(refreshPrivate,60000);document.addEventListener('visibilitychange',refreshPrivate);
   // first-run migration: if the shared DB is empty and this editor has local work, push it up
   async function migrateLocalUp(){
     if(!sb||!user||!canEdit())return;
@@ -2391,18 +2437,19 @@ const Store = (()=>{
 /* ---------------------------- boot ---------------------------- */
 /* ---------- manual overrides: links, bio, external URLs ---------- */
 const OVR_KEY="euroscout:overrides";
-function ovrBase(){const b=window.EUROSCOUT_OVERRIDES||{};return{links:b.links||[],bio:b.bio||{},ext:b.ext||{}};}
-function ovrLocal(){try{const o=JSON.parse(localStorage.getItem(OVR_KEY));return o&&typeof o==="object"?{links:o.links||[],bio:o.bio||{},ext:o.ext||{}}:{links:[],bio:{},ext:{}};}catch(e){return{links:[],bio:{},ext:{}};}}
+function ovrBase(){const b=window.EUROSCOUT_OVERRIDES||{};return{links:b.links||[],bio:b.bio||{},ext:b.ext||{},clubs:b.clubs||{}};}
+function ovrLocal(){try{const o=JSON.parse(localStorage.getItem(OVR_KEY));return o&&typeof o==="object"?{links:o.links||[],bio:o.bio||{},ext:o.ext||{},clubs:o.clubs||{}}:{links:[],bio:{},ext:{},clubs:{}};}catch(e){return{links:[],bio:{},ext:{}};}}
 function ovrMerged(){const b=ovrBase(),l=ovrLocal();
   const links=[...b.links,...l.links];
   const bio={}; Object.keys(b.bio).forEach(k=>bio[k]={...b.bio[k]}); Object.keys(l.bio).forEach(k=>bio[k]={...(bio[k]||{}),...l.bio[k]});
   const ext={...b.ext,...l.ext};
-  return{links,bio,ext};}
+  return{links,bio,ext,clubs:{...(b.clubs||{}),...(l.clubs||{})}};}
 let OVR={links:[],bio:{},ext:{}};
 function ovrSaveLocal(patch){
   if(!Store.canEdit())return;
   const l=ovrLocal();
-  if(patch.bio)Object.keys(patch.bio).forEach(id=>{const clean={};Object.keys(patch.bio[id]).forEach(k=>{const v=patch.bio[id][k];if(v!=null&&(v!==""||k==="projLevel"))clean[k]=v;});l.bio[id]={...(l.bio[id]||{}),...clean};});
+  if(patch.bio)Object.keys(patch.bio).forEach(id=>{const clean={};Object.keys(patch.bio[id]).forEach(k=>{const v=patch.bio[id][k];if(v!=null&&(v!==""||k==="projLevel"||k==="country"||k==="agent"||k==="agency"||k==="agentUrl"))clean[k]=k==='country'?EuroScoutCountries.canonical(v):v;});l.bio[id]={...(l.bio[id]||{}),...clean};});
+  if(patch.clubs)l.clubs={...(l.clubs||{}),...patch.clubs};
   if(patch.ext)Object.keys(patch.ext).forEach(id=>{if(patch.ext[id])l.ext[id]=patch.ext[id];else delete l.ext[id];});
   if(patch.links)patch.links.forEach(pr=>{if(!l.links.some(x=>(x[0]===pr[0]&&x[1]===pr[1])||(x[0]===pr[1]&&x[1]===pr[0])))l.links.push(pr);});
   localStorage.setItem(OVR_KEY,JSON.stringify(l));
@@ -2411,6 +2458,8 @@ function ovrSaveLocal(patch){
   OVR=ovrMerged(); rebuildLinks(); applyOverrides(); STATE._tagg=null;
 }
 function applyOverrides(){
+  EuroScoutClubs.refresh();
+  window.EuroScoutAgencyResearch?.prepare();
   // bio/ext overrides are keyed per-person (shared across all their competitions), so look up
   // by ANY id in the merged group — editing one league's entry propagates to the others.
   const bioFor=p=>{const ids=(p._grp&&p._grp.length?p._grp:[p]).map(x=>x.id);
@@ -2423,17 +2472,19 @@ function applyOverrides(){
     const b=bioFor(p);
     p.hand=null;p.license=null;p.agent=null;p.agency=null;p.agentUrl=null;p._rgm=null;p.projLevel=null;
     if(b){ if(b.height!=null&&b.height!=="")p.height=Number(b.height); if(b.weight!=null&&b.weight!=="")p.weight=Number(b.weight);
-      if(b.country)p.country=b.country; if(b.pos)p.pos=b.pos; if(b.role){const _r=(b.role==="Wing"?"Forward":b.role);p.role=_r;p.pos=_r;} if(b.born!=null&&b.born!=="")p.born=Number(b.born); if(b.name)p.name=b.name;
+      if(Object.prototype.hasOwnProperty.call(b,'country'))p.country=b.country; if(b.pos)p.pos=b.pos; if(b.role){const _r=(b.role==="Wing"?"Forward":b.role);p.role=_r;p.pos=_r;} if(b.born!=null&&b.born!=="")p.born=Number(b.born); if(b.name)p.name=b.name;
       if(b.hand)p.hand=b.hand; if(b.license)p.license=b.license;
       if(b.agent)p.agent=b.agent; if(b.agency)p.agency=normAgency(b.agency); if(b.agentUrl)p.agentUrl=b.agentUrl; if(b.rgm)p._rgm=b.rgm;
       if(b.projLevel!=null&&b.projLevel!=="")p.projLevel=Number(b.projLevel); }
+    window.EuroScoutAgencyResearch?.apply(p,b);
+    p.country=EuroScoutCountries.canonical(p.country);
     p._ext=extFor(p)||null;
   }));
 }
-function normName(x){return (x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u0111\u0142]/g,"d").replace(/\u0142/g,"l").replace(/[\u015f\u0219]/g,"s").replace(/[\u0131]/g,"i").replace(/[\u0127]/g,"h").replace(/[\u00f0]/g,"d").replace(/[\u00f8]/g,"o").replace(/[\u00e6]/g,"ae").replace(/[^a-z ]/g,"").trim();}
+function normName(x){return searchFold(x).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u0111\u0142]/g,"d").replace(/\u0142/g,"l").replace(/[\u015f\u0219]/g,"s").replace(/[\u0131]/g,"i").replace(/[\u0127]/g,"h").replace(/[\u00f0]/g,"d").replace(/[\u00f8]/g,"o").replace(/[\u00e6]/g,"ae").replace(/[^a-z ]/g,"").trim();}
 function allPlayersEvery(){const a=[];STATE.data.leagues.forEach(L=>{if(L.meta.teamsOnly)return;L.players.forEach(p=>a.push(p));});return a;}
 function rebuildLinks(){
-  const all=allPlayersEvery(); const byId={}; all.forEach(p=>byId[p.id]=p);
+  const all=allPlayersEvery(); all.forEach(p=>{delete p._solo;if(p.img&&!isPlayerPhoto(p.img))p.img=null;}); const byId={}; all.forEach(p=>byId[p.id]=p);
   const parent={}; all.forEach(p=>parent[p.id]=p.id);
   const find=x=>{while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x];}return x;};
   const uni=(a,b)=>{if(byId[a]&&byId[b]){const ra=find(a),rb=find(b);if(ra!==rb)parent[ra]=rb;}};
@@ -2444,7 +2495,7 @@ function rebuildLinks(){
   const byCode={},byName={};
   // player codes are only comparable within a code-space: EuroLeague+EuroCup share FIBA codes,
   // every other league has its own local numeric ids (aba-5150 and lba-5150 are DIFFERENT people)
-  const codeSpace=p=>{const lg=p.league||(String(p.id).split("-")[0]);return (lg==="euroleague"||lg==="eurocup")?"f":lg;};
+  const codeSpace=p=>{const lg=p.league||(String(p.id).split("-")[0]);return lg==="kls"?String(p.id).split("-").slice(0,2).join("-"):(lg==="euroleague"||lg==="eurocup")?"f":lg;};
   all.forEach(p=>{
     // only link by code when there IS one — leagues without player ids must not all collapse into one person
     const c=p.code; const hasCode=(c!=null&&c!==""&&String(c)!=="null"&&String(c)!=="undefined");
@@ -2459,16 +2510,24 @@ function rebuildLinks(){
   // same (token-sorted) name links entries when birth years agree OR either side lacks one
   Object.values(byName).forEach(a=>{for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++){
     const A=byId[a[i]],B=byId[a[j]];
-    if(!A.born||!B.born||A.born===B.born)uni(a[i],a[j]);}});
+    if((A._strictIdentity||B._strictIdentity)&&(!A.born||!B.born))continue;
+    const years=new Set(a.map(id=>byId[id].born).filter(Boolean));
+    if((A.born&&B.born&&A.born===B.born)||((!A.born||!B.born)&&years.size<=1))uni(a[i],a[j]);}});
   // nickname variants: same surname + same birth year + first name is a prefix of the other
   // (links "Matt Hurt" to "Matthew Christopher Hurt", "Nico" to "Nicolas", etc.)
   const bucket={};
   all.forEach(p=>{if(!p.born||!nameMergeable(p))return;const t=normName(p.name).split(" ").filter(Boolean);
     if(t.length<2)return;const k=t[t.length-1]+"|"+p.born;(bucket[k]=bucket[k]||[]).push(p);});
   Object.values(bucket).forEach(arr=>{for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++){
+    if(arr[i]._strictIdentity||arr[j]._strictIdentity)continue;
     const a=normName(arr[i].name).split(" ")[0], b=normName(arr[j].name).split(" ")[0];
     const m=Math.min(a.length,b.length);
     if(m>=3&&a.slice(0,m)===b.slice(0,m))uni(arr[i].id,arr[j].id);}});
+  window.EuroScoutABA?.link(uni);
+  window.EuroScoutBBL?.link(uni);window.EuroScoutOfficialRosters?.link(uni);
+  window.EuroScoutFEB?.link(uni);
+  window.EuroScoutElite2?.link(uni);
+  window.EuroScoutExpansion?.link(uni);
   (OVR.links||[]).forEach(pr=>uni(pr[0],pr[1]));
   const groups={}; all.forEach(p=>{const r=find(p.id);(groups[r]=groups[r]||[]).push(p);});
   Object.values(groups).forEach(g=>{if(g.length>8)g.forEach(x=>{x._solo=true;});});   // guard against bad links
@@ -2520,7 +2579,7 @@ function ovrExportBlob(){ const body="window.EUROSCOUT_OVERRIDES="+JSON.stringif
   toast("Downloaded overrides.js"); }
 function ovrImportFile(file){ const r=new FileReader(); r.onload=()=>{ try{ const txt=String(r.result);
     const m=txt.match(/EUROSCOUT_OVERRIDES\s*=\s*([\s\S]*?);?\s*$/); const o=JSON.parse(m?m[1]:txt);
-    localStorage.setItem(OVR_KEY,JSON.stringify({links:o.links||[],bio:o.bio||{},ext:o.ext||{}}));
+    localStorage.setItem(OVR_KEY,JSON.stringify({links:o.links||[],bio:o.bio||{},ext:o.ext||{},clubs:o.clubs||{}}));
     OVR=ovrMerged(); applyOverrides(); rebuildLinks(); toast("Overrides imported"); hideModal(); if(CURRENT)renderProfile();
   }catch(e){ toast("Import failed: "+e.message); } }; r.readAsText(file); }
 function efld(lab,id,val){return '<div class="efld"><label>'+lab+'</label><input type="text" id="'+id+'" value="'+esc(val)+'"/></div>';}
@@ -2569,7 +2628,7 @@ function openEditModal(id){
   // searchable country dropdown (type to filter; free text still allowed)
   (function(){const inp=$("#eCountry"), list=$("#eCountryList"); if(!inp||!list)return;
     const paint=q=>{const qq=(q||"").trim().toLowerCase();
-      const ms=(qq?COUNTRY_LIST.filter(c=>c.toLowerCase().includes(qq)):COUNTRY_LIST);
+      const ms=(qq?COUNTRY_LIST.filter(c=>searchFold(c).includes(searchFold(qq))):COUNTRY_LIST);
       if(!ms.length){list.classList.add("hidden");list.innerHTML="";return;}
       list.innerHTML=ms.slice(0,60).map(c=>{const fe=flagEmoji(c);
         return '<div class="ecombo-opt" data-c="'+esc(c)+'">'+(fe?'<span class="ecflag">'+fe+'</span>':'<span class="ecflag"></span>')+esc(c)+'</div>';}).join("");
@@ -2594,7 +2653,7 @@ function openEditModal(id){
   if(ls) ls.oninput=()=>{const q=ls.value.trim().toLowerCase();const box=$("#linkResults");
     if(q.length<2){box.innerHTML="";return;}
     const inG=new Set((player(id)._grp||[p]).map(x=>x.id));
-    const res=allPlayersFlat().filter(x=>!inG.has(x.id)&&x.name.toLowerCase().includes(q)).sort((a,b)=>(b.pir||0)-(a.pir||0)).slice(0,8);
+    const res=allPlayersFlat().filter(x=>!inG.has(x.id)&&searchFold(x.name).includes(searchFold(q))).sort((a,b)=>(b.pir||0)-(a.pir||0)).slice(0,8);
     box.innerHTML=res.length?res.map(x=>'<div class="gsitem" data-link="'+x.id+'"><div class="gi"><div class="gn">'+esc(x.name)+'</div><div class="gm">'+esc(leagueOf(x).meta.name)+' \u00b7 '+esc(x.teamName)+' \u00b7 b. '+(x.born||"?")+'</div></div><span class="glg">link</span></div>').join(""):'<div class="gsempty">No match</div>';
     $$("#linkResults [data-link]").forEach(el=>el.onclick=()=>{ovrSaveLocal({links:[[id,el.dataset.link]]});toast("Linked");renderProfile();openEditModal(id);});
   };
@@ -2618,7 +2677,7 @@ function muState(){try{return JSON.parse(localStorage.getItem(MU_KEY))||{}}catch
 function muSave(o){if(!Store.canEdit())return;localStorage.setItem(MU_KEY,JSON.stringify(o));try{Sync.stampKey(MU_KEY);}catch(e){}try{Store.pushAppKey(MU_KEY);}catch(e){}}
 function muInit(){
   const bar=$("#matchupBar");if(!bar)return;
-  const opts=[];STATE.data.leagues.filter(L=>!isOtherLeague(L.meta)&&!L.meta.teamsOnly).forEach(L=>L.teams.forEach(t=>opts.push({v:L.meta.id+"|"+t.code,n:t.name,lg:L.meta.name,s:(t.name+" "+t.code).toLowerCase()})));
+  const opts=[];STATE.data.leagues.filter(L=>!isOtherLeague(L.meta)&&!L.meta.teamsOnly).forEach(L=>L.teams.forEach(t=>opts.push({v:L.meta.id+"|"+t.code,n:t.name,lg:L.meta.name,s:searchFold(t.name+" "+t.code)})));
   const paint=()=>{
     const st=muState(),host=$("#muPills");if(!host)return;
     const pill=v=>{if(!v)return "";const[l,c]=v.split("|");
@@ -2633,7 +2692,7 @@ function muInit(){
     const st=muState();
     if(st[slot]){const o=opts.find(x=>x.v===st[slot]);if(o)inp.value=o.n;}
     const close=()=>{box.classList.add("hidden");box.innerHTML="";};
-    inp.oninput=()=>{const q=inp.value.trim().toLowerCase();
+    inp.oninput=()=>{const q=searchFold(inp.value.trim());
       if(q.length<2){close();return;}
       const res=opts.filter(o=>o.s.includes(q)).slice(0,8);
       box.innerHTML=res.length?res.map((o,i)=>`<div class="gsitem" data-i="${i}"><div class="gi"><div class="gn">${o.n}</div><div class="gm">${o.lg}</div></div><span class="glg">${o.v.split("|")[1]}</span></div>`).join(""):'<div class="gsempty">No team</div>';
@@ -2662,7 +2721,7 @@ const Sync = (()=>{
   const OTHER_KEYS=["euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:dashboardOrder:v1"];
   let cfg=loadCfg(), status="idle", busy=false, pushT=null, lastPull=0, lastPush=0, lastErr="";
 
-  function loadCfg(){try{return Object.assign({token:"",gistId:"",device:"",on:false},JSON.parse(localStorage.getItem(CFG_KEY)||"{}"));}catch(e){return{token:"",gistId:"",device:"",on:false};}}
+  function loadCfg(){try{return Object.assign({token:"",gistId:"",device:"",on:false},(JSON.parse(localStorage.getItem(CFG_KEY)||"{}")||JSON.parse("{}")));}catch(e){return{token:"",gistId:"",device:"",on:false};}}
   function saveCfg(){localStorage.setItem(CFG_KEY,JSON.stringify(cfg));}
   function jget(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v;}catch(e){return d;}}
   function sp(s){try{return JSON.parse(s);}catch(e){return null;}}
@@ -2672,7 +2731,7 @@ const Sync = (()=>{
   /* ---- edit stamps (called from every write site) ---- */
   function stampRecord(gid){if(!gid)return;const m=jget(RT_KEY,{});m[gid]=Date.now();localStorage.setItem(RT_KEY,JSON.stringify(m));schedule();}
   function stampKey(key){const m=jget(KM_KEY,{});m[key]=Date.now();localStorage.setItem(KM_KEY,JSON.stringify(m));schedule();}
-  function schedule(){if(!configured())return;setPill("dirty");clearTimeout(pushT);pushT=setTimeout(()=>push().catch(()=>{}),4000);}
+  function schedule(){if(window.ESAccess)return;if(!configured())return;setPill("dirty");clearTimeout(pushT);pushT=setTimeout(()=>push().catch(()=>{}),4000);}
 
   function readBundle(){
     const keys={};DATA_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!=null)keys[k]=v;});
@@ -2813,13 +2872,49 @@ const Sync = (()=>{
   return {stampRecord,stampKey,pull,push,renderPill,bootPull,openSettings,get configured(){return configured();}};
 })();
 
+async function loadCoreData(){
+  // Fetch one copy over HTTP. Load the inline bundle only for file:// or a failed request.
+  if(location.protocol!=="file:"){
+    const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),15000);
+    try{
+      const response=await fetch("data/data.json",{cache:"no-cache",signal:ctl.signal});
+      if(!response.ok)throw new Error("Core data HTTP "+response.status);
+      const raw=await response.json();
+      if(!Array.isArray(raw.leagues))throw new Error("Invalid core data");
+      return raw;
+    }catch(e){console.warn("Using bundled core data",e);}
+    finally{clearTimeout(timer);}
+  }
+  if(window.EUROSCOUT_INLINE)return window.EUROSCOUT_INLINE;
+  return new Promise(resolve=>{
+    const script=document.createElement("script");script.src="data/data.js";
+    script.onload=()=>resolve(window.EUROSCOUT_INLINE||null);
+    script.onerror=()=>resolve(null);document.head.appendChild(script);
+  });
+}
 async function boot(){
+  if(!window.ESAccess){$('#app').textContent='Access verification could not load. Reload the page or reopen Pro Database from DragonsHub.';return;}
+  // Public stats can download while auth resolves; shared reads still await authentication.
+  const rawPromise=loadCoreData();
   try{ await Store.initSB(); }catch(e){ console.warn("Supabase init failed",e); }
-  let raw;
-  try{ raw = await (await fetch("data/data.json",{cache:"no-cache"})).json(); }
-  catch(e){ raw = window.EUROSCOUT_INLINE || null; }
+  const raw=await rawPromise;
+  for(const L of raw?.leagues||[])for(const p of L.players||[])if(p.img&&!isPlayerPhoto(p.img))p.img=null;
+  window.EuroScoutABA?.apply(raw);
+  window.EuroScoutFEB?.apply(raw);
+  window.EuroScoutElite2?.apply(raw);
+  window.EuroScoutExpansion?.apply(raw);
+  window.EuroScoutMemberships?.apply(raw);
+  window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);
+  if(window.ESAccess&&!ESAccess.internal){ESAccess.external(raw);return;}
   if(!raw){ $("#app").innerHTML='<div class="empty">Could not load data. Make sure '+
     '<code>data/data.json</code> (or <code>data/data.js</code>) is present — see README.</div>'; return; }
+  if(window.ESAccess?.internal)Object.assign(raw,ESAccess.state.core||{});
+  window.EuroScoutABA?.apply(raw);
+  window.EuroScoutFEB?.apply(raw);
+  window.EuroScoutElite2?.apply(raw);
+  window.EuroScoutExpansion?.apply(raw);
+  window.EuroScoutMemberships?.apply(raw);
+  window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);
   STATE.data = raw;
   injectExhibitions(raw);
   raw.leagues.forEach(L=>L.players.forEach(p=>{
@@ -2833,12 +2928,12 @@ async function boot(){
   muInit();
   await Store.load();
   mergeGroupRecords();
-  loadExtraLeagues();   // stream NBA/G League, then NCAA, in the background
+  // Other-league packs load only when a section/search needs them.
   const sel=$("#leagueSel");
   if(sel){ sel.innerHTML="";
     const allOpt=document.createElement("option");allOpt.value="__all__";allOpt.textContent="All leagues";sel.appendChild(allOpt);
     raw.leagues.forEach(l=>{const o=document.createElement("option");o.value=l.meta.id;
-      o.textContent=`${l.meta.name} ${l.meta.season}`;sel.appendChild(o);});
+      o.textContent=`${l.meta.id==='bbl'?'🇩🇪 ':''}${l.meta.name} ${l.meta.season}`;sel.appendChild(o);});
     sel.onchange=e=>{ if(e.target.value==="__all__"){STATE.allLeagues=true;}
       else {STATE.allLeagues=false;STATE.league=raw.leagues.find(l=>l.meta.id===e.target.value)||raw.leagues[0];}
       updateScopeLabel(); render(); };
@@ -2851,6 +2946,7 @@ async function boot(){
   $$("#scopeSeg button").forEach(b=>b.onclick=()=>setScopeMode(b.dataset.scope));
   updateScopeLabel();
   wireGlobalSearch();
+  document.addEventListener("focusin",e=>{if(e.target.matches("#globalSearch, #gSearch, #searchAll"))loadExtraLeagues().catch(e=>toast(e.message));});
   scheduleSticky();
   const sc=$("#scrim");if(sc)sc.onclick=closeDrawer;
   document.addEventListener("keydown",onGlobalKey);
@@ -2871,14 +2967,15 @@ async function boot(){
   // 2026/27 transfers (from euroball-tracker) — loaded for manual review/approval only, never auto-committed
   loadTransfers().then(()=>{if(TRANSFERS_LOADED)render();});
   // deep-link: open a player if the URL points at one (#p=<id>), e.g. a shared link
-  openFromHash(__DEEPHASH);
+  if(/^#p=(nba|gleague|ncaa)/i.test(__DEEPHASH))loadExtraLeagues().then(()=>openFromHash(__DEEPHASH)).catch(e=>toast(e.message));
+  else openFromHash(__DEEPHASH);
   window.addEventListener("popstate",()=>{
     const m=/^#p=(.+)$/.exec(location.hash||"");
     if(m){const id=decodeURIComponent(m[1]);if(PROF_HIST.length&&PROF_HIST[PROF_HIST.length-1]===id)PROF_HIST.pop();openProfile(id,true);}
     else if(DRAWER_OPEN){PROF_HIST=[];closeDrawer(true);}
   });
   if(Store.enabled){
-    // Supabase mode: gate the app behind sign-in + membership; header shows the account
+    // Authorized shared mode: gate the app behind sign-in + membership; header shows the account
     if(Store.canEdit())await Store.migrateLocalUp();
     if(Store.canEdit())await applyImportedData();
     applyRoleClass(); applyAuthGate(); startPendingPoll();
@@ -3081,16 +3178,16 @@ function wireGlobalSearch(){
   const paint=()=>{
     box.innerHTML=results.map(({p,L},i)=>`<div class="gsitem${i===active?" active":""}" data-i="${i}">
       ${p.img?`<img src="${p.img}" loading="lazy" onerror="this.style.visibility='hidden'"/>`:'<img alt=""/>'}
-      <div class="gi"><div class="gn">${p.name}</div><div class="gm">${p.teamName} · ${fmt(p.ppg)} pts · PIR ${fmt(p.pir)}</div></div>
+      <div class="gi"><div class="gn">${p.name}</div><div class="gm">${esc((effective26(p)&&clubByKey(effective26(p))?.name)||p.teamName)} · ${fmt(p.ppg)} pts · PIR ${fmt(p.pir)}</div></div>
       <span class="glg">${L.meta.name}</span></div>`).join("");
     $$("#gsResults .gsitem").forEach(el=>el.onclick=()=>{const r=results[+el.dataset.i];openGlobal(r.L.meta.id,r.p.id);});
     box.classList.remove("hidden");
   };
   const search=()=>{
-    const q=inp.value.trim().toLowerCase();active=-1;
+    const q=searchFold(inp.value.trim());active=-1;
     if(q.length<2){close();return;}
     const qn=normName(q);
-    results=allPlayersIndexed().filter(({p})=>normName(p.name).includes(qn)||p.name.toLowerCase().includes(q))
+    results=allPlayersIndexed().filter(({p})=>normName(p.name).includes(qn)||searchFold(p.name).includes(searchFold(q))||(p._abaAliases||[]).some(n=>searchFold(n).includes(q)))
       .sort((a,b)=>(b.p.pir||0)-(a.p.pir||0)).slice(0,12);
     if(!results.length){box.innerHTML='<div class="gsempty">No players found</div>';box.classList.remove("hidden");return;}
     paint();
@@ -3116,6 +3213,7 @@ function applyRoleClass(){
   document.body.classList.toggle("role-editor",Store.enabled && Store.canEdit());
 }
 function renderHeaderAuth(){
+  if(window.ESAccess&&ESAccess.internal){const host=document.getElementById('authBtn');if(host){host.textContent='Internal';host.title=window.ESWorkspace?ESWorkspace.me():'Signed in';host.onclick=()=>toast('Signed in through DragonsHub'+(window.ESWorkspace?' · '+ESWorkspace.me():''));}return;}
   const b=$("#authBtn"); if(!b)return;
   if(!Store.enabled){ b.classList.add("syncpill"); Sync.renderPill(); b.onclick=()=>Sync.openSettings(); return; }
   b.classList.remove("syncpill","s-ok","s-err","s-sync","s-off","s-dirty");
@@ -3232,6 +3330,7 @@ function applyAuthGate(){
      already authenticated, so it must never put its own gate in front of them.
      It was also showing "Access revoked" during the moment before membership
      had loaded, which is not the same thing as having been removed. */
+  if(window.ESAccess){if(!ESAccess.internal){ESAccess.external(STATE.data);return;}g.classList.add("hidden");renderHeaderAuth();return;}
   if(typeof HUB_EMBED!=="undefined" && HUB_EMBED){ g.classList.add("hidden"); renderHeaderAuth(); return; }
   const blocked = Store.enabled && !(Store.user && Store.member);
   g.classList.toggle("hidden",!blocked);
@@ -3341,7 +3440,7 @@ function render(){if(typeof scheduleSticky==="function")scheduleSticky();
   updateTransferBadge();
   if(typeof paintCompareBar==="function")paintCompareBar();
 }
-function goView(v){STATE.view=v;render();}
+function goView(v){if(v==="teams")STATE.teamsMode="next";STATE.view=v;render();}
 function statsSubNav(active){
   return `<div class="subnav">${[["players","Stats"],["compare","Compare"],["charts","Charts"],["fit","Fit Finder"]].map(([v,l])=>`<button class="subnavbtn ${active===v?"on":""}" onclick="goView('${v}')">${l}</button>`).join("")}</div>`;
 }
@@ -3416,20 +3515,19 @@ function renderPlayers(){
       <thead><tr>
         <th class="l">#</th><th class="l" data-k="name">PLAYER</th>
         ${all?'<th class="l" data-k="league">LG</th>':''}
-        <th class="l" data-k="team">TEAM</th><th class="l">ESTIMATED LEVEL</th><th data-k="g">G</th><th data-k="mpg">MPG</th>
+        <th class="l" data-k="team">TEAM</th><th data-k="g">G</th><th data-k="mpg">MPG</th>
         ${cols.map(c=>`<th data-k="${c.k}">${c.t}</th>`).join("")}
         <th></th>
       </tr></thead><tbody id="tb"></tbody>
     </table></div>
   </div>`;
   const upd=()=>{const rows=filterSort();$("#tb").innerHTML=rows.map((p,i)=>{
-    const rec=recOf(p), lg=leagueOf(p), manualLevel=manualLevelBand(p);
+    const rec=recOf(p), lg=leagueOf(p);
     return `<tr data-id="${p.id}">
       <td class="l" style="color:var(--muted)">${i+1}</td>
       <td class="l"><span class="pcell">${p.img?`<img class="tavatar" src="${p.img}" loading="lazy" onerror="this.style.display='none'"/>`:''}<span class="pname">${p.name}</span> ${p.multiTeam?'<span class="badge">2TM</span>':''}</span></td>
       ${all?`<td class="l"><span class="badge">${lg?({euroleague:'EL',eurocup:'EC',aba:'ABA',il:'ISR',gbl:'GRE',plk:'PLK',bcl:'BCL',rou:'ROU',bsl:'BSL',lkl:'LKL',vtb:'VTB',elb:'ELB',nbl:'NBL',slo:'SLO'}[lg.meta.id]||lg.meta.name):''}</span></td>`:''}
       <td class="l"><span class="badge role">${p.role}</span> <span class="pteam">${p.teamName}</span></td>
-      <td class="l">${manualLevel?`<span class="levelpill manual" title="Set manually in the player profile">${esc(manualLevel.label)}</span>`:`<span class="levelpill empty" title="Set this in Edit bio">Set manually</span>`}</td>
       <td>${p.g}</td><td>${fmt(p.mpg)}</td>
       ${cols.map(c=>`<td>${fmt(p[c.k],c.d==null?1:c.d)}</td>`).join("")}
       <td><button class="starbtn ${isWatched(p)?"on":""}" title="Watchlist" data-star="${p.id}">${isWatched(p)?"\u2605":"\u2606"}</button></td>
@@ -3471,7 +3569,7 @@ function filterSort(){
   if(f.role)rows=rows.filter(p=>p.role===f.role);
   if(f.country)rows=rows.filter(p=>p.country===f.country);
   if(f.born)rows=rows.filter(p=>String(p.born)===String(f.born));
-  if(f.q){const q=f.q.toLowerCase();rows=rows.filter(p=>p.name.toLowerCase().includes(q));}
+  if(f.q){const q=f.q.toLowerCase();rows=rows.filter(p=>searchFold(p.name).includes(searchFold(q)));}
   const {key,dir}=STATE.sort;
   rows.sort((a,b)=>{let x,y;
     if(key==="league"){x=(leagueOf(a)||{meta:{}}).meta.name||"";y=(leagueOf(b)||{meta:{}}).meta.name||"";}
@@ -3648,7 +3746,7 @@ function fullDate(dt){if(!dt||dt.length<10)return dt||"\u2014";
   return d+" "+(MONTHS[m-1]||"")+" "+y;}
 function openTeamRoster(leagueId,code){openTeamIn(leagueId,code);
   requestAnimationFrame(()=>{const el=$("#rosterPanel");if(el)el.scrollIntoView({behavior:"smooth",block:"start"});});}
-function openTeamIn(leagueId,code){const L=STATE.data.leagues.find(x=>x.meta.id===leagueId);
+function openTeamIn(leagueId,code){if(EuroScoutClubs.open(leagueId+"|"+code))return;const L=STATE.data.leagues.find(x=>x.meta.id===leagueId);
   if(L){STATE.allLeagues=false;STATE.league=L;const sel=$("#leagueSel");if(sel)sel.value=leagueId;updateScopeLabel();}
   openTeam(code);}
 // open a team roster from a player profile: resolve the team by code, else by teamName
@@ -4339,7 +4437,7 @@ function simQuickFiltersHTML(s){
     <span class="simquickLab">Recruit filters</span>
     <select id="simAgeMax" class="simqSel" title="Only players at or below this age">${ageOpts}</select>
     <select id="simLevelMin" class="simqSel" title="Only players projected at this level or higher">${lvlOpts}</select>
-    <button id="simFreeOnly" class="simqChip ${s.simFreeOnly?"on":""}" title="Only players without a 2026/27 club">Free agents 26/27</button>
+    <button id="simFreeOnly" class="simqChip ${s.simFreeOnly?"on":""}" title="Candidates without a confirmed 2026/27 signing; verify availability">Free agents 26/27</button>
     ${(s.simAgeMax||s.simLevelMin!=null&&s.simLevelMin!==""||s.simFreeOnly)?`<button class="simqClear" onclick="simClearRecruit()">reset</button>`:""}
   </div>`;
 }
@@ -4385,13 +4483,10 @@ function openLeaguePlayers(lgid){const L=STATE.data.leagues.find(l=>l.meta.id===
   $$("#tabs button").forEach((x,i)=>x.classList.toggle("active",i===0));
   renderPlayers();try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){}}
 /* ---------- Profile hero helpers (flag, level barometer, position, summary) ---------- */
-const CTRY_ISO={"USA":"US","United States":"US","United Kingdom":"GB","England":"GB","Bosnia and Herzegovina":"BA","Turkiye":"TR","Turkey":"TR","Ivory Coast":"CI","Cape Verde":"CV","Czechia":"CZ","Czech Republic":"CZ","Dominican Republic":"DO","North Macedonia":"MK","South Sudan":"SS","DR Congo":"CD","Republic of the Congo":"CG",
-  "France":"FR","Spain":"ES","Germany":"DE","Italy":"IT","Greece":"GR","Serbia":"RS","Croatia":"HR","Slovenia":"SI","Lithuania":"LT","Latvia":"LV","Estonia":"EE","Poland":"PL","Israel":"IL","Georgia":"GE","Ukraine":"UA","Russia":"RU","Montenegro":"ME","Belgium":"BE","Netherlands":"NL","Finland":"FI","Sweden":"SE","Norway":"NO","Denmark":"DK","Iceland":"IS","Ireland":"IE","Portugal":"PT","Switzerland":"CH","Austria":"AT","Hungary":"HU","Romania":"RO","Bulgaria":"BG","Slovakia":"SK","Canada":"CA","Cyprus":"CY","Belarus":"BY","Brazil":"BR","Argentina":"AR","Chile":"CL","Cuba":"CU","Mexico":"MX","Australia":"AU","Nigeria":"NG","Senegal":"SN","Mali":"ML","Angola":"AO","Cameroon":"CM","Guinea":"GN","Gabon":"GA","Ghana":"GH","Egypt":"EG","Tunisia":"TN","Morocco":"MA","Japan":"JP","China":"CN","Philippines":"PH","New Zealand":"NZ","Bahamas":"BS","Jamaica":"JM","Puerto Rico":"PR","Malta":"MT","Luxembourg":"LU"};
-function isoOf(country){ if(!country)return null; return CTRY_ISO[country]||null; }
-const COUNTRY_LIST=(()=>{const seen=new Set(),out=[];
-  Object.keys(CTRY_ISO).forEach(name=>{const iso=CTRY_ISO[name];if(seen.has(iso))return;seen.add(iso);out.push(name);});
-  return out.sort((a,b)=>a.localeCompare(b));})();
-function flagEmoji(country){ const iso=isoOf(country); if(!iso)return ""; return iso.replace(/./g,ch=>String.fromCodePoint(127397+ch.charCodeAt(0))); }
+function isoOf(country){return EuroScoutCountries.iso(country)||null;}
+const COUNTRY_LIST=EuroScoutCountries.names;
+function flagEmoji(country){return EuroScoutCountries.flag(country);}
+function countryLabel(country){return EuroScoutCountries.label(country);}
 // Level barometer: where the player projects, from the tier-adjusted board grade.
 // Bands mirror a scout's mental ladder. Returns {i (0=bottom..3=top), label, bands[]}.
 const LEVEL_BANDS=["Low-Level","Mid-Level","Top Level","EuroCup","EuroLeague"];
@@ -4436,25 +4531,21 @@ function levelBand(p){
   if(i==null)return null;
   return {i,label:LEVEL_BANDS[i],manual:false};
 }
-// Estimated level is a user decision. Automatic production bands stay internal
-// guidance and are never shown as if they were manually assigned.
-function manualLevelBand(p){
-  if(!p||p.projLevel==null||p.projLevel==='')return null;
-  const i=Number(p.projLevel);
-  return (i>=0&&i<LEVEL_BANDS.length)?{i,label:LEVEL_BANDS[i],manual:true}:null;
-}
 function levelBarometerHTML(p){
-  const b=manualLevelBand(p); if(!b)return `<div class="barometer"><div class="bar-title">Estimated level <span class="bar-tag">Set manually</span></div></div>`;
+  const b=levelBand(p); if(!b)return "";
   const n=LEVEL_BANDS.length;
   const rows=LEVEL_BANDS.map((lab,idx)=>{
     const on=idx===b.i, below=idx<b.i;
     return `<div class="lvrow${on?' on':''}"><span class="lvdot${on?' on':below?' below':''}"></span><span class="lvlab${on?' on':''}">${lab}</span></div>`;
   }).reverse().join("");
   const fillPct=Math.round(((b.i+1)/n)*100);
-  const tag=`<span class="bar-tag manual" title="You set this level manually">set</span>`;
-  const tip="Estimated level — set manually in Edit bio";
+  const rated=!b.manual && effRating(p)>0;
+  const tag=b.manual?`<span class="bar-tag manual" title="You set this level manually">set</span>`
+    :(rated?`<span class="bar-tag rated" title="Blended with your star rating">★</span>`:"");
+  const tip=b.manual?"Projected level — set manually in Edit bio"
+    :(rated?"Projected level — production blended with your star rating":"Projected level — from season production");
   return `<div class="barometer" title="${tip}">
-    <div class="bar-title">Estimated level ${tag}</div>
+    <div class="bar-title">Projected level ${tag}</div>
     <div class="bar-body">
       <div class="bar-tube"><div class="bar-fill" style="height:${fillPct}%"></div><div class="bar-bulb"></div></div>
       <div class="bar-rows">${rows}</div>
@@ -4528,7 +4619,7 @@ async function applyImportedData(){
   if(!Object.keys(rs).length && !Object.keys(ns).length) return;
   if(!(Store.enabled && Store.user && Store.canEdit())) return;
   const DONE_KEY="euroscout:notionApplied:v1";
-  let done={};try{done=JSON.parse(localStorage.getItem(DONE_KEY)||"{}");}catch(e){}
+  let done={};try{done=(JSON.parse(localStorage.getItem(DONE_KEY)||"{}")||JSON.parse("{}"));}catch(e){}
   const seen=new Set(); const items=[]; let changed=false;
   (allPlayersFlat()||[]).forEach(p=>{
     const g=gid(p); if(!g||seen.has(g))return; seen.add(g);
@@ -4545,6 +4636,7 @@ async function applyImportedData(){
   if(items.length){ const n=await Store.bulkSet(items);
     try{toast("Imported "+n+" rating"+(n===1?"":"s")+" & notes from Notion \u2014 saved to your account");}catch(e){} }
 }
+function externalProfileProvider(url){try{const h=new URL(url).hostname.toLowerCase();for(const [domain,label] of [['eurobasket.com','Eurobasket'],['usbasket.com','USBasket'],['asia-basket.com','Asia-Basket'],['latinbasket.com','Latinbasket'],['afrobasket.com','AfroBasket'],['australiabasket.com','AustraliaBasket']])if(h===domain||h.endsWith('.'+domain))return label;}catch{}return 'Profile link';}
 function eurobasketURL(p){
   const direct=(window.EUROSCOUT_EBLINKS||{})[ebKey(p)];   // exact player page imported from Notion
   if(direct)return direct;
@@ -4555,27 +4647,27 @@ function eurobasketURL(p){
 /* Agent / Agency: manual field. OVR.bio[id].agent = agent name, .agency = agency,
    .agentUrl = RealGM agent-client-list URL. AGENCY_LIST is a user-editable roster. */
 /* Agency dropdown roster (user-editable). Renames are normalized on read. */
-const AGENCY_RENAME={"Wasserman":"The Team","TeamWass":"The Team"};
+const AGENCY_RENAME={"Wasserman":"The Team","TeamWass":"The Team","Octagon Europe":"Octagon","Sportspromotion LLC":"Lotsos"};
 function normAgency(a){return a?(AGENCY_RENAME[a]||a):a;}
 function agencyList(){
   const base=(window.EUROSCOUT_AGENCIES||[]);
-  let local=[];try{local=JSON.parse(localStorage.getItem("euroscout:agencies")||"[]");}catch(e){}
+  let local=[];try{local=(JSON.parse(localStorage.getItem("euroscout:agencies")||"[]")||JSON.parse("[]"));}catch(e){}
   return [...new Set([...base,...local].map(normAgency))].filter(Boolean).sort((a,b)=>a.localeCompare(b));
 }
 function addAgency(name){if(!Store.canEdit())return;name=(name||"").trim();if(!name)return;
-  let local=[];try{local=JSON.parse(localStorage.getItem("euroscout:agencies")||"[]");}catch(e){}
+  let local=[];try{local=(JSON.parse(localStorage.getItem("euroscout:agencies")||"[]")||JSON.parse("[]"));}catch(e){}
   if(!local.includes(name)){local.push(name);localStorage.setItem("euroscout:agencies",JSON.stringify(local));try{Sync.stampKey("euroscout:agencies");}catch(e){}try{Store.pushAppKey("euroscout:agencies");}catch(e){}}
 }
 /* Agent roster + agent→agency map. Base map from overrides.js, plus any you add live. */
 function agentMap(){
   const base=Object.assign({},window.EUROSCOUT_AGENTS||{});
-  let local={};try{local=JSON.parse(localStorage.getItem("euroscout:agents")||"{}");}catch(e){}
+  let local={};try{local=(JSON.parse(localStorage.getItem("euroscout:agents")||"{}")||JSON.parse("{}"));}catch(e){}
   return Object.assign(base,local);
 }
 function agentList(){return Object.keys(agentMap()).sort((a,b)=>a.localeCompare(b));}
 function agencyForAgent(agent){const m=agentMap();return agent&&m[agent]?normAgency(m[agent]):"";}
 function addAgent(agent,agency){if(!Store.canEdit())return;agent=(agent||"").trim();if(!agent)return;
-  let local={};try{local=JSON.parse(localStorage.getItem("euroscout:agents")||"{}");}catch(e){}
+  let local={};try{local=(JSON.parse(localStorage.getItem("euroscout:agents")||"{}")||JSON.parse("{}"));}catch(e){}
   local[agent]=(agency||"").trim(); localStorage.setItem("euroscout:agents",JSON.stringify(local));try{Sync.stampKey("euroscout:agents");}catch(e){}try{Store.pushAppKey("euroscout:agents");}catch(e){}
 }
 function agentCellHTML(p){
@@ -4589,19 +4681,10 @@ function agentCellHTML(p){
 }
 /* Agent/agency rosters — one card per person, sorted by raw stat grade */
 function agentRosterList(matchFn){
-  return scoutPool().filter(matchFn).sort((a,b)=>
+  return assignPool().filter(matchFn).sort((a,b)=>
     ((statGradeOverall(b,{raw:true})??-1)-(statGradeOverall(a,{raw:true})??-1))||a.name.localeCompare(b.name));
 }
-function arowHTML(p){const L=leagueOf(p),rec=recOf(p),g=statGradeOverall(p,{raw:true});
-  const _rt=effRating(p);const stars=_rt?"\u2605".repeat(_rt):"";
-  return `<div class="arow" data-id="${p.id}">
-    ${p.img?`<img class="aav" src="${p.img}" loading="lazy" onerror="this.style.visibility='hidden'"/>`:'<span class="aav anoimg"></span>'}
-    <span class="an">${p.name}</span>
-    <span class="ameta"><span class="badge role">${p.role||""}</span> <span class="atm">${p.teamName||p.team||""}</span></span>
-    <span class="alg">${L?L.meta.name:""}</span>
-    <span class="astars">${stars}</span>
-    <span class="agr">${g==null?"":g.toFixed(1)}</span>
-  </div>`;}
+function arowHTML(p){const g=statGradeOverall(p,{raw:true}),rating=effRating(p),e=EuroScoutMarket.evidence(p,next26Get()),photo=photoOf(p);return '<button type="button" class="arow client-row" data-id="'+escAttr(p.id)+'"><span class="client-photo">'+(photo?'<img src="'+escAttr(photo)+'" loading="lazy" alt="">':esc(initials(p.name)))+'</span><span class="client-info"><strong>'+esc(p.name)+'</strong><small>'+esc([posLabel(p),p.height?p.height+' cm':'',p.age!=null?p.age+' years':''].filter(Boolean).join(' · '))+'</small><span>'+esc(e.status==='signed'?(e.club||'Signed'):e.label)+'</span></span><span class="client-score"><small>GRADE</small><b>'+(g==null?'—':g.toFixed(1))+'</b>'+(rating?'<span aria-label="'+rating+' stars">'+'★'.repeat(rating)+'</span>':'')+'</span><span aria-hidden="true">›</span></button>';}
 function rosterModal(title,subHTML,list,kind){
   if(!list.length){showModal(`<h3>${escAttr(title)}</h3><p class="arsub">${subHTML}</p><p class="empty">No players with this ${kind} in your database yet.</p>`);return;}
   const rows=list.map(arowHTML).join("");
@@ -4612,10 +4695,10 @@ function agencyEnc(a){return encodeURIComponent(a).replace(/'/g,"%27");}
 function agencyOfAgent(key){const p=scoutPool().find(x=>x.agent&&normName(x.agent)===key&&x.agency&&x.agency.trim());return p?p.agency.trim():null;}
 function openAgencyPage(kind,name){STATE.agencyView={kind,name};STATE.view="agencies";render();try{window.scrollTo(0,0);}catch(e){}}
 function backToAgencies(){STATE.agencyView=null;renderAgencies();}
-function teamsModeToggle(){const md=STATE.teamsMode||"current";
+function teamsModeToggle(){const md=STATE.teamsMode||"next";
   const b=(k,l)=>`<button class="subnavbtn ${md===k?"on":""}" data-tmode="${k}">${l}</button>`;
-  return `<div class="subnav" style="margin-bottom:16px">${b("current","Teams 2025/26")}${b("next","Teams 2026/27")}${b("fa","Free agents 26/27")}</div>`;}
-function wireTeamsToggle(){$$("[data-tmode]").forEach(b=>b.onclick=()=>{STATE.teamsMode=b.dataset.tmode;STATE.curTeam=null;renderTeams();});}
+  return `<div class="subnav" style="margin-bottom:16px">${b("current","Teams 2025/26")}${b("next","Teams 2026/27")}</div>`;}
+function wireTeamsToggle(){$$("[data-tmode]").forEach(b=>b.onclick=()=>{STATE.teamsMode=b.dataset.tmode;STATE.curTeam=null;if(b.dataset.tmode==="fa")renderFreeAgents();else renderTeams();});}
 function reRenderTeams(){(STATE.teamsMode==="fa"?renderFreeAgents:renderTeamsNext)();}
 function openTeamPicker(pid,onDone){const p=player(pid);if(!p)return;
   const teams=allClubs().slice().sort((a,b)=>a.name.localeCompare(b.name));
@@ -4624,8 +4707,9 @@ function openTeamPicker(pid,onDone){const p=player(pid);if(!p)return;
   const ov=document.createElement("div");ov.className="tpOverlay";ov.id="tpOverlay";
   ov.innerHTML=`<div class="tpModal"><div class="tpHead"><span>Sign <b>${esc(p.name)}</b> to\u2026</span><button class="tpClose" id="tpClose" aria-label="Close">\u2715</button></div>
     <input class="tpSearch" id="tpSearch" placeholder="Search club or league\u2026" autocomplete="off"/>
-    <div class="tpList" id="tpList"></div></div>`;
+    <button class="tpItem" id="tpAddClub" type="button">+ Add missing club</button><div class="tpList" id="tpList"></div></div>`;
   document.body.appendChild(ov);
+  ov.querySelector("#tpAddClub").onclick=()=>EuroScoutClubs.addForm(key=>{set26(pid,key);closeTeamPicker();if(onDone)onDone(key);else reRenderTeams();});
   const listEl=ov.querySelector("#tpList");
   // Two-way support: if this person's primary club is NBA or G League, a second (counterpart-league)
   // club can be attached. `mode` toggles which slot the picker is assigning.
@@ -4641,18 +4725,18 @@ function openTeamPicker(pid,onDone){const p=player(pid);if(!p)return;
       const twList=teams.filter(t=>clubLeaguesOf(t.key).includes(want)&&(!qn||normClub(t.name).includes(qn)));
       listEl.innerHTML=`<button class="tpItem tpFa" data-tw="back">\u2190 Back to main club</button>`+
         (curB?`<button class="tpItem tpFa" data-tw="">\u2715 Remove two-way club</button>`:"")+
-        (twList.length?twList.slice(0,300).map(t=>`<button class="tpItem${curB===t.key?" cur":""}" data-tw="${escAttr(t.key)}">${clubBadge(t,18)}<span class="tpName">${esc(t.name)}</span><span class="tpLg">${t.leagues.map(l=>esc(l.name)).join(" \u00b7 ")}</span></button>`).join(""):`<div class="tpNone">No ${want==="nba"?"NBA":"G League"} club matches "${esc(q)}".</div>`);
+        (twList.length?twList.slice(0,300).map(t=>`<button class="tpItem${curB===t.key?" cur":""}" data-tw="${escAttr(t.key)}">${clubBadge(t,18)}<span class="tpName">${esc(t.name)}</span><span class="tpLg">${esc(comps2627Label(t))}</span></button>`).join(""):`<div class="tpNone">No ${want==="nba"?"NBA":"G League"} club matches "${esc(q)}".</div>`);
       listEl.querySelectorAll("[data-tw]").forEach(b=>b.onclick=()=>{
         const v=b.dataset.tw;
         if(v==="back"){mode="primary";render(si?si.value:"");return;}
         set26b(pid,v);closeTeamPicker();if(onDone)onDone(effective26(p));else reRenderTeams();});
       return;
     }
-    const filt=qn?teams.filter(t=>normClub(t.name).includes(qn)||t.teams.some(x=>normClub(x.city).includes(qn))||t.leagues.some(l=>normClub(l.name).includes(qn))):teams;
-    listEl.innerHTML=(cur?`<button class="tpItem tpFa" data-tk="">\u2190 Unassign (free agent)</button>`:"")+
-      `<button class="tpItem tpRet${cur===STATUS_RETIRED?" cur":""}" data-tk="${STATUS_RETIRED}">\u23f9 Mark as retired</button>`+
+    const filt=qn?teams.filter(t=>normClub(t.name+" "+t.teams.flatMap(x=>x.searchAliases||[]).join(" ")).includes(qn)||t.teams.some(x=>normClub(x.city).includes(qn))||normClub(comps2627Label(t)).includes(qn)):teams;
+    listEl.innerHTML=(cur?`<button class="tpItem tpFa" data-tk="">\u2190 Clear assignment (unknown)</button>`:"")+
+      `<button class="tpItem tpFa" data-tk="${STATUS_FREE}">Mark as free agent</button><button class="tpItem tpRet${cur===STATUS_RETIRED?" cur":""}" data-tk="${STATUS_RETIRED}">\u23f9 Mark as retired</button>`+
       (twoWayEligible()?`<button class="tpItem tpTwoway" data-tw="open">${curB?`\u21c4 Two-way: ${esc((clubByKey(curB)||{}).name||"")} \u2014 change`:`\u21c4 Add two-way club (${twoWayWant()==="nba"?"NBA":"G League"})`}</button>`:"")+
-      (filt.length?filt.slice(0,300).map(t=>`<button class="tpItem${cur===t.key?" cur":""}" data-tk="${escAttr(t.key)}">${clubBadge(t,18)}<span class="tpName">${esc(t.name)}</span><span class="tpLg">${t.leagues.map(l=>esc(l.name)).join(" \u00b7 ")}${(t.teams&&t.teams[0]&&t.teams[0].conf)?" \u00b7 "+esc(t.teams[0].conf):""}</span>${nextCompBadges(t)}</button>`).join(""):`<div class="tpNone">No club matches "${esc(q)}".</div>`);
+      (filt.length?filt.slice(0,300).map(t=>`<button class="tpItem${cur===t.key?" cur":""}" data-tk="${escAttr(t.key)}">${clubBadge(t,18)}<span class="tpName">${esc(t.name)}</span><span class="tpLg">${esc(comps2627Label(t))}${(t.teams&&t.teams[0]&&t.teams[0].conf)?" \u00b7 "+esc(t.teams[0].conf):""}</span>${nextCompBadges(t)}</button>`).join(""):`<div class="tpNone">No club matches "${esc(q)}".</div>`);
     listEl.querySelectorAll("[data-tk]").forEach(b=>b.onclick=()=>{set26(pid,b.dataset.tk);closeTeamPicker();if(onDone)onDone(b.dataset.tk);else reRenderTeams();});
     listEl.querySelectorAll("[data-tw='open']").forEach(b=>b.onclick=()=>{mode="twoway";render("");});};
   render("");
@@ -4669,7 +4753,7 @@ const RBHEAD=`<tr><th>Player</th><th>Pos</th><th>Nat</th><th class="num">Ht</th>
 function rbRow(p,acts){const g=statGradeOverall(p);
   return `<tr data-pid="${p.id}">
     <td class="agp"><span class="agpInner">${rbPhoto(p)}<span class="agpName">${p.name}</span></span></td>
-    <td>${posLabel(p)}</td><td class="rbNat" title="${escAttr(p.country||"")}">${p.country||"\u2014"}</td>
+    <td>${posLabel(p)}</td><td class="rbNat" title="${escAttr(p.country||"")}">${countryLabel(p.country)||"\u2014"}</td>
     <td class="num">${p.height?p.height+"cm":"\u2014"}</td><td class="num">${p.age!=null?p.age:"\u2014"}</td>
     <td class="num">${p.ppg!=null?p.ppg.toFixed(1):"\u2014"}</td><td class="num">${p.rpg!=null?p.rpg.toFixed(1):"\u2014"}</td><td class="num">${p.apg!=null?p.apg.toFixed(1):"\u2014"}</td>
     <td class="num"><b class="agscore">${g!=null?g.toFixed(1):"\u2014"}</b></td>
@@ -4719,7 +4803,7 @@ function renderTransfers(){
   const CAP=200;
   $("#app").innerHTML=`<div class="view">
     <h1 class="title">Transfers</h1>
-    <div class="sub" style="margin-bottom:14px">Approve a move to place the player on their 2026/27 roster. <b id="trCount">${total}</b> waiting${handled?` \u00b7 ${handled} already handled`:""}.</div>
+    <div class="sub" style="margin-bottom:14px">Approve a move to place the player on their 2026/27 roster. Players without a confirmed destination stay in Free agents and do not need transfer approval. <b id="trCount">${total}</b> waiting${handled?` \u00b7 ${handled} already handled`:""}.</div>
     <div class="rbFilters">
       <select id="trLgSel"><option value="">All leagues (${total})</option>${lgs.map(l=>`<option value="${escAttr(l.key)}"${l.key===f.lg?" selected":""}>${esc(l.name)} (${l.n})</option>`).join("")}</select>
       <select id="trClubSel"><option value="">All clubs</option>${clubs.map(c=>`<option value="${escAttr(c.key)}"${c.key===f.club?" selected":""}>${esc(c.name)} (${c.n})</option>`).join("")}</select>
@@ -4791,6 +4875,13 @@ function clubRoster2526(club){ // this season's squad across every competition t
 function clubRoster2627(club,m){m=m||next26Get();const mb=next26bGet();
   return assignPool().filter(p=>effective26keys(p,m,mb).includes(club.key)).sort((a,b)=>(statGradeOverall(b)??-1)-(statGradeOverall(a)??-1));
 }
+
+function compactTeamTags(club,historical=false){
+ const short={bbl:'BBL',acb:'ACB',lba:'Serie A',aba:'ABA',euroleague:'EL',eurocup:'EuroCup',bcl:'BCL',fec:'FEC',enbl:'ENBL',lnb:'Betclic',bsl:'BSL',gbl:'GBL',lkl:'LKL',slo:'KZS',hrv:'Premijer',proa:'ProA',seriea2:'Serie A2',tbl:'TBL',ncaam:'NCAA'};
+ const rows=historical?club.leagues:[...domCompsOf(club),...nextCompsOf(club)];
+ return [...new Map(rows.map(c=>[c.id,c])).values()].map(c=>{const suffix=c.stage==='Q'?' Q':c.stage==='conditional'?' *':'';const full=c.name+(c.stage==='Q'?' — qualifying':c.stage==='conditional'?' — conditional entry':'');const label=short[c.id]||c.id.toUpperCase().slice(0,8);return '<span class="tmCompetition" title="'+escAttr(full)+'" aria-label="'+escAttr(full)+'">'+esc(label+suffix)+'</span>';}).join('');
+}
+
 function renderTeamsNext(){
   if(STATE.nextTeam){const c=allClubs().find(x=>x.key===STATE.nextTeam);
     if(c)return renderNextRoster(c); STATE.nextTeam=null;}
@@ -4801,8 +4892,8 @@ function renderTeamsNext(){
   const lgs=[...new Set(allDbTeams().map(t=>t.lgName))];
   const S=(STATE.data||{}).season2627, nextLgs=S&&S.comps?Object.entries(S.comps).map(([id,c])=>({id,name:c.name})):[];
   // domestic leagues continue into 26/27; the European field comes from the confirmed entry lists
-  const domLgs=(STATE.data.leagues||[]).filter(L=>!L.meta.exhibition&&!L.meta.teamsOnly&&!EURO_COMPS.has(L.meta.id))
-    .map(L=>({id:L.meta.id,name:L.meta.name}));
+  const loaded=new Set((STATE.data.leagues||[]).map(L=>L.meta.id));
+  const domLgs=Object.values(STATE.data.domestic2627?.leagues||{}).filter(l=>loaded.has(l.id)).map(l=>({id:l.id,name:l.name}));
   const lgSel=STATE.next26Lg||"",q=normClub(STATE.next26Q||"");
   const isNext=lgSel.startsWith("n27:"), nextId=isNext?lgSel.slice(4):"";
   let show=clubs.filter(c=>(isNext?nextCompsOf(c).some(x=>x.id===nextId)
@@ -4818,23 +4909,34 @@ function renderTeamsNext(){
       <select id="rbLg"><option value="">All leagues</option>
         ${nextLgs.length?`<optgroup label="European 2026/27">${nextLgs.map(l=>`<option value="n27:${escAttr(l.id)}"${lgSel==="n27:"+l.id?" selected":""}>${esc(l.name)}</option>`).join("")}</optgroup>`:""}
         <optgroup label="Domestic 2026/27">${domLgs.map(l=>`<option value="${escAttr(l.name)}"${l.name===lgSel?" selected":""}>${esc(l.name)}${dom27Confirmed(l.id)?"":" *"}</option>`).join("")}</optgroup></select>
-      ${domLgs.some(l=>!dom27Confirmed(l.id))?`<span class="hint" style="align-self:center">* promotions/relegations not yet verified \u2014 showing 2025/26 membership</span>`:""}
+      ${domLgs.some(l=>!dom27Confirmed(l.id))?`<span class="hint" style="align-self:center">* provisional or awaiting a verified entry list</span>`:""}
       <input id="rbClubQ" placeholder="Search club\u2026" value="${escAttr(STATE.next26Q||"")}" autocomplete="off"/>
     </div>
+    ${window.EuroScoutMemberships?.reviewHTML(STATE.data,lgSel)||""}
     ${show.length?`<div class="tmGrid">${show.map(c=>{const n=(byTeam.get(c.key)||[]).length;
       return `<button class="tmCard" data-club="${escAttr(c.key)}">
-        <span class="tmCardHead">${clubBadge(c,28)}<span class="tmStatus future">2026/27</span></span>
-        <span class="tmName">${esc(c.name)}</span>
-        <span class="tmMeta"><span class="tmLg">${c.leagues.map(l=>leagueFlag(l.id)).join("")} ${esc(comps2627Label(c))}</span><span class="n27wrap">${nextCompBadges(c)}</span></span>
-        <span class="tmFoot"><span>${n} placed player${n===1?"":"s"}</span><span class="tmOpen">Open roster →</span></span>
-      </button>`;}).join("")}</div>`:`<div class="empty" style="margin-top:16px">No clubs match.</div>`}
+        ${clubBadge(c,20)}<span class="tmName">${esc(c.name)}</span>
+        <span class="tmCompetitions">${compactTeamTags(c)}</span><span class="tmCount" title="Players on roster">${n} players</span>
+      </button>`;}).join("")}</div>`:`<div class="empty" style="margin-top:16px">No verified clubs match. If this league’s entries are not published yet, use the previous-season view for historical teams.</div>`}
   </div>`;
   wireRosterCommon(); wireTransferInbox();
   $$(".tmCard[data-club]").forEach(b=>b.onclick=()=>{STATE.nextTeam=b.dataset.club;renderTeams();try{window.scrollTo(0,0);}catch(e){}});
 }
+function rosterHistory(p){
+  // Current roster registrations carry identity and photos, not historical statistics.
+  const candidates=(p._grp?.length?p._grp:[p]).filter(x=>!x._rosterOnly&&!x._exhib&&x.league!=="sl"&&x.teamName);
+  return candidates.sort((a,b)=>{
+    const season=x=>Number(String(leagueOf(x)?.meta?.season||'').match(/20\d{2}/)?.[0]||0);
+    return season(b)-season(a)||lastGameDate(b).localeCompare(lastGameDate(a))||(Number(b.g)||0)-(Number(a.g)||0)||String(a.id).localeCompare(String(b.id));
+  })[0]||p;
+}
 function renderNextRoster(club){
+  if(!STATE._extraDone&&!STATE._rosterHistoryLoading){
+    STATE._rosterHistoryLoading=true;
+    loadExtraLeagues().catch(e=>toast(e.message)).finally(()=>{STATE._rosterHistoryLoading=false;});
+  }
   const m=next26Get();
-  const now=clubRoster2526(club), next=clubRoster2627(club,m);
+  const now=clubRoster2526(club), next=clubRoster2627(club,m).map(rosterHistory);
   const nowIds=new Set(now.map(p=>gid(p))), nextIds=new Set(next.map(p=>gid(p)));
   const staying=next.filter(p=>nowIds.has(gid(p)));
   const arrivals=next.filter(p=>!nowIds.has(gid(p)));
@@ -4848,7 +4950,7 @@ function renderNextRoster(club){
   const whereFrom=p=>`<span class="cmpTo from">${esc(p.teamName||"\u2014")}</span>`;
   $("#app").innerHTML=`<div class="view">
     <button class="btn ghost" id="nextBack">\u2190 All clubs</button>
-    <h1 class="title" style="margin-top:10px">${esc(club.name)} <span class="rbClubLg">${club.leagues.map(l=>leagueFlag(l.id)).join("")} ${esc(club.leagues.map(l=>l.name).join(" \u00b7 "))}</span></h1>
+    <h1 class="title" style="margin-top:10px">${esc(club.name)} <span class="rbClubLg">${club.leagues.map(l=>leagueFlag(l.id)).join("")} ${esc(comps2627Label(club))}</span></h1>
     <div class="sub" style="margin-bottom:14px">Compare this season\u2019s squad with the 2026/27 roster you\u2019re building.</div>
     <div class="cmpWrap">
       <div class="cmpCol"><div class="cmpHead">2025/26 <span class="cmpN">${now.length}</span></div>
@@ -4876,7 +4978,7 @@ function renderNextRoster(club){
   $$(".rbTeamAdd").forEach(inp=>inp.oninput=()=>{const tk=inp.dataset.tk,box=$("#rbSug0");if(!box)return;
     const qq=inp.value.toLowerCase().trim();if(qq.length<2){box.innerHTML="";return;}const qn=normNm(qq);
     // identity-aware: skip anyone already assigned on any of their league entries
-    const hits=pool.filter(p=>!effective26(p,m)&&(p.name.toLowerCase().includes(qq)||normNm(p.name).includes(qn))).slice(0,8);
+    const hits=pool.filter(p=>!effective26(p,m)&&(searchFold(p.name).includes(searchFold(qq))||normNm(p.name).includes(qn))).slice(0,8);
     box.innerHTML=hits.map(p=>{const L=leagueOf(p);const other=isOtherLeague(L.meta);
       const tag=other?` <span class="rbSugLg">${esc(L.meta.name)}</span>`:"";
       return `<button class="rbSugItem" data-pick="${p.id}">${esc(p.name)}${tag} <small>${posLabel(p)}${p.age?" \u00b7 "+p.age:""} \u00b7 ${esc(p.teamName||"")}</small></button>`;}).join("")||'<div class="rbSugNone">No unassigned player matches.</div>';
@@ -4909,7 +5011,7 @@ function renderFreeAgents(){
   const rows=capped.map(p=>{const g=statGradeOverall(p);
     return `<tr data-pid="${p.id}">
       <td class="agp"><span class="agpInner">${ph(p)}<span class="agpName">${p.name}</span></span></td>
-      <td>${posLabel(p)}</td><td class="rbNat">${p.country||"\u2014"}</td>
+      <td>${posLabel(p)}</td><td class="rbNat">${countryLabel(p.country)||"\u2014"}</td>
       <td class="num">${p.height?p.height+"cm":"\u2014"}</td><td class="num">${p.age!=null?p.age:"\u2014"}</td>
       <td class="rbNat">${esc(p.teamName||"\u2014")}</td>
       <td class="num">${p.ppg!=null?p.ppg.toFixed(1):"\u2014"}</td><td class="num">${p.rpg!=null?p.rpg.toFixed(1):"\u2014"}</td>
@@ -5004,8 +5106,8 @@ function renderAgencyRoster(){
   const {kind,name}=STATE.agencyView;
   const m=next26Get(), f=agState();
   let all;
-  if(kind==="agency"){const key=normAgency(name);all=scoutPool().filter(p=>p.agency&&normAgency(p.agency)===key);}
-  else{const key=normName(name);all=scoutPool().filter(p=>p.agent&&normName(p.agent)===key);}
+  if(kind==="agency"){const key=normAgency(name);all=assignPool().filter(p=>p.agency&&normAgency(p.agency)===key);}
+  else{const key=normName(name);all=assignPool().filter(p=>EuroScoutAgencyResearch.agentsOf(p).some(a=>normName(a)===key));}
   const counts={signed:0,available:0,retired:0};
   all.forEach(p=>{counts[careerStatus(p,m)]++;});
 
@@ -5028,19 +5130,19 @@ function renderAgencyRoster(){
 
   const used=new Set((f.filters||[]).map(x=>x.key));
   const addOpts=FILTER_STATS.filter(x=>!used.has(x.key)).map(x=>`<option value="${x.key}">${esc(x.label)}</option>`).join("");
-  const seg=[["","All",all.length],["available","Available",counts.available],["signed","Signed",counts.signed],["retired","Retired",counts.retired]]
+  const seg=[["","All",all.length],["available","Candidates",counts.available],["signed","Signed",counts.signed],["retired","Retired",counts.retired]]
     .map(([k,l,n])=>`<button class="agStBtn ${f.st===k?"on":""} ${k||"all"}" data-st="${k}">${l}<span>${n}</span></button>`).join("");
 
   // a signed player is shown with his 2026/27 club and that club's 26/27 competitions,
   // not the league his stats happen to come from
   const lineOf=p=>{const st=careerStatus(p,m);
     const cl=(st==="signed")?clubByKey(effective26(p,m)):null;
-    return {st,cl,club:cl?cl.name:(p.teamName||"\u2014"),
-      lg:cl?comps2627Label(cl):leagueOf(p).meta.name};};
+    return {st,cl,club:cl?cl.name:(EuroScoutMarket.evidence(p,m).club&&st==="signed"?EuroScoutMarket.evidence(p,m).club:st==="retired"?"Retired":"No confirmed club"),
+      lg:cl?comps2627Label(cl):""};};
   const cards=players.map(p=>{const L=lineOf(p);const st=L.st;const g=statGradeOverall(p);const rec=recOf(p);const rt=effRating(p);
     const ph=photoOf(p);
     return `<div class="agCard st-${st}" data-id="${p.id}">
-      ${agStatusTag(st," corner")}
+      ${agencyStatusControl(p," corner")}
       ${Store.canEdit()?`<button class="agCardRm" data-rm="${p.id}" title="Remove from this ${kind}">\u2715</button>`:""}
       <span class="agCardPh${ph?"":" noimg"}">${ph?`<img src="${ph}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name)}</span>
       <div class="agCardName">${esc(p.name)}</div>
@@ -5084,25 +5186,25 @@ function renderAgencyRoster(){
           <tbody>${players.map(p=>{const L=lineOf(p);const g=statGradeOverall(p);const ph=photoOf(p);
             return `<tr class="st-${L.st}" data-id="${p.id}">
               <td class="agTblP"><span class="agTblInner"><span class="agpPhoto${ph?"":" noimg"}">${ph?`<img src="${ph}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name)}</span><span class="agpName">${esc(p.name)}</span></span></td>
-              <td>${posLabel(p)}</td><td>${esc(p.country||"\u2014")}</td>
+              <td>${posLabel(p)}</td><td>${esc(countryLabel(p.country)||"\u2014")}</td>
               <td>${p.height?p.height+"cm":"\u2014"}</td><td>${p.age!=null?p.age:"\u2014"}</td>
               <td class="agTblClub">${esc(L.club)}<span>${esc(L.lg)}</span></td>
               <td>${p.ppg!=null?p.ppg.toFixed(1):"\u2013"}</td><td>${p.rpg!=null?p.rpg.toFixed(1):"\u2013"}</td><td>${p.apg!=null?p.apg.toFixed(1):"\u2013"}</td>
               <td><b class="agscore">${g!=null?g.toFixed(1):"\u2013"}</b></td>
-              <td>${agDot(L.st)}</td>
+              <td>${agencyStatusControl(p)}</td>
               ${Store.canEdit()?`<td><button class="amdel agRm" data-rm="${p.id}" title="Remove from this ${kind}">\u2715</button></td>`:""}
             </tr>`;}).join("")}</tbody></table></div>`
       :`<div class="agCards">${cards}</div>`)
     :`<div class="empty" style="margin-top:16px">No players match these filters.</div>`}
   </div>`;
 
-  $$(".agCard").forEach(c=>c.onclick=e=>{if(e.target.closest(".agCardRm"))return;openProfile(c.dataset.id);});
+  $$(".agCard").forEach(c=>c.onclick=e=>{if(e.target.closest(".agCardRm, .ag-status-edit"))return;openProfile(c.dataset.id);});
   $$(".agCardRm").forEach(b=>b.onclick=e=>{e.stopPropagation();
     const nm=(player(b.dataset.rm)||{}).name||"Player";
     agencyClear(b.dataset.rm,kind); toast(nm+" removed"); renderAgencyRoster();});
   $$(".agStBtn").forEach(b=>b.onclick=()=>{f.st=b.dataset.st;renderAgencyRoster();});
   $$(".agViewBtn").forEach(b=>b.onclick=()=>{f.view=b.dataset.v;agViewSet(f.view);renderAgencyRoster();});
-  $$(".agTbl tbody tr").forEach(tr=>tr.onclick=e=>{if(e.target.closest(".agRm"))return;openProfile(tr.dataset.id);});
+  $$(".agTbl tbody tr").forEach(tr=>tr.onclick=e=>{if(e.target.closest(".agRm, .ag-status-edit"))return;openProfile(tr.dataset.id);});
   $$(".agTbl .agRm").forEach(b=>b.onclick=e=>{e.stopPropagation();
     const nm=(player(b.dataset.rm)||{}).name||"Player";
     agencyClear(b.dataset.rm,kind); toast(nm+" removed"); renderAgencyRoster();});
@@ -5143,20 +5245,20 @@ function renderAgencyRoster(){
 }
 function renderAgencies(){
   if(STATE.agencyView)return renderAgencyRoster();
-  const pool=scoutPool();
+  const pool=assignPool();
   const mode=STATE.agencyMode||"agency";
   const agMap=new Map();
-  pool.forEach(p=>{if(p.agency&&p.agency.trim()){const k=normAgency(p.agency);if(!agMap.has(k))agMap.set(k,{name:p.agency.trim(),players:[],agents:new Set()});const e=agMap.get(k);e.players.push(p);if(p.agent&&p.agent.trim())e.agents.add(normName(p.agent));}});
+  pool.forEach(p=>{if(p.agency&&p.agency.trim()){const k=normAgency(p.agency);if(!agMap.has(k))agMap.set(k,{name:p.agency.trim(),players:[],agents:new Set()});const e=agMap.get(k);e.players.push(p);EuroScoutAgencyResearch.agentsOf(p).forEach(a=>e.agents.add(normName(a)));}});
   const agencies=[...agMap.values()].sort((a,b)=>b.players.length-a.players.length||a.name.localeCompare(b.name));
   const agtMap=new Map();
-  pool.forEach(p=>{if(p.agent&&p.agent.trim()){const k=normName(p.agent);if(!agtMap.has(k))agtMap.set(k,{name:p.agent.trim(),agency:(p.agency||"").trim(),players:[]});agtMap.get(k).players.push(p);}});
+  pool.forEach(p=>EuroScoutAgencyResearch.agentsOf(p).forEach(a=>{const k=normName(a);if(!agtMap.has(k))agtMap.set(k,{name:a,agency:(p.agency||"").trim(),players:[]});agtMap.get(k).players.push(p);}));
   const agents=[...agtMap.values()].sort((a,b)=>b.players.length-a.players.length||a.name.localeCompare(b.name));
   const items=mode==="agency"?agencies:agents;
   const cards=mode==="agency"
-    ? agencies.map(a=>`<button class="agencyCard" data-ag="${agencyEnc(a.name)}"><span class="acTop"><span class="acMark">${esc(a.name.slice(0,2).toUpperCase())}</span><span class="acName">${esc(a.name)}</span></span><span class="acStats"><span class="acStat">${a.players.length} player${a.players.length===1?"":"s"}</span><span class="acStat">${a.agents.size} agent${a.agents.size===1?"":"s"}</span></span><span class="acMeta">Open represented-player list →</span></button>`).join("")
-    : agents.map(a=>`<button class="agencyCard" data-agt="${agencyEnc(a.name)}"><span class="acTop"><span class="acMark">${esc(a.name.slice(0,2).toUpperCase())}</span><span class="acName">${esc(a.name)}</span></span><span class="acStats"><span class="acStat">${a.players.length} represented</span></span><span class="acMeta">${a.agency?esc(a.agency)+" · ":""}Open player list →</span></button>`).join("");
+    ? agencies.map(a=>`<button class="agencyCard" data-ag="${agencyEnc(a.name)}"><div class="acName">${esc(a.name)}</div><div class="acMeta">${a.players.length} player${a.players.length===1?"":"s"} \u00b7 ${a.agents.size} agent${a.agents.size===1?"":"s"}</div></button>`).join("")
+    : agents.map(a=>`<button class="agencyCard" data-agt="${agencyEnc(a.name)}"><div class="acName">${esc(a.name)}</div><div class="acMeta">${a.players.length} player${a.players.length===1?"":"s"}${a.agency?" \u00b7 "+esc(a.agency):""}</div></button>`).join("");
   $("#app").innerHTML=`<div class="view">
-    <h1 class="title">Agencies</h1>
+    <h1 class="title">Agencies</h1><p class="hint"><a href="RealGM-agency-review.html" target="_blank" rel="noopener">RealGM research: matches and listings to review ↗</a></p>
     <div class="sub" style="margin-bottom:14px">${agencies.length} agenc${agencies.length===1?"y":"ies"} \u00b7 ${agents.length} agent${agents.length===1?"":"s"} in your database</div>
     <div class="agencyBar">
       <div class="aseg"><button class="${mode==="agency"?"on":""}" data-amode="agency">Agencies</button><button class="${mode==="agent"?"on":""}" data-amode="agent">Agents</button></div>
@@ -5167,11 +5269,11 @@ function renderAgencies(){
   $$("[data-amode]").forEach(b=>b.onclick=()=>{STATE.agencyMode=b.dataset.amode;renderAgencies();});
   $$(".agencyCard[data-ag]").forEach(c=>c.onclick=()=>openAgencyPage("agency",decodeURIComponent(c.dataset.ag)));
   $$(".agencyCard[data-agt]").forEach(c=>c.onclick=()=>openAgencyPage("agent",decodeURIComponent(c.dataset.agt)));
-  const sq=$("#agencyQ");if(sq)sq.oninput=()=>{const q=sq.value.toLowerCase();
-    $$(".agencyCard").forEach(c=>{const t=c.textContent.toLowerCase();c.style.display=(!q||t.includes(q))?"":"none";});};
+  const sq=$("#agencyQ");if(sq)sq.oninput=()=>{const q=searchFold(sq.value);
+    $$(".agencyCard").forEach(c=>{const t=searchFold(c.textContent);c.style.display=(!q||t.includes(q))?"":"none";});};
 }
 function openAgentRoster(enc){const agent=decodeURIComponent(enc),key=normName(agent);
-  const list=agentRosterList(p=>p.agent&&normName(p.agent)===key);
+  const list=agentRosterList(p=>EuroScoutAgencyResearch.agentsOf(p).some(a=>normName(a)===key));
   const agency=agencyOfAgent(key);
   const sub=`${list.length} player${list.length===1?"":"s"} represented`+
     (agency?` \u00b7 <span class="arlink" onclick="hideModal();openAgencyRoster('${agencyEnc(agency)}')">${escAttr(agency)}</span>`:"");
@@ -5180,8 +5282,7 @@ function openAgencyRoster(enc){const agency=decodeURIComponent(enc),key=normAgen
   const list=agentRosterList(p=>p.agency&&normAgency(p.agency)===key);
   if(!list.length){showModal(`<h3>${escAttr(agency)}</h3><p class="empty">No players at this agency in your database yet.</p>`);return;}
   const byAgent=new Map();
-  list.forEach(p=>{const a=(p.agent&&p.agent.trim())?p.agent.trim():"\u2014 no agent listed";const k=normName(a)||"_none";
-    if(!byAgent.has(k))byAgent.set(k,{name:a,players:[]});byAgent.get(k).players.push(p);});
+  list.forEach(p=>{const agents=EuroScoutAgencyResearch.agentsOf(p);(agents.length?agents:["— no agent listed"]).forEach(a=>{const k=normName(a)||"_none";if(!byAgent.has(k))byAgent.set(k,{name:a,players:[]});byAgent.get(k).players.push(p);});});
   const groups=[...byAgent.values()].sort((a,b)=>b.players.length-a.players.length||a.name.localeCompare(b.name));
   const sections=groups.map(gp=>{
     const named=gp.name.indexOf("\u2014 no agent")!==0;
@@ -5240,8 +5341,9 @@ function renderProfile(){
               <button class="btn ghost sm" onclick="drawerJump('reportPanel')">Notes</button>
               <button class="btn ghost sm" onclick="toggleCompare('${p.id}')" title="${inCompare(p.id)?'In compare — click to remove':'Add this player to the comparison'}">\u21c6 ${inCompare(p.id)?'In compare':'Compare'}</button>
               <button class="btn ghost sm" onclick="copyPlayerLink('${p.id}',this)" title="Copy a shareable link to this player">🔗 Copy link</button>
+              <button class="btn ghost sm" onclick="exportPlayerReport('${p.id}')" title="Open a printable one-page report (Save as PDF or print)">🖨 Report</button>
               <a class="btn ghost sm" href="${eurobasketURL(p)}" target="_blank" rel="noopener" title="Find this player on Eurobasket.com">↗ Eurobasket</a>
-              ${(p._ext&&!/eurobasket\.com/i.test(p._ext))?`<a class="btn ghost sm" href="${p._ext}" target="_blank" rel="noopener">↗ Profile link</a>`:''}
+              ${(p._ext&&!/eurobasket\.com/i.test(p._ext))?`<a class="btn ghost sm" href="${p._ext}" target="_blank" rel="noopener">↗ ${esc(externalProfileProvider(p._ext))}</a>`:''}
             </div>
           </div>
           <div class="ph-rating">
@@ -5256,6 +5358,7 @@ function renderProfile(){
           </div>
           ${levelBarometerHTML(p)}
         </div>
+        ${window.EuroScoutNCAA?.profileHTML(p)||""}
         ${(p._grp&&p._grp.length>1)?`<div class="comptabs ph-comps"><span class="hint" style="align-self:center;margin-right:2px">Competitions:</span>${p._grp.map(c=>`<button class="comptab ${c.id===p.id?'active':''}" onclick="switchComp('${c.league}','${c.id}')" title="${leagueOf(c).meta.name} · ${c.teamName}">${leagueOf(c).meta.name}</button>`).join('')}</div>`:''}
       </div>
     </div>
@@ -5652,7 +5755,7 @@ function chartFiltersHTML(c){
   if(c.fLeague&&c.fLeague!=="all"){const L=leagues.find(l=>l.meta.id===c.fLeague);
     if(L)teamOpts+=L.teams.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(t=>`<option value="${t.code}"${c.fTeam===t.code?" selected":""}>${escAttr(t.name)}</option>`).join("");}
   const countries=[...new Set((c.fLeague&&c.fLeague!=="all"?(leagues.find(l=>l.meta.id===c.fLeague)||{players:[]}).players:allPlayersFlat()).filter(p=>p.qualified&&p.country).map(p=>p.country))].sort();
-  const ctOpts=`<option value="">All countries</option>`+countries.map(ct=>`<option value="${escAttr(ct)}"${c.fCountry===ct?" selected":""}>${escAttr(ct)}</option>`).join("");
+  const ctOpts=`<option value="">All countries</option>`+countries.map(ct=>`<option value="${escAttr(ct)}"${c.fCountry===ct?" selected":""}>${esc(countryLabel(ct))}</option>`).join("");
   const roleOpts=`<option value="">All positions</option>`+["Guard","Forward","Big"].map(r=>`<option value="${r}"${c.fRole===r?" selected":""}>${r}</option>`).join("");
   return `<div class="chartfilters">
     <label class="chlab">League <select id="fLeague">${lgOpts}</select></label>
@@ -5733,7 +5836,7 @@ function fitScore(p,f){
   if(f.ageMax&&!(p.age!=null&&p.age<=+f.ageMax))return null;
   if(f.levelMin!==""&&f.levelMin!=null){const b=levelBand(p);if(!(b&&b.i>=+f.levelMin))return null;}
   if(f.contract==="free"){const mm=next26Get(),mb=(typeof next26bGet==="function"?next26bGet():{});
-    if(effective26keys(p,mm,mb).length>0||isStatus(effective26(p,mm)))return null;}
+    if(!marketCandidate(p,mm,mb))return null;}
   const og=statGradeOverall(p,{raw:true}); if(f.minGrade&&(og==null||og<+f.minGrade))return null;
   // weighted components
   const w=fitWeights(f);
@@ -5757,14 +5860,14 @@ function renderFitFinder(){
   const archOpts=`<option value="">Any style</option>`+fitArchList().map(a=>`<option value="${a.key}" ${f.arch===a.key?"selected":""}>${a.label}</option>`).join("");
   const ageOpts=[["","Any age"],[21,"U21"],[23,"U23"],[25,"U25"],[28,"U28"]].map(([v,l])=>`<option value="${v}" ${String(f.ageMax)===String(v)?"selected":""}>${l}</option>`).join("");
   const lvlOpts=[["","Any level"],[4,"EuroLeague"],[3,"EuroCup+"],[2,"Top level+"],[1,"Mid-level+"]].map(([v,l])=>`<option value="${v}" ${String(f.levelMin)===String(v)?"selected":""}>${l}</option>`).join("");
-  const conOpts=[["","Any status"],["free","Free agents 26/27 only"]].map(([v,l])=>`<option value="${v}" ${f.contract===v?"selected":""}>${l}</option>`).join("");
+  const conOpts=[["","Any status"],["free","Free-agent candidates 26/27"]].map(([v,l])=>`<option value="${v}" ${f.contract===v?"selected":""}>${l}</option>`).join("");
   // score the pool
   let pool=scoutPool().filter(p=>p.qualified);
   const scored=pool.map(p=>({p,s:fitScore(p,f)})).filter(x=>x.s!=null).sort((a,b)=>b.s-a.s).slice(0,60);
   const rows=scored.map(({p,s})=>{
     const L=leagueOf(p),og=statGradeOverall(p),b=levelBand(p);
     const mm=next26Get(),mb=(typeof next26bGet==="function"?next26bGet():{});
-    const assigned=effective26keys(p,mm,mb).length>0||isStatus(effective26(p,mm));
+    const assigned=!marketCandidate(p,mm,mb);
     const photo=p.img?`<img src="${p.img}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name);
     const styleLab=(topArch(p,1)[0]||{}).lab||"";
     return `<button class="fitrow" data-id="${p.id}">
@@ -5910,32 +6013,46 @@ function renderCompare(){
 /* ---------- Exhibitions / Events (NBA Summer League 2026) ---------- */
 let EXHIB=null, EXHIB_BYNN={};
 function roleFromHt(ht){ if(ht==null)return "Guard"; if(ht>=207)return "Center"; if(ht>=198)return "Forward"; return "Guard"; }
-async function loadExtraLeagues(){
-  const steps=[{f:"data/leagues_pro.json",label:"pro"},{f:"data/leagues_ncaa.json",label:"ncaa"}];
+const EXTRA_JOBS=new Map();
+async function loadExtraLeagues(scope='all'){
+  const labels=scope==='pro'?['pro']:['pro','ncaa'];
+  await Promise.all(labels.map(label=>{
+    if(!EXTRA_JOBS.has(label))EXTRA_JOBS.set(label,loadExtraPack(label).catch(e=>{EXTRA_JOBS.delete(label);throw e;}));
+    return EXTRA_JOBS.get(label);
+  }));
+}
+async function loadExtraPack(label){
+  const steps=[{f:label==='pro'?'data/leagues_pro.json':'data/leagues_ncaa.json',label}];
   for(const st of steps){
     let pack=null;
     try{ pack=await (await fetch(st.f,{cache:"no-cache"})).json(); }
     catch(e){ pack=(window.EUROSCOUT_EXTRA&&window.EUROSCOUT_EXTRA[st.label])||null; }
-    if(!pack||!pack.leagues||!pack.leagues.length){ console.warn("extra league not loaded:",st.label,"— check that "+st.f+" is deployed"); continue; }
+    if(!pack||!pack.leagues||!pack.leagues.length)throw Error("Could not load "+st.label+" players. Try again.");
+    if(label==="ncaa"&&window.EuroScoutNCAA)await EuroScoutNCAA.enrich(pack);
     // add any leagues not already present
     const have=new Set(STATE.data.leagues.map(L=>L.meta.id));
-    pack.leagues.forEach(L=>{ if(!have.has(L.meta.id)) STATE.data.leagues.push(L); });
+    if(window.EuroScoutABA){EuroScoutABA.merge(STATE.data,pack.leagues);EuroScoutABA.apply(STATE.data);}else pack.leagues.forEach(L=>{if(!have.has(L.meta.id))STATE.data.leagues.push(L);});
+    window.EuroScoutNCAA?.apply(STATE.data);
+    window.EuroScoutExpansion?.apply(STATE.data);
+    window.EuroScoutMemberships?.apply(STATE.data);
+    window.EuroScoutBBL?.apply(STATE.data);window.EuroScoutOfficialRosters?.apply(STATE.data);
     // derived per-player fields the core boot computes (astto etc.) for the new leagues
     pack.leagues.forEach(L=>L.players.forEach(p=>{
       if(p.astto==null)p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);
     }));
-    DBTEAM_LIST=null; DBTEAM_BYKEY=null; CLUBS=null; CLUB_BY_TEAMKEY=null;   // invalidate club caches
+    DBTEAM_LIST=null; DBTEAM_BYKEY=null; CLUBS=null; CLUB_BY_TEAMKEY=null; DOM27=null; NEXTCOMP=null;   // invalidate club caches
     PLAYER_BY_NAME=null;   // invalidate transfer name index so NBA/GL/NCAA players become resolvable
     applyOverrides(); rebuildLinks();
     try{ mergeGroupRecords(); }catch(e){}
     // now that these players + their clubs exist, apply any auto-flagged transfers targeting them
-    try{ if(TRANSFERS_LOADED){ applyAutoTransfers(STATE.data.transfers||[]); updateTransferBadge(); } }catch(e){}
+    try{ if(TRANSFERS_LOADED)updateTransferBadge(); }catch(e){}
     // if the user is looking at a view that could show these, refresh it
     STATE._extraLoaded=(STATE._extraLoaded||[]).concat(st.label);
-    if(["exhib","players","teams","agencies"].includes(STATE.view)){ try{ render(); }catch(e){} }
+    if(["exhib","players","teams","agencies","freeagents"].includes(STATE.view)){ try{ render(); }catch(e){} }
   }
-  STATE._extraDone=true;
+  STATE._extraDone=["pro","ncaa"].every(k=>STATE._extraLoaded?.includes(k));
   if(STATE.view==="exhib"){ try{ render(); }catch(e){} }
+  const search=document.getElementById('globalSearch');if(search&&document.activeElement===search&&search.value.trim())search.dispatchEvent(new Event('input',{bubbles:true}));
 }
 function injectExhibitions(raw){
   const ex=window.EUROSCOUT_EXHIBITIONS; if(!ex||!ex.players){return;}
@@ -5971,6 +6088,8 @@ function exhibMatch(p){ if(!p||p.league==="sl")return null; const nn=normName(p.
 
 function otherLeagues(){return STATE.data.leagues.filter(L=>isOtherLeague(L.meta));}
 function renderExhib(){
+  if(STATE.oth?.lg==="ncaam"&&window.EuroScoutNCAA?.ready()){EuroScoutNCAA.render();return;}
+  if(!STATE._extraDone)loadExtraLeagues().catch(e=>toast(e.message));
   const others=otherLeagues();
   if(!others.length){
     if(!STATE._extraDone){
@@ -5988,7 +6107,7 @@ function renderExhib(){
   if(st.euOnly)pool=pool.filter(p=>p._euMatch);
   if(st.role)pool=pool.filter(p=>p.role===st.role);
   if(st.country)pool=pool.filter(p=>(p.country||"")===st.country);
-  if(st.q){const q=st.q.toLowerCase(),qn=normName(st.q);pool=pool.filter(p=>p.name.toLowerCase().includes(q)||normName(p.name).includes(qn));}
+  if(st.q){const q=st.q.toLowerCase(),qn=normName(st.q);pool=pool.filter(p=>searchFold(p.name).includes(searchFold(q))||normName(p.name).includes(qn));}
   const COLS=st.mode==="adv"
    ?[["ppg","PPG"],["ts","TS%"],["efg","eFG%"],["ftr","FTr"],["pps","PPS"],["orbp","OR%"],["drbp","DR%"],["pts40","P40"],["reb40","R40"],["ast40","A40"]]
    :[["ppg","PPG"],["rpg","RPG"],["apg","APG"],["spg","SPG"],["bpg","BPG"],["fgp","FG%"],["f3p","3P%"],["ftp","FT%"],["mpg","MIN"],["g","GP"]];
@@ -6000,7 +6119,7 @@ function renderExhib(){
   const rows=shown.map(p=>{const g=statGradeOverall(p);const ph=photoOf(p);const em=p._euMatch;
     return `<tr data-id="${p.id}">
       <td class="opN"><span class="opInner"><span class="agpPhoto${ph?"":" noimg"}">${ph?`<img src="${ph}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name)}</span><span class="opName">${esc(p.name)}${em?`<span class="opEu" title="Also in your European database">EU</span>`:""}</span></span></td>
-      <td class="opPos">${posLabel(p)}</td><td class="opNat">${esc(p.country||"\u2014")}</td>
+      <td class="opPos">${posLabel(p)}</td><td class="opNat">${esc(countryLabel(p.country)||"\u2014")}</td>
       <td class="num">${p.height?p.height:"\u2014"}</td><td class="num">${p.age!=null?p.age:"\u2014"}</td>
       <td class="opTeam">${esc(p.teamName||"\u2014")}</td>
       ${COLS.map(([k])=>`<td class="num">${p[k]!=null?(typeof p[k]==="number"&&!Number.isInteger(p[k])?p[k].toFixed(1):p[k]):"\u2013"}</td>`).join("")}
@@ -6019,7 +6138,7 @@ function renderExhib(){
     <div class="controls">
       <input type="text" id="opQ" placeholder="Search player" value="${escAttr(st.q)}" style="min-width:190px"/>
       <select class="f" id="opRole"><option value="">All positions</option>${["Guard","Forward","Big"].map(r=>`<option value="${r}"${st.role===r?" selected":""}>${r}s</option>`).join("")}</select>
-      <select class="f" id="opNat"><option value="">All countries</option>${countries.map(c=>`<option value="${escAttr(c)}"${st.country===c?" selected":""}>${esc(c)}</option>`).join("")}</select>
+      <select class="f" id="opNat"><option value="">All countries</option>${countries.map(c=>`<option value="${escAttr(c)}"${st.country===c?" selected":""}>${esc(countryLabel(c)||c)}</option>`).join("")}</select>
       <div class="seg opMode"><button data-m="pg"${st.mode==="pg"?' class="on"':""}>Per game</button><button data-m="adv"${st.mode==="adv"?' class="on"':""}>Advanced</button></div>
       <button class="fchip${st.euOnly?" on":""}" id="opEuOnly">In EU database${euCount?" ("+euCount+")":""}</button>
       ${(st.q||st.role||st.country||st.euOnly)?`<button class="fchip clearall" id="opClear">Clear</button>`:""}
@@ -6061,7 +6180,7 @@ function scoutPool(){
   // one card per person (dedupe merged identities), across all league seasons.
   // Exhibitions (Summer League) are excluded here — they live on their own tab.
   const seen=new Set(),out=[];
-  allPlayersFlat().forEach(p=>{if(p.league==="sl")return;const g=gid(p);if(seen.has(g))return;seen.add(g);out.push(p);});
+  allPlayersEvery().filter(p=>!isOtherLeague(leagueOf(p).meta)||p._abaRoster).forEach(p=>{if(p.league==="sl")return;const g=gid(p);if(seen.has(g))return;seen.add(g);out.push(p);});
   return out;
 }
 function playerTags(p){const r=recOf(p);return (r&&r.tags)||[];}
@@ -6108,7 +6227,7 @@ function riserBadgeHTML(p){
 }
 // RECENTLY VIEWED (localStorage, most-recent-first, capped)
 const RECENT_KEY="euroscout:recent";
-function recentGet(){try{return JSON.parse(localStorage.getItem(RECENT_KEY)||"[]");}catch(e){return [];}}
+function recentGet(){try{return (JSON.parse(localStorage.getItem(RECENT_KEY)||"[]")||JSON.parse("[]"));}catch(e){return [];}}
 function recentPush(id){
   // store the person's canonical id so switching competitions doesn't list them multiple times
   const p=player(id); const key=(p&&gid(p))||id;
@@ -6119,15 +6238,16 @@ function recentPush(id){
 }
 // SAVED VIEWS (localStorage): named filter combinations
 const VIEWS_KEY="euroscout:views";
-function viewsGet(){try{return JSON.parse(localStorage.getItem(VIEWS_KEY)||"[]");}catch(e){return [];}}
+function viewsGet(){try{return (JSON.parse(localStorage.getItem(VIEWS_KEY)||"[]")||JSON.parse("[]"));}catch(e){return [];}}
 function viewsSave(list){if(!Store.canEdit())return;try{localStorage.setItem(VIEWS_KEY,JSON.stringify(list));Sync.stampKey(VIEWS_KEY);Store.pushAppKey(VIEWS_KEY);}catch(e){}}
-function currentViewState(){const s=STATE.scout;return {q:s.q,leagues:[...s.leagues],roles:[...s.roles],tags:[...s.tags],status:s.status,sort:s.sort};}
+function currentViewState(){const s=STATE.scout;return {season:s.season||'2025/26',statsSeason:s.statsSeason||s.season||'2025/26',competition:s.competition||'all',q:s.q,leagues:[...s.leagues],roles:[...s.roles],tags:[...s.tags],status:s.status,sort:s.sort};}
 function viewIsActive(v){const s=STATE.scout;
-  return v.q===s.q && v.status===s.status && v.sort===s.sort
+  return (v.season||'2025/26')===(s.season||'2025/26') && (v.statsSeason||v.season||'2025/26')===(s.statsSeason||s.season||'2025/26') && (v.competition||'all')===(s.competition||'all') && v.q===s.q && v.status===s.status && v.sort===s.sort
     && v.leagues.length===s.leagues.size && v.leagues.every(x=>s.leagues.has(x))
     && v.roles.length===s.roles.size && v.roles.every(x=>s.roles.has(x))
     && v.tags.length===s.tags.size && v.tags.every(x=>s.tags.has(x));}
 function applyView(v){const s=STATE.scout;
+  s.season=v.season||'2025/26';s.statsSeason=v.statsSeason||s.season;s.competition=v.competition||'all';
   s.q=v.q||"";s.status=v.status||"all";s.sort=v.sort||"grade";
   s.leagues=new Set(v.leagues||[]);s.roles=new Set(v.roles||[]);s.tags=new Set(v.tags||[]);
   renderScout();}
@@ -6172,18 +6292,41 @@ function watchlistAlerts(pool){
   out.forEach(a=>{if(seen.has(a.p.id))return;seen.add(a.p.id);uniq.push(a);});
   return uniq;
 }
+const WATCH_ALERT_SEEN_KEY='euroscout:watchAlertsSeen:v1';
+function watchAlertUser(){return String(window.ESAccess?.user?.email||'local').toLowerCase();}
+function watchAlertSeenMap(){try{return JSON.parse(localStorage.getItem(WATCH_ALERT_SEEN_KEY)||'{}')||{};}catch{return {};}}
+function watchAlertKey(a){
+  const event=a.kind==='signed'?effective26keys(a.p).slice().sort():[a.txt,(a.p.gameLog||[]).slice(-1),a.p.statsSeason||a.p.season||''];
+  return encodeURIComponent(JSON.stringify([a.p.gid||a.p.id,a.kind,event]));
+}
+function unseenWatchlistAlerts(pool){const seen=watchAlertSeenMap()[watchAlertUser()]||{};return watchlistAlerts(pool).filter(a=>!seen[watchAlertKey(a)]);}
+function markWatchAlertSeen(key){
+  const all=watchAlertSeenMap(),user=watchAlertUser();all[user]={...(all[user]||{}),[key]:Date.now()};
+  try{localStorage.setItem(WATCH_ALERT_SEEN_KEY,JSON.stringify(all));}catch{toast('Could not save the seen alert. Please try again.');return;}
+  try{Sync.stampKey(WATCH_ALERT_SEEN_KEY);Store.pushAppKey(WATCH_ALERT_SEEN_KEY);}catch{}
+  renderWatchlist();
+}
+function watchAlertsHidden(){try{return localStorage.getItem('euroscout:watchAlertsHidden:'+String(window.ESAccess?.user?.email||'local'))==='1';}catch{return false;}}
+function toggleWatchAlerts(){try{localStorage.setItem('euroscout:watchAlertsHidden:'+String(window.ESAccess?.user?.email||'local'),watchAlertsHidden()?'0':'1');}catch{}renderWatchlist();}
 function watchlistAlertsHTML(pool){
-  const al=watchlistAlerts(pool);
+  const al=unseenWatchlistAlerts(pool);
   if(!al.length)return "";
+  if(watchAlertsHidden())return '<div class="waPanel"><button type="button" class="btn" data-toggle-watch-alerts>Show alerts ('+al.length+')</button></div>';
   const ICON={hot:"\uD83D\uDD25",cold:"\u2744\uFE0F",high:"\u2B50",signed:"\u270D\uFE0F",riser:"\uD83D\uDE80"};
-  const rows=al.slice(0,12).map(a=>`<button class="waRow wa-${a.kind}" data-id="${a.p.id}">
+  const rows=al.slice(0,12).map(a=>`<div class="waAlert"><button type="button" class="waRow wa-${a.kind}" data-id="${esc(a.p.id)}">
     <span class="waIcon">${ICON[a.kind]||"\u2022"}</span>
     <span class="waName">${esc(a.p.name)}</span>
-    <span class="waTxt">${esc(a.txt)}</span></button>`).join("");
+    <span class="waTxt">${esc(a.txt)}</span></button><button type="button" class="btn waSeen" data-watch-alert-seen="${esc(watchAlertKey(a))}" title="Mark as seen" aria-label="Mark alert for ${esc(a.p.name)} as seen">✓</button></div>`).join("");
   return `<div class="waPanel">
-    <div class="waHead">Alerts <span class="hint" style="font-weight:400;font-size:11.5px">notable changes for your flagged players</span></div>
+    <div class="waHead">Alerts <span class="hint" style="font-weight:400;font-size:11.5px">notable changes for your flagged players</span><button type="button" class="btn" data-toggle-watch-alerts style="margin-left:auto">Hide alerts</button></div>
     <div class="waList">${rows}</div>
   </div>`;
+}
+function watchlistClubLabel(p){
+  const k=effective26(p);
+  if(isStatus(k))return statusLabel(k);
+  const clubs=effective26keys(p).map(key=>clubByKey(key)?.name).filter(Boolean);
+  return [...new Set(clubs)].join(" / ")||"Free agent";
 }
 function renderWatchlist(){
   const rateOf=p=>effRating(p);
@@ -6196,7 +6339,7 @@ function renderWatchlist(){
   else if(sort==="name")  pool.sort((a,b)=>a.name.localeCompare(b.name));
   const sortBtn=(k,lab)=>`<button class="wsort ${sort===k?'on':''}" data-ws="${k}">${lab}</button>`;
   const row=p=>{
-    const rec=recOf(p),og=statGradeOverall(p),band=levelBand(p),L=leagueOf(p);
+    const rec=recOf(p),og=statGradeOverall(p),band=levelBand(p),L=leagueOf(p),tags=playerTags(p).filter(t=>t!==WATCH_TAG).map(t=>esc(t)).join(" · ");
     const _rt=effRating(p);const stars=_rt?`<span class="wStars">${"★".repeat(_rt)}<span class="off">${"★".repeat(5-_rt)}</span></span>`:`<span class="wStars off">☆☆☆☆☆</span>`;
     const _ph=photoOf(p);const photo=_ph?`<img src="${_ph}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name);
     const form=formArrowHTML(p);
@@ -6204,7 +6347,7 @@ function renderWatchlist(){
       <div class="wPhoto${p.img?"":" noimg"}">${photo}</div>
       <div class="wMain">
         <div class="wName">${p.name} ${form}</div>
-        <div class="wMeta">${p.teamName} · ${L.meta.name}${p.age?" · "+p.age+"y":""}${(p.pos&&p.pos!=="-")?" · "+p.pos:(p.role?" · "+p.role:"")}</div>
+        <div class="wMeta">${esc(watchlistClubLabel(p))} · 2026/27${p.age?" · "+p.age+"y":""}${(p.pos&&p.pos!=="-")?" · "+p.pos:(p.role?" · "+p.role:"")}</div>
         ${tags?`<div class="wtags">${tags}</div>`:""}
       </div>
       <div class="wLevel">${band?`<span class="wBand b${band.i}">${band.label}</span>`:""}</div>
@@ -6225,6 +6368,10 @@ function renderWatchlist(){
     ${pool.length?`<div class="wboard">${pool.map(row).join("")}</div>`:`<div class="empty" style="margin-top:20px">No players on your watchlist yet. Tap the ☆ star on any player card or profile to add them here.</div>`}
   </div>`;
   $$(".wsort").forEach(b=>b.onclick=()=>{STATE.watchSort=b.dataset.ws;renderWatchlist();});
+  /* $ returns one element, $$ returns the list. forEach on a single element
+     throws, which stopped the whole watchlist rendering. */
+  $$("[data-toggle-watch-alerts]").forEach(b=>b.onclick=toggleWatchAlerts);
+  $$("[data-watch-alert-seen]").forEach(b=>b.onclick=e=>{e.stopPropagation();markWatchAlertSeen(b.dataset.watchAlertSeen);});
   $$(".waRow").forEach(r=>r.onclick=()=>openProfile(r.dataset.id));
   $$(".wrow").forEach(r=>r.onclick=e=>{
     if(e.target.closest("[data-rm]")){e.stopPropagation();const id=e.target.closest("[data-rm]").dataset.rm;
@@ -6232,20 +6379,51 @@ function renderWatchlist(){
     openProfile(r.dataset.id);});
 }
 
+function scoutSeason(p){const v=String(p.statsSeason||p.season||leagueOf(p)?.meta?.season||'');const m=v.match(/(20\d{2})\D+(?:20)?(\d{2})/);return m?m[1]+'/'+m[2]:'';}
+let seasonPoolCache=null;
+function scoutSeasonPool(s){
+ const m=next26Get(),mb=next26bGet();allDbTeams();
+ const signature=JSON.stringify([s.season,s.statsSeason,s.competition,[...s.leagues].sort(),m,mb,localStorage.getItem('euroscout:autoApplied:v1'),STATE.data.leagues.map(l=>[l.meta.id,l.players.length]),localStorage.getItem('euroscout:overrides')]);
+ if(seasonPoolCache?.signature===signature&&seasonPoolCache.clubs===CLUBS&&seasonPoolCache.data===STATE.data)return seasonPoolCache.rows.map(p=>({...p}));
+ const season=s.season||'2025/26',stats=s.statsSeason||season,groups=new Map();
+ for(const p of allPlayersEvery()){if(isExhib(p))continue;const id=gid(p);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
+ const registrations=new Map(),data=window.EUROSCOUT_OFFICIAL_ROSTERS,byId=new Map(allPlayersEvery().map(p=>[p.id,p])),teamKeys=new Map((data?.teams||[]).map(t=>[t.id,canonKey(t.key)]));
+ const qualifying=new Set((data?.qualifiers?.teams||[]).map(t=>canonKey(t.key)));
+ for(const r of data?.roster||[]){if(!qualifying.has(teamKeys.get(r.teamId)))continue;for(const id of r.ids){const p=byId.get(id);if(p)registrations.set(gid(p),r);}}
+ const out=[];
+ for(const [id,rows] of groups){
+  const base=rows[0],reg=registrations.get(id);
+  if(s.competition==='bclq'&&(!reg||season!=='2026/27'))continue;
+  const keys=season==='2026/27'?effective26keys(base,m,mb):[];
+  const historical=rows.filter(p=>!p._rosterOnly&&scoutSeason(p)===season);
+  if(season==='2025/26'&&!historical.length)continue;
+  const clubs=keys.map(k=>clubByKey(k)).filter(Boolean);
+  if(s.leagues.size){const match=season==='2026/27'?clubs.some(c=>[...domCompsOf(c),...nextCompsOf(c)].some(l=>s.leagues.has(l.id))):historical.some(p=>s.leagues.has(p.league));if(!match)continue;}
+  let candidates=rows.filter(p=>!p._rosterOnly&&scoutSeason(p)===stats);
+  if(season==='2025/26'&&s.leagues.size)candidates=candidates.filter(p=>s.leagues.has(p.league));
+  // Tournament registration is not tournament statistics. Never substitute BCL regular-season lines.
+  if(s.competition==='bclq'&&stats==='2026/27')candidates=candidates.filter(p=>p.competitionId==='bclq'||p.stage==='Q');
+  candidates.sort((a,b)=>(b.g||0)-(a.g||0));const record=candidates[0];
+  let p;if(record)p={...record};else{p={};for(const k of ['id','name','code','league','team','teamName','role','pos','height','weight','age','born','country','img','_grp','_gid'])if(base[k]!=null)p[k]=base[k];p._rosterOnly=true;p.gameLog=[];p.pct=null;p.arch=[];}
+  p._seasonLabel=record?stats+' · '+(leagueOf(record)?.meta?.name||''):'No '+stats+' statistics recorded';
+  p._seasonClub=season==='2026/27'?(s.competition==='bclq'?reg.teamName:clubs.map(c=>c.name).join(' / ')||'Club unconfirmed'):(historical[0]?.teamName||p.teamName);
+  p._seasonContext=season==='2026/27'?'2026/27 roster'+(s.competition==='bclq'?' · BCL Qualifiers':''):'2025/26 club';out.push(p);
+ }
+ seasonPoolCache={signature,clubs:CLUBS,data:STATE.data,rows:out};return out.map(p=>({...p}));
+}
+function scoutSeasonControls(s){const year=s.season||'2025/26',stats=s.statsSeason||year;return `<div class="seasonFilters"><label>Roster season<select id="scoutSeason"><option value="2025/26" ${year==='2025/26'?'selected':''}>2025/26</option><option value="2026/27" ${year==='2026/27'?'selected':''}>2026/27</option></select></label><label>Competition group<select id="scoutCompetition"><option value="all">All competitions</option><option value="bclq" ${s.competition==='bclq'?'selected':''}>BCL Qualifiers · 2026/27</option></select></label><label>Statistics season<select id="scoutStatsSeason"><option value="2025/26" ${stats==='2025/26'?'selected':''}>2025/26</option><option value="2026/27" ${stats==='2026/27'?'selected':''}>2026/27</option></select></label><p class="hint" style="flex-basis:100%;margin:0">Roster season selects the player group. Statistics season selects the numbers shown. Missing statistics stay blank. Open a profile for its full history.</p></div>`;}
+
 function renderScout(){
   const s=STATE.scout;
-  // Load the database progressively as the user scrolls instead of stopping at
-  // an arbitrary 180/300-player cutoff.
-  if(!s.visibleCount||s.visibleCount<80)s.visibleCount=120;
   if(!s._viewInit){try{const v=localStorage.getItem(SCOUT_VIEW_KEY);if(v==="table"||v==="cards")s.view=v;}catch(e){}
     try{const r=localStorage.getItem(RAIL_KEY);if(r!=null)s.railHidden=(r==="1");}catch(e){}
     s._viewInit=1;}
   KBD_SEL=-1;
   const simP=s.simRef?player(s.simRef):null; if(s.simRef&&!simP)s.simRef=null;
-  let pool=scoutPool();
+  let pool=scoutSeasonPool(s);
   if(simP){const rg=gid(simP);pool=pool.filter(p=>gid(p)!==rg);}
   // filters
-  if(s.leagues.size) pool=pool.filter(p=>s.leagues.has(p.league));
+  // Competition membership is resolved before deduplicating seasonal records.
   if(s.roles.size)   pool=pool.filter(p=>s.roles.has(p.role));
   if(s.status!=="all") pool=pool.filter(p=>scoutStatusOf(p)===s.status);
   if(s.tags.size)    pool=pool.filter(p=>{const t=playerTags(p);return [...s.tags].every(tag=>t.includes(tag));});
@@ -6253,7 +6431,7 @@ function renderScout(){
   if(s.ratingMin!=null){pool=pool.filter(p=>{const r=effRating(p);return s.ratingMin==="u"?r===0:r>=s.ratingMin;});}
   if(s.level!=null)  pool=pool.filter(p=>{const b=levelBand(p);return b&&b.i===s.level;});
   if(s.next26){const mm=next26Get(),mb=(typeof next26bGet==="function"?next26bGet():{});
-    pool=pool.filter(p=>{const assigned=effective26keys(p,mm,mb).length>0||isStatus(effective26(p,mm));return s.next26==="free"?!assigned:assigned;});}
+    pool=pool.filter(p=>{const assigned=!marketCandidate(p,mm,mb);return s.next26==="free"?!assigned:assigned;});}
   if(s.arch){const parts=s.arch.split(":");const ai=+parts[0];const A=ARCHETYPES[ai];
     // the chip's label (e.g. "Interior Scorer") — match any player who both expresses this
     // archetype meaningfully AND whose role-appropriate label for it equals the chip label.
@@ -6268,7 +6446,7 @@ function renderScout(){
     const active=f.min>st.min||f.max<st.max; if(!active)return;
     pool=pool.filter(p=>{const v=(f.key==="grade")?statGradeOverall(p):p[f.key];return v!=null&&v>=f.min&&v<=f.max;});});}
   if(s.q){const q=s.q.toLowerCase(),qn=normName(s.q);
-    pool=pool.filter(p=>p.name.toLowerCase().includes(q)||normName(p.name).includes(qn)||noteText(p).includes(q));}
+    pool=pool.filter(p=>searchFold(p.name).includes(searchFold(q))||normName(p.name).includes(qn)||searchFold(noteText(p)).includes(searchFold(q)));}
   // sort
   const rateOf=p=>effRating(p);
   if(simP){
@@ -6276,7 +6454,7 @@ function renderScout(){
     if(s.simAgeMax) pool=pool.filter(p=>p.age!=null&&p.age<=+s.simAgeMax);
     if(s.simLevelMin!=null&&s.simLevelMin!=="") pool=pool.filter(p=>{const b=levelBand(p);return b&&b.i>=+s.simLevelMin;});
     if(s.simFreeOnly){const mm=next26Get(),mb=(typeof next26bGet==="function"?next26bGet():{});
-      pool=pool.filter(p=>!(effective26keys(p,mm,mb).length>0||isStatus(effective26(p,mm))));}
+      pool=pool.filter(p=>marketCandidate(p,mm,mb));}
     pool.forEach(p=>p._sim=simMatch(simP,p)); pool=pool.filter(p=>p._sim!=null); pool.sort((a,b)=>b._sim-a._sim); }
   else if(s.arch){const ai=+s.arch.split(":")[0]; pool.sort((a,b)=>(b.arch?b.arch[ai]:0)-(a.arch?a.arch[ai]:0));}
   else if(s.sort==="grade")      pool.sort((a,b)=>(statGradeOverall(b)??-1)-(statGradeOverall(a)??-1));
@@ -6417,6 +6595,7 @@ function renderScout(){
           </div>`}
         </div>
       </div>
+      ${scoutSeasonControls(s)}
       ${simP?"":filterBarHTML(s)}
       ${simP?"":naStrip}
       ${simP?simQuickFiltersHTML(s):""}
@@ -6424,25 +6603,15 @@ function renderScout(){
       ${simP?"":viewsBar}
       ${simP?"":recentRow}
       ${simP?"":activeChipsHTML(s)}
-      ${s.view==="table"?scoutTable(pool.slice(0,s.visibleCount),s):`<div class="board">${pool.slice(0,s.visibleCount).map(scoutCard).join("")}</div>`}
-      ${pool.length>s.visibleCount?`<div class="scout-more" id="scoutLoadMore" role="status">Scroll for more players · showing ${Math.min(s.visibleCount,pool.length)} of ${pool.length}</div>`:`<div class="scout-more done" role="status">All ${pool.length} players loaded</div>`}
+      ${s.view==="table"?scoutTable(pool.slice(0,300),s):`<div class="board">${pool.slice(0,180).map(scoutCard).join("")}</div>`}
+      ${pool.length>(s.view==="table"?300:180)?`<div class="sub" style="text-align:center;margin-top:16px">Showing first ${s.view==="table"?300:180} — narrow with filters to see more.</div>`:""}
       ${!pool.length?'<div class="empty">No players match. Loosen the filters on the left.</div>':""}
     </section>
   </div>`;
 
+  for(const [id,key] of [['scoutSeason','season'],['scoutCompetition','competition'],['scoutStatsSeason','statsSeason']]){const el=document.getElementById(id);el.onchange=async()=>{s[key]=el.value;if(key==='season'){s.statsSeason=el.value;if(el.value==='2025/26')s.competition='all';}if(key==='competition'&&el.value==='bclq'){s.season='2026/27';s.leagues.clear();}el.setAttribute('aria-busy','true');await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));renderScout();try{if(!STATE._extraDone){await loadExtraLeagues();if(STATE.view==='scout')renderScout();}}catch(e){toast(e.message);}};}
   // rail interactions
-  if(!window.__esInfiniteScroll){
-    window.__esInfiniteScroll=true;
-    let loading=false;
-    window.addEventListener("scroll",()=>{
-      if(loading||STATE.view!=="scout")return;
-      const more=document.getElementById("scoutLoadMore");
-      if(!more||window.innerHeight+window.scrollY<document.documentElement.scrollHeight-700)return;
-      loading=true; STATE.scout.visibleCount=(STATE.scout.visibleCount||120)+120; renderScout();
-      requestAnimationFrame(()=>{loading=false;});
-    },{passive:true});
-  }
-  const q=$("#scoutQ");if(q){q.oninput=()=>{s.q=q.value;const pos=q.selectionStart;renderScout();const nq=$("#scoutQ");if(nq){nq.focus();try{nq.setSelectionRange(pos,pos);}catch(e){}}};}
+  const q=$("#scoutQ");if(q){q.oninput=()=>{s.q=q.value;const pos=q.selectionStart;clearTimeout(window.scoutTypingTimer);window.scoutTypingTimer=setTimeout(()=>{if(STATE.view!=="scout")return;renderScout();const nq=$("#scoutQ");if(nq){nq.focus();try{nq.setSelectionRange(pos,pos);}catch(e){}}},180);};}
   $$("[data-lg]").forEach(b=>b.onclick=()=>{const id=b.dataset.lg;s.leagues.has(id)?s.leagues.delete(id):s.leagues.add(id);renderScout();});
   $$("[data-role]").forEach(b=>b.onclick=()=>{const r=b.dataset.role;s.roles.has(r)?s.roles.delete(r):s.roles.add(r);renderScout();});
   $$("[data-status]").forEach(b=>b.onclick=()=>{s.status=b.dataset.status;renderScout();});
@@ -6459,9 +6628,9 @@ function renderScout(){
   const n26c=$("#n26Clr");if(n26c)n26c.onclick=e=>{e.stopPropagation();s.next26=null;renderScout();};
   const lvlClr=$("#lvlClr");if(lvlClr)lvlClr.onclick=e=>{e.stopPropagation();s.level=null;renderScout();};
   $$("[data-chip]").forEach(b=>b.onclick=()=>{removeChip(b.dataset.chip,s);renderScout();});
-  const chipClr=$("#chipClear");if(chipClr)chipClr.onclick=()=>{s.q="";s.leagues.clear();s.roles.clear();s.tags.clear();s.status="all";s.riserOnly=false;s.arch=null;s.filters=[];s.simRef=null;s.level=null;s.next26=null;renderScout();};
+  const chipClr=$("#chipClear");if(chipClr)chipClr.onclick=()=>{s.competition="all";s.q="";s.leagues.clear();s.roles.clear();s.tags.clear();s.status="all";s.riserOnly=false;s.arch=null;s.filters=[];s.simRef=null;s.level=null;s.next26=null;renderScout();};
   const aClr=$("#archClr");if(aClr)aClr.onclick=(e)=>{e.stopPropagation();s.arch=null;renderScout();};
-  const clr=$("#scoutClear");if(clr)clr.onclick=()=>{s.q="";s.leagues.clear();s.roles.clear();s.tags.clear();s.status="all";s.riserOnly=false;s.arch=null;s.filters=[];s.level=null;s.next26=null;s.ratingMin=null;renderScout();};
+  const clr=$("#scoutClear");if(clr)clr.onclick=()=>{s.competition="all";s.q="";s.leagues.clear();s.roles.clear();s.tags.clear();s.status="all";s.riserOnly=false;s.arch=null;s.filters=[];s.level=null;s.next26=null;s.ratingMin=null;renderScout();};
   const riserBtn=$("#riserToggle");if(riserBtn)riserBtn.onclick=()=>{s.riserOnly=!s.riserOnly;renderScout();};
   // saved views
   const saveViewBtn=$("#saveViewBtn");if(saveViewBtn)saveViewBtn.onclick=saveCurrentView;
@@ -6781,7 +6950,7 @@ function scoutTable(pool,s){
       <td class="estdim">${p.born!=null?p.born:"\u2014"}</td>
       <td><span class="estpos" style="color:${rc};background:${rc}1e">${posLabel(p)}</span></td>
       <td class="estdim">${p.height!=null?p.height:"\u2014"}</td>
-      <td class="estclubcell l"><span class="estclub">${p.teamName?esc(p.teamName):"\u2014"}</span><span class="estcomp">${lg?esc(lg.meta.name):""}</span></td>
+      <td class="estclubcell l"><span class="estclub">${esc(p._seasonClub||p.teamName||"—")}</span><span class="estcomp">${esc(p._seasonContext||"")}<br>${esc(p._seasonLabel||lg?.meta?.name||"")}</span></td>
       <td>${p.g!=null?p.g:"\u2014"}</td>
       <td>${p.mpg!=null?p.mpg.toFixed(1):"\u2014"}</td>
       <td class="estgrdcell">${og!=null?`<b class="estgrade">${og.toFixed(1)}</b>`:"\u2014"}</td>
@@ -6815,7 +6984,7 @@ function scoutCard(p){
     <div class="sc2-photo${_ph?"":" noimg"}">${photo||initials(p.name)}</div>
     <div class="sc2-head">
       <div class="sc2-name">${p.name} ${formArrowHTML(p)}${riserBadgeHTML(p)}</div>
-      <div class="sc2-club">${p.teamName?esc(p.teamName):"\u2014"}${lg?`<span class="sc2-lg"> \u00b7 ${lg.meta.name}</span>`:""}</div>
+      <div class="sc2-club">${esc(p._seasonClub||p.teamName||"—")}<span class="sc2-lg"> · ${esc(p._seasonContext||"")}<br>${esc(p._seasonLabel||lg?.meta?.name||"")}</span></div>
       <div class="sc2-starsrow">${stars}</div>
       <div class="sc2-posrow"><span class="sc2-pos" style="color:${rc};background:${rc}20">${posLabel(p)}</span></div>
     </div>
@@ -6842,7 +7011,9 @@ async function toggleTag(id,tag){
   const p=player(id)||{id};const r=recOf(p);const tags=[...((r&&r.tags)||[])];
   const i=tags.indexOf(tag);
   if(i>=0)tags.splice(i,1); else tags.push(tag);
-  await saveRec(p,{tags});
+  const saving=saveRec(p,{tags});
+  document.querySelectorAll("[data-star],.cardwatch").forEach(b=>{const pid=b.dataset.star||b.closest("[data-id]")?.dataset.id;if(pid===id){const on=tags.includes(WATCH_TAG);b.classList.toggle("on",on);b.textContent=on?"★":"☆";}});
+  saving.catch(e=>toast("Saved locally; cloud sync failed: "+e.message));
 }
 function escAttr(s){return String(s||"").replace(/"/g,"&quot;");}
 
@@ -6938,8 +7109,8 @@ function openTeamBoard(k,label,hi){
   const me=$("#modal tr.me");if(me)me.scrollIntoView({block:"center"});
 }
 function renderTeams(){
-  if(STATE.teamsMode==="next")return renderTeamsNext();
-  if(STATE.teamsMode==="fa")return renderFreeAgents();
+  if(!STATE.teamsMode||STATE.teamsMode==="next")return renderTeamsNext();
+  if(STATE.teamsMode==="fa"){STATE.teamsMode="next";return renderTeamsNext();}
   return renderTeamsCurrent();
 }
 function renderTeamsCurrent(){
@@ -6970,10 +7141,8 @@ function renderTeamsCurrent(){
       <input id="curTeamQ" placeholder="Search club\u2026" value="${escAttr(STATE.teamQ||"")}" autocomplete="off"/>
     </div>
     ${cards.length?`<div class="tmGrid">${cards.map(c=>`<button class="tmCard" data-club="${escAttr(c.club.key)}">
-      <span class="tmCardHead">${clubBadge(c,28)}<span class="tmStatus">2025/26</span></span>
-      <span class="tmName">${esc(c.name)}</span>
-      <span class="tmMeta"><span class="tmLg">${c.lgIds.map(id=>leagueFlag(id)).join("")} ${esc(c.lgList)}</span></span>
-      <span class="tmFoot"><span>${c.n} player${c.n===1?"":"s"} in database</span><span class="tmOpen">Open roster →</span></span>
+      ${clubBadge(c,20)}<span class="tmName">${esc(c.name)}</span>
+      <span class="tmCompetitions">${compactTeamTags(c.club,true)}</span><span class="tmCount" title="Players on roster">${c.n} players</span>
     </button>`).join("")}</div>`:`<div class="empty" style="margin-top:16px">No clubs match.</div>`}
   </div>`;
   wireTeamsToggle(); wireTransferInbox();
@@ -6989,7 +7158,7 @@ function renderCurClubRoster(club){
   const rows=roster.map(p=>{const g=statGradeOverall(p);
     return `<tr data-pid="${p.id}">
       <td class="agp"><span class="agpInner">${ph(p)}<span class="agpName">${p.name}</span></span></td>
-      <td>${posLabel(p)}</td><td class="rbNat">${p.country||"\u2014"}</td>
+      <td>${posLabel(p)}</td><td class="rbNat">${countryLabel(p.country)||"\u2014"}</td>
       <td class="num">${p.height?p.height+"cm":"\u2014"}</td><td class="num">${p.age!=null?p.age:"\u2014"}</td>
       <td>${esc((STATE.data.leagues.find(L=>L.meta.id===p.league)||{meta:{}}).meta.name||p.league)}</td>
       <td class="num">${p.g!=null?p.g:"\u2014"}</td>
@@ -7000,7 +7169,7 @@ function renderCurClubRoster(club){
   const head=`<tr><th>Player</th><th>Pos</th><th>Nat</th><th class="num">Ht</th><th class="num">Age</th><th>Stats from</th><th class="num">GP</th><th class="num">PPG</th><th class="num">RPG</th><th class="num">APG</th><th class="num">Score</th></tr>`;
   $("#app").innerHTML=`<div class="view">
     <button class="btn ghost" id="curBack">\u2190 All teams</button>
-    <h1 class="title" style="margin-top:10px">${logo?`<span class="clubBadge" style="--bs:30px;vertical-align:middle"><img src="${logo}" onerror="this.parentNode.remove()"/></span>`:""}${esc(club.name)} <span class="rbClubLg">${club.leagues.map(l=>leagueFlag(l.id)).join("")} ${esc(club.leagues.map(l=>l.name).join(" \u00b7 "))}</span></h1>
+    <h1 class="title" style="margin-top:10px">${logo?`<span class="clubBadge" style="--bs:30px;vertical-align:middle"><img src="${logo}" onerror="this.parentNode.remove()"/></span>`:""}${esc(club.name)} <span class="rbClubLg">${club.leagues.map(l=>leagueFlag(l.id)).join("")} ${esc(comps2627Label(club))}</span></h1>
     <div class="sub" style="margin-bottom:14px">2025/26 squad across every competition \u00b7 ${roster.length} player${roster.length===1?"":"s"}</div>
     ${roster.length?`<div class="agtableWrap"><table class="agtable rbtable">${cols}<thead>${head}</thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No players recorded for this club.</div>`}
   </div>`;
@@ -7015,7 +7184,7 @@ function renderCurRoster(lgId,code){
   const rows=roster.map(p=>{const g=statGradeOverall(p);
     return `<tr data-pid="${p.id}">
       <td class="agp"><span class="agpInner">${ph(p)}<span class="agpName">${p.name}</span></span></td>
-      <td>${posLabel(p)}</td><td class="rbNat">${p.country||"\u2014"}</td>
+      <td>${posLabel(p)}</td><td class="rbNat">${countryLabel(p.country)||"\u2014"}</td>
       <td class="num">${p.height?p.height+"cm":"\u2014"}</td><td class="num">${p.age!=null?p.age:"\u2014"}</td>
       <td class="num">${p.g!=null?p.g:"\u2014"}</td>
       <td class="num">${p.ppg!=null?p.ppg.toFixed(1):"\u2014"}</td><td class="num">${p.rpg!=null?p.rpg.toFixed(1):"\u2014"}</td>
@@ -7063,12 +7232,12 @@ function renderTeam(){
       <td class="l" style="color:${win?"var(--good)":"var(--bad)"};font-weight:700">${win?"W":"L"}</td>
       <td style="font-family:var(--mono)">${ts}\u2013${os}</td></tr>`;}).join("");
   const myGroup=t.group||"";
-  const stTeams=L.teams.filter(x=>(x.group||"")===myGroup).sort((a,b)=>a.rank-b.rank);
-  let strows="";
-  if(myGroup)strows+=`<tr class="stgrouprow"><td colspan="8">Group ${myGroup}</td></tr>`;
+  const stTeams=t.newFor2627?[]:L.teams.filter(x=>!x.newFor2627&&(x.group||"")===myGroup).sort((a,b)=>(a.rank??999)-(b.rank??999));
+  let strows=stTeams.length?"":`<tr><td colspan="8">No standings for this club in ${esc(L.meta.season||"the recorded season")}. Future entrants are listed separately from results.</td></tr>`;
+  if(myGroup&&stTeams.length)strows+=`<tr class="stgrouprow"><td colspan="8">Group ${myGroup}</td></tr>`;
   stTeams.forEach(x=>{
     strows+=`<tr class="${x.code===t.code?"me":""}" data-tc="${x.code}">
-      <td class="rk">${x.rank}</td><td class="l">${x.name}</td>
+      <td class="rk">${x.rank??"—"}</td><td class="l">${x.name}</td>
       <td>${x.w}</td><td>${x.l}</td><td class="pfpa">${x.pf!=null?x.pf:"–"}</td><td class="pfpa">${x.pa!=null?x.pa:"–"}</td>
       <td style="color:${x.net>0?"var(--good)":x.net<0?"var(--bad)":"var(--muted)"}">${x.net>0?"+":""}${fmt(x.net)}</td></tr>`;});
   $("#app").innerHTML=`<div class="view">
@@ -7107,7 +7276,7 @@ function renderTeam(){
     </div>
     ${teamNeedsHTML(roster)}
     <div class="twocol" style="margin-top:16px">
-      <div class="panel"><h3>Standings \u00b7 ${L.meta.name}${t.group?" \u00b7 Group "+t.group:""}</h3>
+      <div class="panel"><h3>Standings \u00b7 ${L.meta.name} · ${esc(L.meta.season||"Recorded season")}${t.group?" \u00b7 Group "+t.group:""}</h3>
         <div class="tablewrap stwrap"><table class="sttbl">
           <thead><tr><th class="rk">#</th><th class="l">TEAM</th><th>W</th><th>L</th><th title="Points for">PF</th><th title="Points against">PA</th><th>NET</th></tr></thead>
           <tbody>${strows}</tbody></table></div>
@@ -7153,7 +7322,7 @@ function renderGlossary(){
   const S=[
     {id:"overview",title:"Getting around",cards:[
       ["What EuroScout is","A scouting board spanning <b>40+ competitions</b> for the 2025\u201326 season \u2014 Europe\u2019s top leagues and cups, the NBA / G League / NCAA, and leagues across the Americas and Asia-Pacific. The home <b>Players</b> board shows every player as a card with a skill radar, star grade and tags; filter down the left and click any card for the full profile."],
-      ["Leagues covered","<b>Pan-European:</b> EuroLeague, EuroCup, Champions League (BCL), FIBA Europe Cup, ENBL. <b>Top domestic:</b> ACB (Spain), Lega A (Italy), BBL (Germany), Betclic \u00c9lite (France), Greek Basket League, Turkish BSL, ABA, VTB United, LKL (Lithuania), Israeli Super League, BNXT (Belgium/Netherlands). <b>More of Europe:</b> ABA 2, Primera FEB, Poland, Romania, Hungary, Croatia, Bulgaria, Czechia, Sweden, Finland, Portugal, Slovenia, Latvian\u2013Estonian. <b>Americas:</b> NBA, G League, NCAA, CEBL (Canada), BSN (Puerto Rico), Liga Nacional (Argentina), NBB (Brazil). <b>Asia-Pacific:</b> NBL (Australia), CBA (China), B.League (Japan), KBL (Korea), PBA (Philippines)."],
+      ["Leagues covered","<b>Pan-European:</b> EuroLeague, EuroCup, Champions League (BCL), FIBA Europe Cup, ENBL. <b>Top domestic:</b> ACB (Spain), Lega A (Italy), BBL (Germany), Betclic \u00c9lite (France), Greek Basket League, Turkish BSL, ABA, VTB United, LKL (Lithuania), Israeli Super League, BNXT (Belgium/Netherlands). <b>More of Europe:</b> ABA 2, Primera FEB, France Élite 2, Italy Serie A2, Germany ProA, Türkiye TBL, Great Britain, Switzerland, Denmark, Slovakia, Iceland, Bosnia and Herzegovina, Montenegro, North Macedonia, Kosovo, Poland, Romania, Hungary, Croatia, Bulgaria, Czechia, Sweden, Finland, Portugal, Slovenia, Latvian\u2013Estonian. <b>Americas:</b> NBA, G League, NCAA, CEBL (Canada), BSN (Puerto Rico), Liga Nacional (Argentina), NBB (Brazil). <b>Asia-Pacific:</b> NBL (Australia), CBA (China), B.League (Japan), KBL (Korea), PBA (Philippines)."],
       ["The tabs","The top tabs switch between the <b>Players</b> board, <b>Teams</b>, <b>Agencies</b>, <b>Transfers</b>, the <b>Stats</b> table, the <b>Scouting</b> matchup, <b>Watchlist</b>, <b>Other leagues</b> and this <b>Glossary</b>. The search box up top jumps to any player, and every profile has a shareable link."],
       ["vs League / vs All","The header switch controls what a player or team is <b>ranked against</b>. <b>vs League</b> ranks them within their own competition; <b>vs All</b> pools every competition together \u2014 e.g. \u201cbest rebounder across everything?\u201d. It changes the rank badges, not the raw numbers."],
     ]},
@@ -7274,8 +7443,21 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260906-6"></script>
-<script src="euroscout-workflow.js?v=20260906-6"></script>
+<script src="euroscout-ui.js?v=20260920-1"></script>
+<script src="euroscout-workflow.js?v=20260920-1"></script>
+
+<script src="euroscout-market-records.js?v=16"></script>
+<script src="euroscout-market.js?v=20260913-batch"></script>
+<script src="euroscout-transfers.js?v=20260908-1"></script>
+<script src="euroscout-transfer-confirmations.js?v=20260915-verified"></script>
+<script src="euroscout-roster-edit.js?v=20260907-13"></script>
+<script src="data/agency-research.js?v=20260907-13"></script>
+<script src="euroscout-agency-research.js?v=20260908-1"></script>
+<link rel="stylesheet" href="euroscout-teams-2627.css?v=2">
+<script src="euroscout-teams-2627.js?v=2"></script>
+<script src="data/realgm-representation.js?v=20260907-13"></script>
+<script src="euroscout-representation.js?v=20260907-13"></script>
+<script src="data/aba-rosters-2026.js?v=20260910-1"></script>
+<script src="euroscout-aba-rosters.js?v=20260910-1"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260914-bclq-release"></script>
 <script>esSetup();boot();</script>
-</body>
-</html>
+<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-sessions.js?v=20260920-2"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260920-2"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260920-1"><script src="data/signal-origins.js?v=20260920-1"></script><script src="euroscout-signals.js?v=20260920-2"></script><script src="euroscout-quickstats.js?v=20260920-1"></script><script src="euroscout-live-notes.js?v=20260920-2"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>

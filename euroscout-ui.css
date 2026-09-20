@@ -51,3 +51,13 @@ body.es-redesign{background:var(--bg);font-family:var(--body);font-size:13px;pad
 @media(pointer:coarse){.es-redesign .es-level-steps button{min-width:44px;min-height:44px}.es-redesign .es-header-right .ph-actions>.btn,.es-redesign .es-header-right .ph-actions>button,.es-redesign .es-header-right .es-actions-more>summary{min-height:44px!important;height:44px!important}.es-redesign .comptab{min-height:44px}}
 @media(max-width:760px){.es-header-right{min-width:0;width:100%;margin:0}.es-header-right .es-header-action-row{justify-content:flex-start;flex-wrap:wrap}.es-header-right .es-assessment-cards{width:100%}.es-redesign .prohero .ph-top{flex-wrap:wrap}.es-header-right .es-level-ladder{min-width:0}.es-redesign .ph-id{min-width:150px}}
 .es-redesign .dr-scroll>.es-profile-tabs{top:0;box-shadow:none}
+
+/* Keep the open More menu above the sticky profile tabs. */
+.es-redesign #drawer .prohero-wrap:has(.es-actions-more[open]){z-index:60!important}
+
+.es-dashboard-title{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;margin:0!important}.es-dashboard-title h3{margin:0!important}.es-dashboard-title select{width:auto;max-width:46%;margin:0}.es-dashboard-controls{display:flex;align-items:center;min-height:44px;margin:8px 0 12px!important}.es-dashboard>.es-panel .es-player{min-height:71px}@media(max-width:600px){.es-dashboard-title{flex-wrap:wrap}.es-dashboard-title select{max-width:100%}}
+
+body.es-redesign .es-profile-tabs{position:static!important;top:auto!important}.es-back-top{position:fixed;right:18px;bottom:48px;z-index:10005;border:0;border-radius:50%;width:40px;height:40px;background:#17644f;color:white;cursor:pointer}.es-quick-review{border:1px solid #cbd8d2;background:transparent;color:inherit;border-radius:6px;cursor:pointer;margin-left:4px;padding:4px 8px}
+
+/* Keep global search results above full-page profiles (85), below navigation (90) and dialogs (100). */
+.es-redesign header{z-index:86}
