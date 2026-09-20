@@ -693,8 +693,6 @@ body.drawer-lock{overflow:hidden}
 .drawer .profnav .inscope{margin-left:10px}
 /* ===== Scout board ===== */
 .scoutwrap{display:grid;grid-template-columns:236px 1fr;gap:22px;max-width:1320px;margin:0 auto;padding:20px 22px 60px}
-.scout-more{margin:20px auto 0;padding:14px 16px;text-align:center;color:var(--muted);font-size:12.5px;border:1px dashed var(--line);border-radius:10px;background:var(--panel2)}
-.scout-more.done{border-style:solid;color:var(--muted2);background:transparent}
 .scoutmain{min-width:0}
 .scoutrail{position:sticky;top:120px;align-self:start;display:flex;flex-direction:column;gap:18px;max-height:calc(100vh - 140px);overflow-y:auto;padding-right:4px}
 /* Filter rail: toggle button, collapse (desktop), off-canvas drawer (touch/narrow) */
@@ -1741,14 +1739,47 @@ body.drawer-lock{overflow:hidden}
 
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
-<link rel="stylesheet" href="euroscout-ui.css?v=20260920-3">
+<link rel="stylesheet" href="euroscout-ui.css?v=20260913-search">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
+<script src="feb-data.js?v=20260913"></script><script src="feb-rosters-2026.js?v=20260920"></script><script src="euroscout-feb.js?v=20260920-fix"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260920-fix"></script><script src="membership-data.js?v=20260920-fix"></script><script src="euroscout-regional-rosters.js?v=20260920"></script><script src="euroscout-registry.js?v=20260920"></script>
+<script src="euroscout-memberships.js?v=20260913-expansion"></script>
 <style>.membership-review{margin:12px 0 18px;padding:12px 16px;background:var(--card,#fff);border:1px solid var(--border,#d9e3df);border-radius:12px;color:var(--text,#193442);font-size:13px}.membership-review details{margin-top:8px}.membership-review summary{cursor:pointer}.membership-review-row{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 0;align-items:baseline}.membership-review-row>span{flex:1 1 250px}.membership-review-row>a{white-space:nowrap}.membership-review details[open]{max-height:340px;overflow:auto}.rbFilters>select{min-width:min(320px,100%);max-width:100%;height:auto;min-height:44px;padding:10px 36px 10px 12px}</style>
 <link rel="stylesheet" href="euroscout-team-cards.css?v=20260914">
 <style>
 .seasonFilters{display:flex;flex-wrap:wrap;gap:14px;align-items:end;margin:16px 0;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
 .seasonFilters label{display:grid;gap:7px;color:var(--muted);font-size:12px;font-weight:600;flex:1 1 155px;min-width:0}.seasonFilters label:nth-child(2){flex:2 1 245px}
 .seasonFilters select{appearance:none;width:100%;min-height:46px;border:1px solid var(--line);border-radius:10px;padding:11px 36px 11px 14px;font:600 13px var(--body);color:var(--txt);background:var(--bg);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23ce8b50' stroke-width='2'/%3E%3C/svg%3E");background-position:right 14px center;background-repeat:no-repeat;cursor:pointer;box-sizing:border-box}.seasonFilters select:hover,.seasonFilters select:focus-visible{border-color:var(--accent);outline:2px solid color-mix(in srgb,var(--accent) 20%,transparent);outline-offset:1px}.seasonFilters .hint{line-height:1.5}
+</style>
+<style>
+/* Profile polish: keep identity, status and scout controls together. */
+.prohero{overflow:hidden;border:1px solid #d9e5df;background:linear-gradient(135deg,#fff 0%,#fbfdfc 72%,#f2f8f5 100%);box-shadow:0 8px 24px rgba(18,55,44,.06)}
+.ph-top{align-items:flex-start;gap:22px;padding:26px 28px 22px}
+.ph-photo{width:132px;height:132px;min-width:132px;border-radius:18px;background:#e3f1eb;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:30px;font-weight:800;color:#126b4f;box-shadow:0 2px 0 rgba(12,61,47,.08)}
+.ph-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.ph-photo.noimg img{display:none}
+.ph-id{min-width:0;flex:1}
+.ph-nrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ph-nrow h1{font-size:clamp(28px,3vw,40px);letter-spacing:-.02em;margin:0;color:#142b27}
+.ph-pills{margin-top:8px;display:flex;gap:7px;flex-wrap:wrap}
+.ph-pill{border:0;background:transparent;padding:0;color:#5d706b;font-size:14px}
+.ph-pill:not(:last-child)::after{content:' · ';color:#a6b5b0;margin-left:7px}
+.ph-pill.lg,.ph-pill.team{font-weight:600;color:#214e41}
+.ph-identity-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:17px}
+.profile-follow,.profile-estimated-level,.profile-status-chip{display:inline-flex;align-items:center;border-radius:999px;padding:8px 13px;font-weight:700;font-size:13px;line-height:1}
+.profile-follow{border:1px solid #b8d9cb;background:#fff;color:#126b4f;cursor:pointer}
+.profile-follow.on{background:#0b7a51;color:#fff;border-color:#0b7a51}
+.profile-estimated-level{background:#e9ddff;color:#5c2c9c;border:1px solid #d3b9fb}
+.profile-status-chip{background:#eef6f3;color:#315b4d;border:1px solid #d8e9e1;font-weight:600}
+.ph-rating,.barometer{display:none!important}
+.ph-actions{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+.ph-detail{border:1px solid #dfe9e4;background:#fff}
+.ph-bio{grid-template-columns:repeat(4,minmax(0,1fr));gap:0}
+.ph-bio .bio-cell{padding:14px 16px;border-bottom:1px solid #edf2ef}
+.ph-bio .bio-cell:nth-child(4n+1){padding-left:0}
+.ph-bio .bio-cell:nth-child(n+5){padding-top:12px}
+.tavatar-wrap.hasimg .tavatar-fallback{display:none}
+.tavatar-wrap.noimg .tavatar-fallback{display:flex}
+@media(max-width:760px){.ph-top{padding:18px}.ph-photo{width:96px;height:96px;min-width:96px}.ph-bio{grid-template-columns:repeat(2,minmax(0,1fr))}.ph-bio .bio-cell:nth-child(4n+1){padding-left:12px}}
 </style></head>
 <body><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=3Y7lXbDvH8pAG9lPBacTPclY0DT0LplrHz1eTf5OXUo-1789284776.9266841-1.2.1.1-x5DFik2ap6VDH42hUPVphw8tQy6FKPoLaH5riZbc2q_ycdpGCOE2dg20ikdH7sb." aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a><a href="https://euroscout.mtscouting.com/cdn-cgi/content?id=q3ZLhyTUExY4lZ8mVZSd_1GAuJtDz697preToyxnaAw-1788766655.758017-1.2.1.1-BWZemiI8CEuT3_Xh.vWitdl.HfnLDyKow4.ly1UJISHi2_K_bGhX2v5mTcIXXd2M" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
 <header>
@@ -1780,8 +1811,6 @@ body.drawer-lock{overflow:hidden}
 <main id="app"><div class="empty">Loading data…</div></main>
 <div id="toast" class="toast"></div>
 <div id="authgate" class="authgate hidden"><div class="agbox" id="agBox"></div></div>
-<script src="feb-data.js?v=20260913"></script><script src="feb-rosters-2026.js?v=20260920"></script><script src="euroscout-feb.js?v=20260920-2"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260920-2"></script><script src="membership-data.js?v=20260920-2"></script><script src="euroscout-regional-rosters.js?v=20260920"></script><script src="euroscout-registry.js?v=20260920"></script>
-<script src="euroscout-memberships.js?v=20260913-expansion"></script>
 
 <script src="data/club-directory.js?v=36"></script>
 <script src="euroscout-clubs.js?v=20260914-virtus-merge"></script>
@@ -2125,7 +2154,7 @@ const STATE = {data:null, league:null, view:"dashboard", allLeagues:false,
   compare:{slots:[null,null,null,null]}, fit:{role:"",arch:"",ageMax:"",levelMin:"",contract:"",minGrade:0,wStyle:50,wProd:30,wAge:20}, scouting:{a:null,b:null}, watchSort:"rating", profileScope:"league", statMode:"pg",
   charts:{type:"scatter", x:"pts40", y:"ts", dist:"pir", colorBy:"league", fLeague:null, fTeam:"", fCountry:"", fRole:"", hi:null, size:600},
   sim:{stat:0.4,pos:0.35,arch:0.25},
-  scout:{q:"",leagues:new Set(),roles:new Set(),tags:new Set(),status:"all",sort:"grade",riserOnly:false,simRef:null,simAgeMax:null,simLevelMin:null,simFreeOnly:false,arch:null,filters:[],level:null,next26:null,view:"table",tsort:{key:"grade",dir:-1},railHidden:true,railOpen:false,ratingMin:null,visibleCount:null}};
+  scout:{q:"",leagues:new Set(),roles:new Set(),tags:new Set(),status:"all",sort:"grade",riserOnly:false,simRef:null,simAgeMax:null,simLevelMin:null,simFreeOnly:false,arch:null,filters:[],level:null,next26:null,view:"table",tsort:{key:"grade",dir:-1},railHidden:true,railOpen:false,ratingMin:null}};
 
 /* Tag vocabulary — "Watchlist" is a tag so flagged players surface in the board.
    Curated archetype/skill tags a scout reaches for; free tags still allowed on the card. */
@@ -2576,7 +2605,7 @@ function mergeGroupRecords(){
       (r.tags||[]).forEach(t=>{base.tags=base.tags||[];if(!base.tags.includes(t)){base.tags.push(t);dirty=true;}});
       if(r.report&&r.report!==base.report){
         const a=parseReport(base.report||""),b=parseReport(r.report);
-        const keys=["nStrengths","nImprove","nAth","nOff","nDef","nIntel","nProj","nRecommend"];let ch=false;
+        const keys=["nAth","nOff","nDef","nIntel","nProj"];let ch=false;
         keys.forEach(k=>{const av=(a[k]||"").trim(),bv=(b[k]||"").trim();
           if(!av&&bv){a[k]=bv;ch=true;}
           else if(av&&bv&&av!==bv&&!av.includes(bv)){a[k]=av+"\n\u2014\n"+bv;ch=true;}});
@@ -2914,14 +2943,13 @@ async function boot(){
   const rawPromise=loadCoreData();
   const storePromise=Store.initSB().catch(e=>console.warn("Access initialization delayed",e));
   const raw=await Promise.race([rawPromise,new Promise(resolve=>setTimeout(()=>resolve(null),30000))]);
-  await Promise.race([storePromise,new Promise(resolve=>setTimeout(resolve,13000))]); // longer than euroscout-access.js's own 12s embedded-handshake fallback, so this never wins the race before that resolves
+  await Promise.race([storePromise,new Promise(resolve=>setTimeout(resolve,8000))]);
   if(!ESAccess.internal){
     ESAccess.external(raw);
     return;
   }
   if(!raw || !Array.isArray(raw.leagues) || !raw.leagues.length){ $("#app").innerHTML='<div class="empty"><strong>EuroScout data could not be loaded.</strong><br>'+
     'Check that <code>data/data.json</code> or <code>data/data.js</code> is present in the repository, then reload.</div>'; return; }
-  try{
   for(const L of raw?.leagues||[])for(const p of L.players||[])if(p.img&&!isPlayerPhoto(p.img))p.img=null;
   window.EuroScoutABA?.apply(raw);
   window.EuroScoutFEB?.apply(raw);window.EuroScoutFEB?.applyCurrentRoster(raw);
@@ -2979,11 +3007,6 @@ async function boot(){
     Object.keys(m).forEach(k=>{const p=player(k);if(!p)return;const g=gid(p);
       if(g&&g!==k){if(!m[g])m[g]=m[k];delete m[k];changed=true;}});
     if(changed)next26Set(m);}catch(e){}})();
-  }catch(bootErr){
-    console.error("EuroScout failed to finish loading",bootErr);
-    $("#app").innerHTML='<div class="empty">EuroScout hit a problem while loading and could not continue.<br><span style="font-size:12px;color:var(--muted)">'+escAttr(bootErr&&bootErr.message||String(bootErr))+'</span><br><button class="btn" style="margin-top:12px" onclick="location.reload()">Reload</button></div>';
-    return;
-  }
   try{ render(); }catch(e){ console.error("initial render failed",e); }
   // keep other open tabs in step: roster/transfer edits made elsewhere refresh this view
   window.addEventListener("storage",e=>{
@@ -3043,7 +3066,7 @@ function exportPlayerReport(id){
   const KEY=[["PTS","ppg"],["REB","rpg"],["AST","apg"],["STL","spg"],["BLK","bpg"],["MIN","mpg"],["TS%","ts"],["3P%","f3p"],["PIR","pir"]];
   const keyStats=KEY.map(([lab,k])=>{const v=p[k];return `<div class="ks"><div class="kv">${v!=null&&!isNaN(v)?(k.endsWith("p")||k==="ts"?fmt(v)+"%":fmt(v)):"—"}</div><div class="kk">${lab}</div></div>`;}).join("");
   const noteBlock=(lab,val)=>val?`<div class="nb"><div class="nbh">${lab}</div><div class="nbt">${esc(val).replace(/\n/g,"<br>")}</div></div>`:"";
-  const notesHtml=[["Strengths",rep.nStrengths],["Areas for Improvement",rep.nImprove],["Athleticism",rep.nAth],["Offense",rep.nOff],["Defense",rep.nDef],["Intel",rep.nIntel]].map(([l,v])=>noteBlock(l,v)).join("")||'<div class="hint">No written notes yet.</div>';
+  const notesHtml=[["Athleticism",rep.nAth],["Offense",rep.nOff],["Defense",rep.nDef],["Intel",rep.nIntel]].map(([l,v])=>noteBlock(l,v)).join("")||'<div class="hint">No written notes yet.</div>';
   const _rt=effRating(p);const stars=_rt?("★".repeat(_rt)+"☆".repeat(5-_rt)):"☆☆☆☆☆";
   const tags=(rec.tags||[]).filter(x=>x!==WATCH_TAG);
   const statSum=statSummary(p);
@@ -3557,10 +3580,10 @@ function renderPlayers(){
     const profileMeta=[p.role||p.pos,p.height?p.height+' cm':'',p.born||''].filter(Boolean).join(' · ');
     const attention=[];
     if(isWatched(p))attention.push('<span class="badge">★ Watchlist</span>');
-    const band=levelBand(p);if(band)attention.push('<span class="badge">'+esc(band.label)+'</span>');
+    const band=manualLevelBand(p);if(band)attention.push('<span class="badge">'+esc(band.label)+'</span>');
     return `<tr data-id="${p.id}">
       <td class="l" style="color:var(--muted)">${i+1}</td>
-      <td class="l"><span class="player-cell"><span class="tavatar-wrap">${p.img?`<img class="tavatar" src="${escAttr(p.img)}" loading="lazy" onerror="this.remove()"/>`:''}<span class="tavatar-fallback">${esc(initials(p.name))}</span></span><span class="player-copy"><span class="pname">${esc(p.name)} ${p.multiTeam?'<span class="badge">2TM</span>':''}</span><span class="player-meta">${esc(profileMeta||'Profile details unavailable')}${p.country?' · '+esc(countryLabel(p.country)||p.country):''}<span class="player-flags">${attention.join('')}</span></span></span></span></td>
+      <td class="l"><span class="player-cell"><span class="tavatar-wrap${p.img?' hasimg':''}">${p.img?`<img class="tavatar" src="${escAttr(p.img)}" loading="lazy" onerror="this.remove();this.parentNode.classList.remove('hasimg');this.parentNode.classList.add('noimg')"/>`:''}<span class="tavatar-fallback">${esc(initials(p.name))}</span></span><span class="player-copy"><span class="pname">${esc(p.name)} ${p.multiTeam?'<span class="badge">2TM</span>':''}</span><span class="player-meta">${esc(profileMeta||'Profile details unavailable')}${p.country?' · '+esc(countryLabel(p.country)||p.country):''}<span class="player-flags">${attention.join('')}</span></span></span></span></td>
       ${all?`<td class="l"><span class="badge">${lg?({euroleague:'EL',eurocup:'EC',aba:'ABA',il:'ISR',gbl:'GRE',plk:'PLK',bcl:'BCL',rou:'ROU',bsl:'BSL',lkl:'LKL',vtb:'VTB',elb:'ELB',nbl:'NBL',slo:'SLO'}[lg.meta.id]||lg.meta.name):''}</span></td>`:''}
       <td class="l"><span class="badge role">${p.role}</span> <span class="pteam">${p.teamName}</span></td>
       <td>${p.g}</td><td>${fmt(p.mpg)}</td>
@@ -4527,7 +4550,7 @@ function flagEmoji(country){return EuroScoutCountries.flag(country);}
 function countryLabel(country){return EuroScoutCountries.label(country);}
 // Level barometer: where the player projects, from the tier-adjusted board grade.
 // Bands mirror a scout's mental ladder. Returns {i (0=bottom..3=top), label, bands[]}.
-const LEVEL_BANDS=["Development","Rotation","Top Domestic","EuroCup","EuroLeague"];
+const LEVEL_BANDS=["Low-Level","Mid-Level","Top Level","EuroCup","EuroLeague"];
 // The projected level describes the PERSON, so it must be identical no matter which
 // competition tab is open. We take the player's best (tier-adjusted) grade across all
 // their merged competitions — a player who profiles as Top Level in the EuroLeague is
@@ -4589,6 +4612,17 @@ function levelBarometerHTML(p){
       <div class="bar-rows">${rows}</div>
     </div>
   </div>`;
+}
+// The level shown beside Follow is deliberately manual-only.  Production grades
+// remain available in Stats, but they must never look like a scout's projection.
+function manualEstimatedLevelHTML(p){
+  if(!p||p.projLevel==null||p.projLevel==="")return "";
+  const i=Number(p.projLevel); if(!Number.isInteger(i)||i<0||i>=LEVEL_BANDS.length)return "";
+  return `<span class="profile-estimated-level" title="Manual estimated level">${esc(LEVEL_BANDS[i])}</span>`;
+}
+async function toggleProfileFollow(id){
+  const p=player(id); if(!p)return;
+  await toggleTag(p.id,WATCH_TAG); renderProfile();
 }
 function posAbbr(p){
   const pos=(p.pos&&p.pos!=="-")?p.pos:(p.role||"");
@@ -5375,6 +5409,11 @@ function renderProfile(){
               ${p.qualified?'':'<span class="ph-pill soft">below min</span>'}
               ${p._exhib?'<span class="ph-pill soft">exhibition</span>':''}
             </div>
+            <div class="ph-identity-chips">
+              <button class="profile-follow ${isWatched(p)?'on':''}" id="profileFollow" title="${isWatched(p)?'Remove from watchlist':'Add to watchlist'}" onclick="toggleProfileFollow('${escAttr(p.id)}')">${isWatched(p)?'★ Following':'＋ Follow'}</button>
+              ${manualEstimatedLevelHTML(p)}
+              ${(()=>{const k=effective26(p), c=k&&!isStatus(k)?clubByKey(k):null; const label=isStatus(k)?statusLabel(k):(c?`Signed · ${c.name}`:(p.teamName?`Current · ${p.teamName}`:'Status not set')); return `<span class="profile-status-chip">${esc(label)}</span>`;})()}
+            </div>
             <div class="ph-actions">
               <button class="btn ghost sm" onclick="drawerJump('reportPanel')">Notes</button>
               <button class="btn ghost sm" onclick="toggleCompare('${p.id}')" title="${inCompare(p.id)?'In compare — click to remove':'Add this player to the comparison'}">\u21c6 ${inCompare(p.id)?'In compare':'Compare'}</button>
@@ -5394,7 +5433,7 @@ function renderProfile(){
               <div class="ph-stars" role="group" aria-label="Your rating">${[1,2,3,4,5].map(n=>`<button class="phstar ${effRating(p)>=n?'on':''}" data-hn="${n}">★</button>`).join("")}</div>
             </div>
           </div>
-          ${levelBarometerHTML(p)}
+
         </div>
         ${window.EuroScoutNCAA?.profileHTML(p)||""}
         ${(p._grp&&p._grp.length>1)?`<div class="comptabs ph-comps"><span class="hint" style="align-self:center;margin-right:2px">Competitions:</span>${p._grp.map(c=>`<button class="comptab ${c.id===p.id?'active':''}" onclick="switchComp('${c.league}','${c.id}')" title="${leagueOf(c).meta.name} · ${c.teamName}">${leagueOf(c).meta.name}</button>`).join('')}</div>`:''}
@@ -5471,17 +5510,13 @@ function renderProfile(){
           <div class="rating" id="rating">${[1,2,3,4,5].map(n=>`<button data-n="${n}" class="${effRating(p)>=n?"on":""}">\u2605</button>`).join("")}</div></div>
       </div>
       <div class="notesgrid">
-        ${noteSec("nStrengths","Strengths","Pick-and-roll creation, playmaking vision and timing, efficient scoring, competitive mentality\u2026",rep)}
-        ${noteSec("nImprove","Areas for Improvement","Strength to finish through contact, defensive consistency off the ball, turnovers under pressure\u2026",rep)}
         ${noteSec("nAth","Athleticism","Frame, length, wingspan, explosiveness, speed, motor, conditioning\u2026",rep)}
         ${noteSec("nOff","Offense","Shooting form & range, handle, finishing, shot creation, decisions, off-ball movement\u2026",rep)}
         ${noteSec("nDef","Defense","On-ball, screen navigation, help, rim protection, rebounding, effort & discipline\u2026",rep)}
         ${noteSec("nIntel","Intel","Role & minutes, coach trust, leadership, character, injuries, development timeline, off-court\u2026",rep)}
       </div>
-      <div style="margin-top:14px"><div class="nlab">Projection</div>
-        <div class="blist" id="nProj" data-ph="Role projection, ceiling & floor, fit, comparisons\u2026"></div></div>
-      <div style="margin-top:14px"><div class="nlab">Overall Recommendation</div>
-        <div class="blist" id="nRecommend" data-ph="Sign, monitor, pass \u2014 and why\u2026"></div></div>
+      <div style="margin-top:14px"><div class="nlab">Projection / verdict</div>
+        <div class="blist" id="nProj" data-ph="Role projection, ceiling & floor, fit, comparisons, overall verdict\u2026"></div></div>
       <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button class="btn" id="saveBtn">Save report</button>
         <button class="btn" id="txtSumBtn" title="Turn the bullets into a readable text version">Text version</button>
@@ -5530,7 +5565,7 @@ function renderProfile(){
       const host=$("#scoutRadarHost");if(host)host.innerHTML=scoutRadarSVG(p);
     };
   });
-  const NKEYS=["nStrengths","nImprove","nAth","nOff","nDef","nIntel","nProj","nRecommend"];
+  const NKEYS=["nAth","nOff","nDef","nIntel","nProj"];
   const bulletEditors={};
   let tmr;
   const readField=k=>bulletEditors[k]?bulletEditors[k].serialize():"";
@@ -5549,7 +5584,7 @@ function renderProfile(){
   const toSentence=b=>{b=(b||"").trim().replace(/^[\u2022\u2023\u2043\u25aa\u25cf\u00b7*\u2013\u2014\-]\s*/,"");if(!b)return"";b=b.charAt(0).toUpperCase()+b.slice(1);if(!/[.!?]$/.test(b))b+=".";return b;};
   const txtCard=$("#txtSumCard");
   function buildTextVersion(){
-    const secs=[["Strengths","nStrengths"],["Areas for Improvement","nImprove"],["Athleticism","nAth"],["Offense","nOff"],["Defense","nDef"],["Intel","nIntel"],["Projection","nProj"],["Overall Recommendation","nRecommend"]];
+    const secs=[["Athleticism","nAth"],["Offense","nOff"],["Defense","nDef"],["Intel","nIntel"],["Projection / verdict","nProj"]];
     const html=[],plain=[];
     secs.forEach(([lab,k])=>{const bl=bulletParse(readField(k));if(!bl.length)return;
       const prose=bl.map(toSentence).filter(Boolean).join(" ");
@@ -6229,7 +6264,7 @@ function playerTags(p){const r=recOf(p);return (r&&r.tags)||[];}
 // Concatenated lower-cased note text (all report sections + tags) for searching.
 function noteText(p){const r=recOf(p);if(!r)return "";
   let s="";const rep=r.report;
-  if(rep){if(typeof rep==="string"){s+=" "+rep;}else{["nStrengths","nImprove","nAth","nOff","nDef","nIntel","nProj","nRecommend","overall"].forEach(k=>{if(rep[k])s+=" "+rep[k];});}}
+  if(rep){if(typeof rep==="string"){s+=" "+rep;}else{["nAth","nOff","nDef","nIntel","nProj","overall"].forEach(k=>{if(rep[k])s+=" "+rep[k];});}}
   if(r.tags&&r.tags.length)s+=" "+r.tags.join(" ");
   return s.toLowerCase();}
 function isWatched(p){return playerTags(p).includes(WATCH_TAG);}
@@ -6461,12 +6496,6 @@ function renderScout(){
     try{const r=localStorage.getItem(RAIL_KEY);if(r!=null)s.railHidden=(r==="1");}catch(e){}
     s._viewInit=1;}
   KBD_SEL=-1;
-  /* Scroll for more rather than a hard 180/300 cutoff. A filter/sort/search
-     change is a new list -- reset to the top of it; the load-more observer
-     below re-renders with a bigger visibleCount for the same list, which
-     this signature check leaves alone. */
-  {const sig=JSON.stringify([s.q,[...s.leagues],[...s.roles],[...s.tags],s.status,s.riserOnly,s.ratingMin,s.level,s.next26,s.arch,s.filters,s.sort,s.view,s.tsort,s.simRef,s.season,s.competition,s.statsSeason]);
-    if(s._lastSig!==sig||s.visibleCount==null){s.visibleCount=SCOUT_PAGE;s._lastSig=sig;}}
   const simP=s.simRef?player(s.simRef):null; if(s.simRef&&!simP)s.simRef=null;
   let pool=scoutSeasonPool(s);
   if(simP){const rg=gid(simP);pool=pool.filter(p=>gid(p)!==rg);}
@@ -6651,8 +6680,8 @@ function renderScout(){
       ${simP?"":viewsBar}
       ${simP?"":recentRow}
       ${simP?"":activeChipsHTML(s)}
-      ${s.view==="table"?scoutTable(pool.slice(0,s.visibleCount),s):`<div class="board">${pool.slice(0,s.visibleCount).map(scoutCard).join("")}</div>`}
-      ${pool.length>s.visibleCount?`<div class="scout-more" id="scoutLoadMore" role="status">Loading more players…</div>`:pool.length?`<div class="scout-more done" role="status">All ${pool.length} player${pool.length===1?"":"s"} loaded</div>`:""}
+      ${s.view==="table"?scoutTable(pool.slice(0,300),s):`<div class="board">${pool.slice(0,180).map(scoutCard).join("")}</div>`}
+      ${pool.length>(s.view==="table"?300:180)?`<div class="sub" style="text-align:center;margin-top:16px">Showing first ${s.view==="table"?300:180} — narrow with filters to see more.</div>`:""}
       ${!pool.length?'<div class="empty">No players match. Loosen the filters on the left.</div>':""}
     </section>
   </div>`;
@@ -6731,19 +6760,6 @@ function renderScout(){
     if(e.target.closest(".eststar")){e.stopPropagation();toggleTag(row.dataset.id,WATCH_TAG).then(renderScout);return;}
     openProfile(row.dataset.id);});
   updateKbdSelection();
-  // load more as the bottom marker scrolls into view, keeping scroll position steady
-  (function(){
-    const more=$("#scoutLoadMore"); if(!more)return;
-    const io=new IntersectionObserver(es=>{
-      if(!es.some(x=>x.isIntersecting))return;
-      io.disconnect();
-      const y=window.scrollY;
-      s.visibleCount+=SCOUT_PAGE;
-      renderScout();
-      window.scrollTo(0,y);
-    },{rootMargin:"600px"});
-    io.observe(more);
-  })();
 }
 // keyboard navigation highlight on the board
 function boardCards(){return $$(".board .scoutcard");}
@@ -6888,7 +6904,6 @@ function topArch(p,n){if(!p.arch)return [];
     .map(x=>({idx:x.i,w:x.w,lab:archLabel(x.i,p),c:(ARCHETYPES[x.i]||{}).c||"var(--accent)"}));}
 /* ---------- Scout TABLE view (dense, sortable list) ---------- */
 const SCOUT_VIEW_KEY="euroscout:scoutView";
-const SCOUT_PAGE=60;
 /* ---------- Filter rail: collapse on desktop, off-canvas drawer on touch/narrow ---------- */
 const RAIL_KEY="euroscout:railHidden";
 function railIsNarrow(){try{return window.matchMedia("(max-width:1000px)").matches;}catch(e){return false;}}
@@ -7009,7 +7024,7 @@ function scoutTable(pool,s){
       <td class="estrk c1">${i+1}</td>
       <td class="estadd c2"><button class="estcmp ${inCompare(p.id)?"on":""}" data-cmp="${p.id}" title="${inCompare(p.id)?"In compare \u2014 click to remove":"Add to compare"}" aria-label="Toggle compare">\u21c6</button></td>
       <td class="estplayer l c3"><span class="estp">${statusDotsHTML(p)}<span class="estav${_ph?"":" noimg"}">${_ph?`<img src="${_ph}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name)}</span>${p.country?`<span class="estflag" title="${escAttr(p.country)}">${flagEmoji(p.country)||isoOf(p.country)||""}</span>`:""}<span class="estname">${esc(p.name)}${formArrowHTML(p)}</span></span></td>
-      <td class="estdim">${p.born!=null?p.born+(p.age!=null?" ("+p.age+")":""):"\u2014"}</td>
+      <td class="estdim">${p.born!=null?p.born:"\u2014"}</td>
       <td><span class="estpos" style="color:${rc};background:${rc}1e">${posLabel(p)}</span></td>
       <td class="estdim">${p.height!=null?p.height:"\u2014"}</td>
       <td class="estclubcell l"><span class="estclub">${esc(p._seasonClub||p.teamName||"—")}</span><span class="estcomp">${esc(p._seasonContext||"")}<br>${esc(p._seasonLabel||lg?.meta?.name||"")}</span></td>
@@ -7505,7 +7520,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260920-3"></script>
+<script src="euroscout-ui.js?v=20260920-1"></script>
 <script src="euroscout-workflow.js?v=20260920-1"></script>
 
 <script src="euroscout-market-records.js?v=16"></script>
@@ -7520,7 +7535,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/realgm-representation.js?v=20260907-13"></script>
 <script src="euroscout-representation.js?v=20260907-13"></script>
 <script src="data/aba-rosters-2026.js?v=20260910-1"></script>
-<script src="euroscout-aba-rosters.js?v=20260910-1"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260920-2"></script>
+<script src="euroscout-aba-rosters.js?v=20260910-1"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260920-fix"></script>
 <script>esSetup();boot();</script>
 <script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-sessions.js?v=20260920-2"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260920-2"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260920-1"><script src="data/signal-origins.js?v=20260920-1"></script><script src="euroscout-signals.js?v=20260920-2"></script><script src="euroscout-quickstats.js?v=20260920-1"></script><script src="euroscout-live-notes.js?v=20260920-2"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>
 
