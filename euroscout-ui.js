@@ -28,19 +28,33 @@ const esRenderBase=render;render=function(){if(STATE.view==='dashboard')renderDa
 function esScoutEnhance(){const s=STATE.scout;const head=$('#app .scouthead');if(!head)return;
   const full=scoutPool();const mm=(typeof next26Get==='function')?next26Get():{};const mb=(typeof next26bGet==='function')?next26bGet():{};
   const freeCount=full.filter(p=>(typeof marketCandidate==='function')&&marketCandidate(p,mm,mb)).length;
-  const watchCount=full.filter(p=>playerTags(p).includes(WATCH_TAG)).length;
+  let latest=null;full.forEach(p=>{const u=recOf(p).updated_at;if(u&&(!latest||u>latest))latest=u;});
+  const freshTxt=(()=>{if(!latest)return 'No notes yet';const days=Math.floor((Date.now()-new Date(latest).getTime())/86400000);
+    if(days<=0)return 'Updated today';if(days===1)return 'Updated yesterday';if(days<30)return 'Updated '+days+' days ago';return 'Updated over a month ago';})();
   $('#app .es-scout-kpis')?.remove();
   const kpis=esEl('div','es-scout-kpis');
-  [['Players tracked',full.length],['Free agents 2026/27',freeCount],['On your watchlist',watchCount]].forEach(([lab,val])=>{const tile=esEl('div','es-kpi-tile');tile.appendChild(esEl('b',null,String(val)));tile.appendChild(esEl('small',null,lab));kpis.appendChild(tile);});
+  [['👥','Players',full.length],['＋','Free agents 2026/27',freeCount]].forEach(([icon,lab,val])=>{const tile=esEl('div','es-kpi-tile');tile.appendChild(esEl('span','es-kpi-icon',icon));const body=esEl('div');body.appendChild(esEl('b',null,String(val)));body.appendChild(esEl('small',null,lab));tile.appendChild(body);kpis.appendChild(tile);});
+  const freshTile=esEl('div','es-kpi-tile es-kpi-fresh');freshTile.appendChild(esEl('span','es-kpi-icon es-kpi-icon-muted','↻'));freshTile.appendChild(esEl('b',null,freshTxt));kpis.appendChild(freshTile);
   head.after(kpis);
+  const oldSearch=$('#app .es-scout-search input');
+  const hadFocus=oldSearch&&document.activeElement===oldSearch;
+  const caret=hadFocus?oldSearch.selectionStart:null;
+  $('#app .es-scout-search')?.remove();
+  const searchWrap=esEl('div','es-scout-search');
+  const searchInput=esEl('input');searchInput.type='text';searchInput.placeholder='Search players, clubs, or countries…';searchInput.value=s.q||'';
+  searchInput.oninput=()=>{s.q=searchInput.value;renderScout();};
+  searchWrap.appendChild(searchInput);
+  kpis.after(searchWrap);
+  if(hadFocus){searchInput.focus();try{searchInput.setSelectionRange(caret,caret);}catch(e){}}
   $('#app .es-quick-pos')?.remove();
   const pillRow=esEl('div','es-quick-pos');
   const allBtn=esButton('All positions',()=>{s.roles.clear();renderScout();},'es-qp-pill');
   allBtn.classList.toggle('on',!s.roles.size);
   pillRow.appendChild(allBtn);
-  ROLE_OPTS.forEach(([k,lab])=>{const b=esButton(lab,()=>{s.roles.has(k)?s.roles.delete(k):s.roles.add(k);renderScout();},'es-qp-pill');b.classList.toggle('on',s.roles.has(k));pillRow.appendChild(b);});
-  kpis.after(pillRow);
-  $$('#app .estr').forEach(row=>{const id=row.dataset.id;const p=id&&player(id);if(!p)return;const b=levelBand(p);if(!b)return;const cell=row.querySelector('.estplayer .estp');if(!cell||cell.querySelector('.es-lvl-chip'))return;cell.appendChild(esEl('span','es-lvl-chip',b.label));});
+  const roleLabels={Guard:'Guards',Forward:'Forwards',Big:'Centers'};
+  ROLE_OPTS.forEach(([k])=>{const b=esButton(roleLabels[k]||k,()=>{s.roles.has(k)?s.roles.delete(k):s.roles.add(k);renderScout();},'es-qp-pill');b.classList.toggle('on',s.roles.has(k));pillRow.appendChild(b);});
+  searchWrap.after(pillRow);
+  $$('#app .estr').forEach(row=>{const id=row.dataset.id;const p=id&&player(id);if(!p)return;const b=levelBand(p);if(!b)return;const cell=row.querySelector('.estplayer .estp');if(!cell||cell.querySelector('.es-lvl-chip'))return;cell.appendChild(esEl('span','es-lvl-chip es-lvl-'+b.i,b.label));});
 }
 const esScoutBase=renderScout;renderScout=function(){esScoutBase();esAfterRender();const heading=$('.scouthead .title');if(heading&&heading.textContent==='Scout board')heading.textContent='Player database';esScoutEnhance();};
 const esPlayersBase=renderPlayers;renderPlayers=function(){esPlayersBase();esAfterRender();const groups=esEl('div','es-segment es-stats-groups');[['','Overview'],['scoring','Scoring'],['playmaking','Playmaking'],['advanced','Advanced']].forEach(([k,label])=>{const b=esButton(label,()=>{window.ES_STATS_GROUP=k==='advanced'?'':k;STATE.filters.mode=k==='advanced'?'adv':'pg';renderPlayers();});b.classList.toggle('active',k==='advanced'?STATE.filters.mode==='adv':STATE.filters.mode==='pg'&&(window.ES_STATS_GROUP||'')===k);groups.appendChild(b);});$('#app .controls')?.before(groups);};
@@ -52,7 +66,7 @@ const nameRow=$('#drawer .ph-nrow');
 const follow=$('#drawer #watchToggle');
 if(follow&&nameRow){follow.classList.add('es-follow-btn');follow.classList.toggle('on',isWatched(p));follow.innerHTML=isWatched(p)?'✓ Following':'+ Follow';nameRow.appendChild(follow);}
 const heroBand=levelBand(p);
-if(heroBand&&nameRow){const badge=esEl('span','es-level-pill',heroBand.label);if(heroBand.manual)badge.title='Your assessment — open Scouting to change it';nameRow.appendChild(badge);}
+if(heroBand&&nameRow){const badge=esEl('span','es-level-pill es-lvl-'+heroBand.i,heroBand.label);if(heroBand.manual)badge.title='Your assessment — open Scouting to change it';nameRow.appendChild(badge);}
 const my=$('#drawer .ph-myrate');
 const grade=$('#drawer .ph-grade .ph-rval');
 $('#drawer .ph-rating')?.remove();
@@ -68,9 +82,9 @@ if(teamObj&&teamObj.logo){const cimg=esEl('img');cimg.src=teamObj.logo;cimg.alt=
 crestBlock.appendChild(esEl('b',null,clubTxt||'—'));
 if(countryTxt)crestBlock.appendChild(esEl('small',null,countryTxt));
 $('#drawer .prohero')?.appendChild(crestBlock);const top=$('#drawer .ph-top');if(top)Array.from(top.children).filter(n=>!n.matches('.ph-photo,.ph-id,.ph-rating')).forEach(n=>panesLater.push(n));
- const tabs=esEl('nav','es-profile-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Player profile sections');hero.after(tabs);const panes={};['Overview','Games','Notes','Reports','Stats','Timeline','Scouting','Shooting'].forEach((name,i,all)=>{const b=esButton({Games:'Game Log'}[name]||name,()=>esSelectTab(name),'es-tab');b.dataset.tab=name;b.id='es-tab-'+name;b.setAttribute('role','tab');b.setAttribute('aria-controls','es-panel-'+name);b.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const ix=e.key==='Home'?0:e.key==='End'?all.length-1:(i+(e.key==='ArrowRight'?1:-1)+all.length)%all.length;esSelectTab(all[ix]);$('#es-tab-'+all[ix]).focus();}};tabs.appendChild(b);const pane=esEl('section','es-tabpanel');pane.dataset.tab=name;pane.id='es-panel-'+name;pane.setAttribute('role','tabpanel');pane.setAttribute('aria-labelledby',b.id);root.appendChild(pane);panes[name]=pane;});
+ const tabs=esEl('nav','es-profile-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Player profile sections');hero.after(tabs);const panes={};['Overview','Stats','Notes','Timeline'].forEach((name,i,all)=>{const b=esButton({Notes:'Scouting notes'}[name]||name,()=>esSelectTab(name),'es-tab');b.dataset.tab=name;b.id='es-tab-'+name;b.setAttribute('role','tab');b.setAttribute('aria-controls','es-panel-'+name);b.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const ix=e.key==='Home'?0:e.key==='End'?all.length-1:(i+(e.key==='ArrowRight'?1:-1)+all.length)%all.length;esSelectTab(all[ix]);$('#es-tab-'+all[ix]).focus();}};tabs.appendChild(b);const pane=esEl('section','es-tabpanel');pane.dataset.tab=name;pane.id='es-panel-'+name;pane.setAttribute('role','tabpanel');pane.setAttribute('aria-labelledby',b.id);root.appendChild(pane);panes[name]=pane;});
  panesLater.forEach(n=>panes.Stats.appendChild(n));const overview=esEl('div','es-overview'),main=esEl('div','es-stack'),side=esEl('div','es-stack');overview.append(main,side);panes.Overview.appendChild(overview);const snapshot=esPanel('Season snapshot');snapshot.appendChild(esEl('p','hint',leagueOf(p).meta.name+' · Per game'));const stats=esEl('div','es-snapshot');const snapPool=scopePool(p);
-[['PTS',p.ppg,1,'ppg'],['REB',p.rpg,1,'rpg'],['AST',p.apg,1,'apg'],['PIR',p.pir,1,'pir'],['TS%',p.ts,0,'ts'],['MIN',p.mpg,1,null]].forEach(([l,v,d,key])=>{
+[['PTS',p.ppg,1,'ppg'],['REB',p.rpg,1,'rpg'],['AST',p.apg,1,'apg'],['TS%',p.ts,0,'ts']].forEach(([l,v,d,key])=>{
   const n=esEl('div','es-snap-tile');n.appendChild(esEl('b',null,fmt(v,d)));n.appendChild(esEl('small',null,l));
   if(key){const pct=rankOf(snapPool,key,p).pct;const track=esEl('div','es-track'),fill=esEl('i');fill.style.width=(pct||0)+'%';track.appendChild(fill);n.appendChild(track);n.appendChild(esEl('small','es-pct',pct==null?'—':esOrdinal(pct)+' percentile'));}
   stats.appendChild(n);
@@ -79,19 +93,21 @@ if(grade||my){const assess=esEl('div','es-snap-tile es-snap-assess');if(grade){a
 snapshot.appendChild(stats);const comps=$('#drawer .ph-comps');if(comps)snapshot.appendChild(comps);main.appendChild(snapshot);
  sections.forEach(n=>{const heading=n.querySelector('h3')?.textContent||'';if(n.classList.contains('ph-detail')){const bioHead=esEl('div','es-bio-heading');bioHead.appendChild(esEl('h3',null,'Player Bio'));const edit=n.querySelector('.biopanel-edit');if(edit)bioHead.appendChild(edit);n.prepend(bioHead);side.appendChild(n);n.querySelectorAll('.biocell').forEach(cell=>{const label=cell.querySelector('.bilab')?.textContent,value=cell.querySelector('.bival');if(!value)return;let fn;if(label==='Nationality'&&p.country)fn=()=>filterByAttr('country',p.country,p.country);if(label==='Team')fn=()=>openTeamFromProfile(p.league,p.teamName,p.team);if(label==='League')fn=()=>openLeaguePlayers(p.league);if(fn){const text=label==='Nationality'?countryLabel(p.country):value.textContent;const b=esButton(text+' ↗',fn,'es-bio-link');value.replaceChildren(b);}});}
  else if(n.id==='reportPanel')panes.Notes.appendChild(n);
- else if(n.id==='scoutPanel'||/Playing style|Similar players/.test(heading))panes.Scouting.appendChild(n);
- else if(/Game log/.test(heading))panes.Games.appendChild(n);
+ else if(n.id==='scoutPanel'||/Playing style|Similar players/.test(heading))panes.Stats.appendChild(n);
+ else if(/Game log/.test(heading))panes.Stats.appendChild(n);
  else if(/Season trajectory/.test(heading))panes.Timeline.appendChild(n);
  else panes.Stats.appendChild(n);});
  const verdict=esPanel('Scout summary'),rep=effectiveReport(p);
 const archTags=topArch(p,4);
 if(archTags.length){const chipRow=esEl('div','es-chip-row');archTags.forEach(a=>{const c=esEl('span','es-chip',a.lab);c.style.cssText='color:'+a.c+';border-color:'+a.c;chipRow.appendChild(c);});verdict.appendChild(chipRow);}
 verdict.appendChild(esEl('p','es-verdict',rep.nProj||rep.overall||'No projection recorded yet.'));verdict.appendChild(esButton('Open scouting notes →',()=>esSelectTab('Notes')));main.insertBefore(verdict,main.firstChild);
-const notesCard=esPanel('Recent notes');const noteDate=esNoteDate(p);const noteTxt=esNotes(p);
-if(noteTxt){const entry=esEl('div','es-note-entry');if(noteDate)entry.appendChild(esEl('small',null,new Date(noteDate).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})));entry.appendChild(esEl('p',null,noteTxt.split('\n').find(l=>l.trim())||noteTxt));notesCard.appendChild(entry);}
+const notesCard=esPanel('Recent notes');const noteDate=esNoteDate(p);
+const dateLab=noteDate?new Date(noteDate).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
+const catNotes=[['Offense',rep.nOff],['Defense',rep.nDef],['Athleticism',rep.nAth],['Intel',rep.nIntel]].filter(([,v])=>v&&String(v).trim());
+if(catNotes.length){catNotes.slice(0,3).forEach(([lab,txt])=>{const entry=esEl('div','es-note-entry');entry.appendChild(esEl('small',null,lab+(dateLab?' · '+dateLab:'')));entry.appendChild(esEl('p',null,String(txt).split('\n').find(l=>l.trim())||txt));notesCard.appendChild(entry);});}
 else notesCard.appendChild(esEl('p','hint','No notes recorded yet.'));
 notesCard.appendChild(esButton('View all notes →',()=>esSelectTab('Notes')));
-side.insertBefore(notesCard,side.firstChild);const shooting=esPanel('Shot chart');shooting.innerHTML+='<div class="hint">'+esc(leagueOf(p).meta.name)+' · Zone shooting</div>'+shotChartSVG(p);panes.Shooting.appendChild(shooting);const reports=esPanel('Reports & links');reports.appendChild(esButton('Print / save player report as PDF',()=>exportPlayerReport(p.id)));reports.appendChild(esButton('Open written scouting report',()=>esSelectTab('Notes')));reports.appendChild(esButton('Copy player link',e=>copyPlayerLink(p.id)));panes.Reports.appendChild(reports);
+side.insertBefore(notesCard,side.firstChild);const shooting=esPanel('Shot chart');shooting.innerHTML+='<div class="hint">'+esc(leagueOf(p).meta.name)+' · Zone shooting</div>'+shotChartSVG(p);panes.Stats.appendChild(shooting);const reports=esPanel('Reports & links');reports.id='es-panel-Reports';reports.appendChild(esButton('Print / save player report as PDF',()=>exportPlayerReport(p.id)));reports.appendChild(esButton('Copy player link',e=>copyPlayerLink(p.id)));panes.Notes.appendChild(reports);
  const summary=root.querySelector('.statsum');if(summary){summary.classList.add('es-stat-summary');main.appendChild(summary);}Array.from(root.children).filter(n=>n!==nav&&n!==hero&&n!==tabs&&!n.classList.contains('es-tabpanel')).forEach(n=>panes.Stats.appendChild(n));esSelectTab(ES.tab);$('#drawer').prepend(nav);hero.after(tabs);esProjection(p);if(!Store.canEdit()){$$('#drawer .phstar,#drawer #rating button').forEach(b=>b.disabled=true);$('#drawer .biopanel-edit')?.setAttribute('hidden','');$('#drawer #saveBtn')?.setAttribute('hidden','');}
 }
 const esProfileBase=renderProfile;renderProfile=function(){if(STATE.data?.leagues)applyOverrides();esProfileBase();const p=player(CURRENT);if(p)esProfileLayout(p);};
