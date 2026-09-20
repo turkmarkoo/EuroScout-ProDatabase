@@ -1753,7 +1753,7 @@ body.drawer-lock{overflow:hidden}
 
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
-<link rel="stylesheet" href="euroscout-ui.css?v=20260920-profile-dossier-v3-polish-1">
+<link rel="stylesheet" href="euroscout-ui.css?v=20260920-profile-dossier-v3-refine-2">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
 <script src="feb-data.js?v=20260913"></script><script src="feb-rosters-2026.js?v=20260920"></script><script src="euroscout-feb.js?v=20260920-fix"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260920-fix"></script><script src="membership-data.js?v=20260920-fix"></script><script src="euroscout-regional-rosters.js?v=20260920"></script><script src="euroscout-registry.js?v=20260920"></script>
 <script src="euroscout-memberships.js?v=20260913-expansion"></script>
@@ -1846,11 +1846,10 @@ const initials = n => n.split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCas
 const surnameOf = n => {const parts=(n||"").trim().split(/\s+/);const suf=/^(jr\.?|sr\.?|ii|iii|iv|v)$/i;let i=parts.length-1;if(i>0&&suf.test(parts[i]))i--;return parts[i]||n||"";};
 const posLabel = p => p.role||((p.pos&&p.pos!=="-")?p.pos:"\u2014");
 const isPlayerPhoto = src => !!src && !/(?:^|[\/])flags?[\/]|(?:flagcdn\.com|flagpedia\.net)/i.test(src);
-const photoOf = p => {if(!p)return null;const official=window.EuroScoutOfficialRosters?.current(p);if(official?.img)return official.img;const bbl=window.EuroScoutBBL?.current(p);if(bbl?.img)return bbl.img;if(isPlayerPhoto(p.img))return p.img;
-  const g=p._grp||[];for(const x of g){if(isPlayerPhoto(x.img))return x.img;}
-  const pro=[p,...g].find(x=>['nba','gleague'].includes(x.league)&&/^\d+$/.test(String(x._nbaId||x.code||'')));
-  if(pro)return 'https://cdn.nba.com/headshots/nba/latest/260x190/'+(pro._nbaId||pro.code)+'.png';
-  return ['nba','gleague'].includes(p.league)?'player-silhouette.svg':null;};
+const PLAYER_PHOTO_CACHE=new Map();
+const photoGroupKey=p=>(p?((p._grp&&p._grp.length?p._grp:[p]).map(x=>x.id).sort().join('|')):'');
+const playerPhotoCandidates=p=>{if(!p)return[];const group=(p._grp&&p._grp.length?p._grp:[p]).slice().sort((a,b)=>String(a.id).localeCompare(String(b.id))),out=[];const add=src=>{if(isPlayerPhoto(src)&&!out.includes(src))out.push(src);};group.forEach(x=>{add(window.EuroScoutOfficialRosters?.current(x)?.img);add(window.EuroScoutBBL?.current(x)?.img);add(x.img);});const pro=group.find(x=>['nba','gleague'].includes(x.league)&&/^\d+$/.test(String(x._nbaId||x.code||'')));if(pro)add('https://cdn.nba.com/headshots/nba/latest/260x190/'+(pro._nbaId||pro.code)+'.png');return out;};
+const photoOf=p=>{if(!p)return null;const key=photoGroupKey(p),cached=PLAYER_PHOTO_CACHE.get(key);if(cached)return cached;return playerPhotoCandidates(p)[0]||(['nba','gleague'].includes(p.league)?'player-silhouette.svg':null);};
 document.addEventListener('error',function(e){const img=e.target;if(img.tagName==='IMG'&&(img.hasAttribute('data-player-portrait')||/^https:\/\/cdn\.nba\.com\/headshots\//.test(img.src))&&!img.dataset.silhouette){e.stopImmediatePropagation();img.dataset.silhouette='1';img.style.display='';img.src='player-silhouette.svg';}},true);
 
 /* ---------- 2026/27 transfers (live from euroball-tracker, same origin) ---------- */
@@ -7536,7 +7535,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260920-profile-dossier-v3-polish-1"></script>
+<script src="euroscout-ui.js?v=20260920-profile-dossier-v3-refine-2"></script>
 <script src="euroscout-diagnostics.js?v=20260920-diagnostics-1"></script>
 <script src="euroscout-workflow.js?v=20260920-profile-dossier-v3"></script>
 
