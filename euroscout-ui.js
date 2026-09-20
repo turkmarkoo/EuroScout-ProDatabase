@@ -54,7 +54,7 @@ function esScoutEnhance(){const s=STATE.scout;const head=$('#app .scouthead');if
   const roleLabels={Guard:'Guards',Forward:'Forwards',Big:'Centers'};
   ROLE_OPTS.forEach(([k])=>{const b=esButton(roleLabels[k]||k,()=>{s.roles.has(k)?s.roles.delete(k):s.roles.add(k);renderScout();},'es-qp-pill');b.classList.toggle('on',s.roles.has(k));pillRow.appendChild(b);});
   searchWrap.after(pillRow);
-  $$('#app .estr').forEach(row=>{const id=row.dataset.id;const p=id&&player(id);if(!p)return;const b=levelBand(p);if(!b)return;const cell=row.querySelector('.estplayer .estp');if(!cell||cell.querySelector('.es-lvl-chip'))return;cell.appendChild(esEl('span','es-lvl-chip es-lvl-'+b.i,b.label));});
+  $$('#app .estr').forEach(row=>{const id=row.dataset.id;const p=id&&player(id);if(!p)return;const b=levelBand(p);if(!b)return;const cell=row.querySelector('.estplayer .estp');if(!cell||cell.querySelector('.es-lvl-chip'))return;cell.appendChild(esEl('span','es-lvl-chip',b.label));});
 }
 const esScoutBase=renderScout;renderScout=function(){esScoutBase();esAfterRender();const heading=$('.scouthead .title');if(heading&&heading.textContent==='Scout board')heading.textContent='Player database';esScoutEnhance();};
 const esPlayersBase=renderPlayers;renderPlayers=function(){esPlayersBase();esAfterRender();const groups=esEl('div','es-segment es-stats-groups');[['','Overview'],['scoring','Scoring'],['playmaking','Playmaking'],['advanced','Advanced']].forEach(([k,label])=>{const b=esButton(label,()=>{window.ES_STATS_GROUP=k==='advanced'?'':k;STATE.filters.mode=k==='advanced'?'adv':'pg';renderPlayers();});b.classList.toggle('active',k==='advanced'?STATE.filters.mode==='adv':STATE.filters.mode==='pg'&&(window.ES_STATS_GROUP||'')===k);groups.appendChild(b);});$('#app .controls')?.before(groups);};
@@ -66,7 +66,7 @@ const nameRow=$('#drawer .ph-nrow');
 const follow=$('#drawer #watchToggle');
 if(follow&&nameRow){follow.classList.add('es-follow-btn');follow.classList.toggle('on',isWatched(p));follow.innerHTML=isWatched(p)?'✓ Following':'+ Follow';nameRow.appendChild(follow);}
 const heroBand=levelBand(p);
-if(heroBand&&nameRow){const badge=esEl('span','es-level-pill es-lvl-'+heroBand.i,heroBand.label);if(heroBand.manual)badge.title='Your assessment — open Scouting to change it';nameRow.appendChild(badge);}
+if(heroBand&&nameRow){const badge=esEl('span','es-level-pill',heroBand.label);if(heroBand.manual)badge.title='Your assessment — open Scouting to change it';nameRow.appendChild(badge);}
 const my=$('#drawer .ph-myrate');
 const grade=$('#drawer .ph-grade .ph-rval');
 $('#drawer .ph-rating')?.remove();
@@ -82,7 +82,7 @@ if(teamObj&&teamObj.logo){const cimg=esEl('img');cimg.src=teamObj.logo;cimg.alt=
 crestBlock.appendChild(esEl('b',null,clubTxt||'—'));
 if(countryTxt)crestBlock.appendChild(esEl('small',null,countryTxt));
 $('#drawer .prohero')?.appendChild(crestBlock);const top=$('#drawer .ph-top');if(top)Array.from(top.children).filter(n=>!n.matches('.ph-photo,.ph-id,.ph-rating')).forEach(n=>panesLater.push(n));
- const tabs=esEl('nav','es-profile-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Player profile sections');hero.after(tabs);const panes={};['Overview','Stats','Notes','Timeline'].forEach((name,i,all)=>{const b=esButton({Notes:'Scouting notes'}[name]||name,()=>esSelectTab(name),'es-tab');b.dataset.tab=name;b.id='es-tab-'+name;b.setAttribute('role','tab');b.setAttribute('aria-controls','es-panel-'+name);b.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const ix=e.key==='Home'?0:e.key==='End'?all.length-1:(i+(e.key==='ArrowRight'?1:-1)+all.length)%all.length;esSelectTab(all[ix]);$('#es-tab-'+all[ix]).focus();}};tabs.appendChild(b);const pane=esEl('section','es-tabpanel');pane.dataset.tab=name;pane.id='es-panel-'+name;pane.setAttribute('role','tabpanel');pane.setAttribute('aria-labelledby',b.id);root.appendChild(pane);panes[name]=pane;});
+ const tabs=esEl('nav','es-profile-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Player profile sections');hero.after(tabs);const panes={};['Overview','Notes','Reports','Stats','Timeline','Career','Media'].forEach((name,i,all)=>{const b=esButton(name,()=>esSelectTab(name),'es-tab');b.dataset.tab=name;b.id='es-tab-'+name;b.setAttribute('role','tab');b.setAttribute('aria-controls','es-panel-'+name);b.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const ix=e.key==='Home'?0:e.key==='End'?all.length-1:(i+(e.key==='ArrowRight'?1:-1)+all.length)%all.length;esSelectTab(all[ix]);$('#es-tab-'+all[ix]).focus();}};tabs.appendChild(b);const pane=esEl('section','es-tabpanel');pane.dataset.tab=name;pane.id='es-panel-'+name;pane.setAttribute('role','tabpanel');pane.setAttribute('aria-labelledby',b.id);root.appendChild(pane);panes[name]=pane;});
  panesLater.forEach(n=>panes.Stats.appendChild(n));const overview=esEl('div','es-overview'),main=esEl('div','es-stack'),side=esEl('div','es-stack');overview.append(main,side);panes.Overview.appendChild(overview);const snapshot=esPanel('Season snapshot');snapshot.appendChild(esEl('p','hint',leagueOf(p).meta.name+' · Per game'));const stats=esEl('div','es-snapshot');const snapPool=scopePool(p);
 [['PTS',p.ppg,1,'ppg'],['REB',p.rpg,1,'rpg'],['AST',p.apg,1,'apg'],['TS%',p.ts,0,'ts']].forEach(([l,v,d,key])=>{
   const n=esEl('div','es-snap-tile');n.appendChild(esEl('b',null,fmt(v,d)));n.appendChild(esEl('small',null,l));
@@ -107,7 +107,27 @@ const catNotes=[['Offense',rep.nOff],['Defense',rep.nDef],['Athleticism',rep.nAt
 if(catNotes.length){catNotes.slice(0,3).forEach(([lab,txt])=>{const entry=esEl('div','es-note-entry');entry.appendChild(esEl('small',null,lab+(dateLab?' · '+dateLab:'')));entry.appendChild(esEl('p',null,String(txt).split('\n').find(l=>l.trim())||txt));notesCard.appendChild(entry);});}
 else notesCard.appendChild(esEl('p','hint','No notes recorded yet.'));
 notesCard.appendChild(esButton('View all notes →',()=>esSelectTab('Notes')));
-side.insertBefore(notesCard,side.firstChild);const shooting=esPanel('Shot chart');shooting.innerHTML+='<div class="hint">'+esc(leagueOf(p).meta.name)+' · Zone shooting</div>'+shotChartSVG(p);panes.Stats.appendChild(shooting);const reports=esPanel('Reports & links');reports.id='es-panel-Reports';reports.appendChild(esButton('Print / save player report as PDF',()=>exportPlayerReport(p.id)));reports.appendChild(esButton('Copy player link',e=>copyPlayerLink(p.id)));panes.Notes.appendChild(reports);
+side.insertBefore(notesCard,side.firstChild);const shooting=esPanel('Shot chart');shooting.innerHTML+='<div class="hint">'+esc(leagueOf(p).meta.name)+' · Zone shooting</div>'+shotChartSVG(p);panes.Stats.appendChild(shooting);const reports=esPanel('Reports & links');reports.appendChild(esButton('Print / save player report as PDF',()=>exportPlayerReport(p.id)));reports.appendChild(esButton('Copy player link',e=>copyPlayerLink(p.id)));panes.Reports.appendChild(reports);
+/* Spec 11.15: Season, Club, Competition, Games, Role — every record on file for this player, not a
+   fabricated multi-year history. The data set is one season deep for most players, so that is what shows. */
+const careerPanel=esPanel('Career');const gidP=gid(p);
+const careerRows=allPlayersEvery().filter(r=>gid(r)===gidP&&!r._rosterOnly).map(r=>({season:scoutSeason(r)||'—',club:r.teamName||'—',comp:leagueOf(r)?.meta?.name||'—',g:r.g!=null?r.g:'—',role:posLabel(r)})).sort((a,b)=>b.season.localeCompare(a.season));
+if(careerRows.length){const table=esEl('div','es-career-table');
+  const head=esEl('div','es-career-row es-career-head');[['Season'],['Club'],['Competition'],['Games'],['Role']].forEach(([l])=>head.appendChild(esEl('span',null,l)));table.appendChild(head);
+  careerRows.forEach(r=>{const row=esEl('div','es-career-row');[r.season,r.club,r.comp,String(r.g),r.role].forEach(v=>row.appendChild(esEl('span',null,v)));table.appendChild(row);});
+  careerPanel.appendChild(table);
+}else careerPanel.appendChild(esEl('p','hint','No season records on file for this player yet.'));
+panes.Career.appendChild(careerPanel);
+/* Spec 11.16: Videos, Photos, Attachments, External Links — only real ones; nothing fabricated. */
+const mediaPanel=esPanel('Media');const mediaPhoto=photoOf(p);
+if(mediaPhoto){const fig=esEl('div','es-media-photo');const img=esEl('img');img.src=mediaPhoto;img.alt=p.name;img.loading='lazy';fig.appendChild(img);mediaPanel.appendChild(fig);}
+else mediaPanel.appendChild(esEl('p','hint','No photo on file for this player.'));
+const mediaLinks=esEl('div','es-media-links');
+const eurobasketA=actions?actions.querySelector('a[href*="eurobasket.com"]'):null;
+if(eurobasketA){const a=esEl('a',null,'↗ Find on Eurobasket.com');a.href=eurobasketA.href;a.target='_blank';a.rel='noopener';mediaLinks.appendChild(a);}
+try{if(window.EuroScoutMarket){const ev=EuroScoutMarket.evidence(p,next26Get());if(ev&&ev.url){const a=esEl('a',null,'↗ '+(ev.source||'Source'));a.href=ev.url;a.target='_blank';a.rel='noopener';mediaLinks.appendChild(a);}}}catch(eMediaLink){}
+if(mediaLinks.children.length){mediaLinks.classList.add('es-stack');const linksHead=esEl('h4',null,'External links');mediaPanel.appendChild(linksHead);mediaPanel.appendChild(mediaLinks);}
+panes.Media.appendChild(mediaPanel);
  const summary=root.querySelector('.statsum');if(summary){summary.classList.add('es-stat-summary');main.appendChild(summary);}Array.from(root.children).filter(n=>n!==nav&&n!==hero&&n!==tabs&&!n.classList.contains('es-tabpanel')).forEach(n=>panes.Stats.appendChild(n));esSelectTab(ES.tab);$('#drawer').prepend(nav);hero.after(tabs);esProjection(p);if(!Store.canEdit()){$$('#drawer .phstar,#drawer #rating button').forEach(b=>b.disabled=true);$('#drawer .biopanel-edit')?.setAttribute('hidden','');$('#drawer #saveBtn')?.setAttribute('hidden','');}
 }
 const esProfileBase=renderProfile;renderProfile=function(){if(STATE.data?.leagues)applyOverrides();esProfileBase();const p=player(CURRENT);if(p)esProfileLayout(p);};
