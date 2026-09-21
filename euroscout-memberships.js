@@ -36,5 +36,10 @@
     const picked=leagues.find(l=>selected==='n27:'+l.id||selected===l.name);
     return `<div class="membership-review">${picked?detail(picked):'<span>League entries checked 13 Sept 2026. Qualifications and provisional entries are marked separately.</span>'}<details><summary>All league entry checks</summary>${leagues.sort((a,b)=>a.name.localeCompare(b.name)).map(detail).join('')}</details></div>`;
   }
-  window.EuroScoutMemberships={apply,decorate,status,reviewHTML};
+  function reviewRowsHTML(raw){
+    const leagues=[...Object.values(raw.domestic2627?.leagues||{}),...Object.values(raw.season2627?.comps||{})];
+    const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    return leagues.sort((a,b)=>a.name.localeCompare(b.name)).map(l=>`<div class="membership-review-row"><strong>${e(l.name)} · ${e(l.season||'2026/27')}</strong><span>${e(status(l))} · ${(l.teams||[]).length} listed${l.checked?' · Checked '+e(l.checked):''}</span>${l.note?'<span>'+e(l.note)+'</span>':''}${/^https:\/\//.test(l.source||'')?'<a href="'+e(l.source)+'" target="_blank" rel="noopener noreferrer">Entry source ↗</a>':''}</div>`).join('');
+  }
+  window.EuroScoutMemberships={apply,decorate,status,reviewHTML,reviewRowsHTML};
 })();

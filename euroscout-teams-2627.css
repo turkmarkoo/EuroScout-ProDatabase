@@ -53,3 +53,15 @@
 .tm27-left .tm27-checks{margin-top:10px;font-size:12px}.tm27-left .tm27-checks .membership-review{max-height:300px}
 .tm27-old{display:block;width:100%;margin-top:12px;border:0;border-top:1px solid var(--line,#e3e7e4);background:none;padding:10px 2px 0;text-align:left;font:inherit;font-size:12.5px;color:var(--muted,#6b7a72);cursor:pointer}.tm27-old:hover{color:#d58c4a}
 @media(max-width:780px){.tm27-left{position:static}}
+
+.clubBadgeFallback{border-radius:50%;background:var(--chip,#eaf3ef);color:var(--accent-deep,#155a43);font-size:calc(var(--bs,20px)*.36);font-weight:800;line-height:1;letter-spacing:-.04em;text-align:center}
+.tm27-checks-open{display:block;width:100%;margin-top:12px;padding:10px 12px;border:1px solid var(--line,#dbe5df);border-radius:9px;background:var(--panel,#fff);color:var(--txt,#193442);font:inherit;font-size:12.5px;font-weight:650;text-align:left;cursor:pointer}
+.tm27-checks-open:hover,.tm27-checks-open:focus-visible{border-color:var(--accent,#0f6c37);color:var(--accent-deep,#0f6c37)}
+.tm27-checks-dialog{width:min(760px,calc(100vw - 32px));max-width:none;max-height:min(720px,84dvh);margin:auto;padding:0;border:1px solid var(--line,#dbe5df);border-radius:14px;background:var(--panel,#fff);color:var(--txt,#193442);box-shadow:0 24px 70px #102b2440}
+.tm27-checks-dialog::backdrop{background:#0b2119a6}
+.tm27-checks-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;border-bottom:1px solid var(--line,#dbe5df)}
+.tm27-checks-head h2{margin:0;font-size:19px;line-height:1.3}
+.tm27-checks-head button{display:grid;place-items:center;flex:none;width:36px;height:36px;border:1px solid var(--line,#dbe5df);border-radius:8px;background:var(--panel,#fff);color:inherit;cursor:pointer;font-size:16px}
+.tm27-checks-content{max-height:calc(min(720px,84dvh) - 74px);overflow-y:auto;padding:4px 22px 18px}
+.tm27-checks-content .membership-review-row{border-bottom:1px solid var(--line,#dbe5df)}
+.tm27-checks-content .membership-review-row:last-child{border-bottom:0}
