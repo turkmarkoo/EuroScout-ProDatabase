@@ -491,3 +491,8 @@ html[data-theme=dark] .es-dashboard-kpi-icon{background:#1f4838;color:#8bdbb2}ht
 @media(max-width:1280px){.es-dashboard-top{grid-template-columns:1fr}.es-dashboard-tools>div{grid-template-columns:repeat(2,minmax(0,1fr))}.es-dashboard-secondary{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}.es-dashboard-secondary>.panel:last-child{grid-column:auto}}
 @media(max-width:900px){.es-dashboard-secondary{grid-template-columns:1fr}}
 @media(max-width:560px){.es-dashboard-kpis{grid-template-columns:1fr 1fr}.es-dashboard-kpi:nth-child(2){border-right:1px solid var(--line)}.es-dashboard-kpi:nth-child(3){grid-column:1/-1;border-top:1px solid var(--line)}.es-dashboard-tools>div{grid-template-columns:1fr 1fr}.es-dashboard-review-question{margin-left:12px}}
+
+/* Keep the collapse control beside the brand, where it remains reachable without scrolling. */
+.es-redesign .es-sidebar #esCollapse{flex:none;min-height:40px;margin:0 0 8px;position:relative}
+.es-redesign.es-nav-collapsed .es-sidebar #esCollapse{width:52px!important;min-width:52px;justify-content:center;margin:0 0 8px}
+.es-redesign.es-nav-collapsed .es-sidebar #esCollapse::before{content:'›';font-size:20px}

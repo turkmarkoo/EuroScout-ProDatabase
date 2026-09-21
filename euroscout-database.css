@@ -22,3 +22,39 @@
 .es-database-page .board{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;margin-top:0}.es-db-card{position:relative;display:flex;flex-direction:column;height:360px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0;cursor:pointer}.es-db-card:hover{border-color:var(--accent);box-shadow:var(--shadow)}.es-db-card-top{display:flex;gap:10px;align-items:flex-start;min-height:85px}.es-db-card-photo{display:grid;place-items:center;flex:none;width:72px;height:72px;overflow:hidden;border-radius:10px;background:var(--chip);font-size:13px}.es-db-card-photo img{width:100%;height:100%;object-fit:cover}.es-db-card-id{display:grid;gap:3px;min-width:0;padding-right:20px}.es-db-card-id strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.es-db-card-id small{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.es-db-card .cardwatch{position:absolute;top:11px;right:11px;font-size:19px;color:var(--gold);background:transparent;border:0}.es-db-card .es-db-grade{position:absolute;top:51px;right:10px}.es-db-tags{display:flex;gap:5px;min-height:28px;overflow:hidden}.es-db-tags span{padding:4px 7px;background:var(--chip);border-radius:6px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.es-db-card-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin:12px 0}.es-db-card-stats span{display:grid;text-align:center}.es-db-card-stats b{font-size:15px}.es-db-card-stats small{color:var(--muted);font-size:9px}.es-db-summary{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:5px 0 8px;font-size:11px;line-height:1.5;color:var(--muted)}.es-db-card-actions{display:flex;gap:8px;margin-top:auto}.es-db-card-actions button{padding:8px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--txt);font-size:11px}.es-db-card-actions button:first-child{flex:1;text-align:left}
 @media(max-width:1200px){.es-database-page .es-sidebar{gap:12px;padding:0 14px}.es-database-page .es-sidebar nav.tabs button{padding:8px;font-size:11px}.es-database-page .scoutwrap{grid-template-columns:280px minmax(0,1fr)!important}.es-database-page .scoutrail{width:280px!important}.es-database-page .scoutmain{padding:24px}.es-database-page main#app{padding:0 12px 24px}}
 @media(max-width:700px){.es-database-page .es-sidebar{height:60px}.es-database-page .es-sidebar .logotext{font-size:21px}.es-database-page .es-sidebar #authBtn{display:none}.es-database-page .scoutwrap{display:block;min-height:calc(100dvh - 60px)}.es-database-page .scoutrail{display:none!important;position:relative!important;top:auto!important;width:100%!important;height:auto;max-height:65dvh!important;border-right:0;border-bottom:1px solid var(--line)}.es-database-page .scoutwrap.es-db-filters-open .scoutrail{display:flex!important}.es-db-filter-toggle{display:inline-flex;margin-top:12px;align-items:center;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--txt);padding:7px 12px}.es-database-page .scoutmain{padding:16px}.es-database-page .scouthead h1{font-size:31px}.es-db-toolbar{flex-wrap:wrap}.es-db-toolbar-actions{width:100%;justify-content:space-between;flex-wrap:wrap}.es-database-page .estwrap{max-height:65dvh}}
+
+/* The database shares the same navigation and header as every other EuroScout page. */
+body.es-redesign.es-database-page{--es-nav:292px;padding-left:292px}
+body.es-redesign.es-database-page.es-nav-collapsed{--es-nav:72px!important;padding-left:72px!important}
+.es-database-page .es-sidebar{position:fixed;inset:0 auto 0 0;width:292px;height:100dvh;display:flex;flex-direction:column;align-items:stretch;gap:0;padding:22px 18px;background:#102a25;overflow-y:auto;overflow-x:hidden}
+.es-database-page.es-nav-collapsed .es-sidebar{width:72px!important;align-items:center;padding:18px 10px!important;overflow:hidden}
+.es-database-page .es-sidebar .logo{margin:0 0 12px;padding:0 6px 20px;flex:none}
+.es-database-page .es-sidebar nav.tabs{display:flex;flex-direction:column;align-items:stretch;gap:3px;overflow:visible;min-width:0;flex:none;width:100%}
+.es-database-page .es-sidebar nav.tabs button{width:100%;height:44px;min-height:44px;text-align:left;padding:8px 14px;color:#d0ddd7;font-size:13px;white-space:nowrap}
+.es-database-page .es-sidebar nav.tabs button.active{background:#176348;border:0;border-left:3px solid #f19a5b}
+.es-database-page .es-sidebar .es-nav-label,.es-database-page .es-nav-foot{display:grid}
+.es-database-page header{display:block}
+.es-database-page main#app{max-width:none;margin:0;padding:18px 24px 32px}
+.es-database-page .scoutwrap{min-height:calc(100dvh - 116px);grid-template-columns:280px minmax(0,1fr)!important;background:transparent}
+.es-database-page .scoutrail{top:92px!important;width:280px!important;height:calc(100dvh - 92px);padding:20px!important;border:1px solid var(--line);border-radius:10px 0 0 10px}
+.es-database-page .scoutmain{padding:0 0 0 20px;min-width:0}
+.es-database-page .scouthead{margin:0;min-height:0}
+.es-database-page .es-db-toolbar{margin-top:0}
+.es-database-page .es-scroll{margin:8px 0;position:relative;z-index:1}
+.es-database-page .estwrap{max-height:calc(100dvh - 242px);scrollbar-width:auto;overflow-x:auto!important;overscroll-behavior-x:contain}
+.es-database-page .board{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.es-database-page .es-db-card{height:auto;min-height:390px;padding:18px}
+.es-database-page .es-db-card-photo{width:82px;height:92px}
+.es-database-page .es-db-card-id strong{font-size:15px;white-space:normal;overflow:visible;line-height:1.3}
+.es-database-page .es-db-card-id small{font-size:12px;white-space:normal;overflow:visible;line-height:1.35}
+.es-database-page .es-db-card-stats b{font-size:18px}
+.es-database-page .es-db-summary{font-size:12px;line-height:1.5;-webkit-line-clamp:4}
+.es-db-position button,.es-db-view button,.es-db-toolbar-actions>button,.es-db-columns summary{transition:background-color .18s ease,color .18s ease,border-color .18s ease,box-shadow .18s ease}
+.es-db-position button:hover,.es-db-view button:hover,.es-db-toolbar-actions>button:hover,.es-db-columns summary:hover{background:var(--chip);border-color:var(--accent)}
+.es-db-position button:focus-visible,.es-db-view button:focus-visible,.es-db-toolbar button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.es-db-position button{border:1px solid var(--line);border-radius:9px}
+.es-db-position button.on:hover{background:#0a6749;color:#fff}
+.es-db-view button.on{border:1px solid var(--accent);background:var(--chip);border-radius:8px}
+@media(max-width:1400px){.es-database-page .board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1180px){body.es-redesign.es-database-page,body.es-redesign.es-database-page.es-nav-collapsed{--es-nav:0px!important;padding-left:0!important}.es-database-page .es-sidebar,.es-database-page.es-nav-collapsed .es-sidebar{width:292px!important;height:100dvh;transform:translateX(-100%)!important}.es-database-page.es-nav-open .es-sidebar{transform:none!important}.es-database-page main#app{padding:14px}.es-database-page .scoutwrap{grid-template-columns:250px minmax(0,1fr)!important}.es-database-page .scoutrail{width:250px!important}}
+@media(max-width:700px){.es-database-page .scoutwrap{display:block!important;min-height:0}.es-database-page .scoutrail{display:none!important;position:relative!important;top:auto!important;width:100%!important;height:auto;max-height:65dvh!important}.es-database-page .scoutwrap.es-db-filters-open .scoutrail{display:flex!important}.es-database-page .scoutmain{padding:0}.es-db-filter-toggle{display:inline-flex;margin:0 0 10px}.es-database-page .board{grid-template-columns:1fr}.es-database-page .es-db-toolbar{flex-wrap:wrap}.es-database-page .estwrap{max-height:65dvh}}
