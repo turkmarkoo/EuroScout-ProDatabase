@@ -397,18 +397,20 @@ function openFinish(done) {
 
 /* ── Player history ────────────────────────────────────── */
 function timeline(p) {
-  const r = parseReport(recOf(p).report), w = r._workflow || {}, out = [];
-  (w.viewings || []).filter(v => !v.removed).forEach(v => out.push({ at: (v.gameDate || v.date || '') + 'T' + (v.updatedAt || '').slice(11, 19), date: v.gameDate || v.date, kind: 'viewing',
-    title: v.event || 'Viewing', status: v.status || (v.source === 'matchup' ? 'notes' : ''), meta: [v.competition, v.mode, v.date && v.date !== v.gameDate ? 'watched ' + fmtDate(v.date) : '', nameOf(v.author)].filter(Boolean).join(' · '), text: v.notes || '', sessionId: v.sessionId || '' }));
-  /* Only the games. "Updated Notes" on a game already says the notes changed. */
-  return out.sort((x, y) => String(y.at).localeCompare(String(x.at)));
+  const r = parseReport(recOf(p).report), w = r._workflow || {};
+  const ids = [gid(p), p.id].concat((p._grp || []).map(x => x.id)).filter(Boolean);
+  return ESScoutingHistory.build(w.viewings || [], all(), ids).map(g => ({
+    ...g, kind: 'viewing', meta: [g.competition, g.mode,
+      g.watched.length && (g.watched.length > 1 || g.watched[0] !== g.date)
+        ? 'watched ' + g.watched.map(fmtDate).join(', ') : '',
+      g.authors.map(nameOf).join(', ')].filter(Boolean).join(' · ')
+  }));
 }
 function timelineHTML(p) {
   const items = timeline(p), views = items.filter(i => i.kind === 'viewing');
   if (!items.length) return '<p class="sx-hint">Nothing logged yet. Players you open or edit during a scouting session appear here when the session is finished.</p>';
-  const games = new Set(views.map(v => v.title + '|' + v.date)).size;
-  return '<p class="sx-hint">' + games + ' game' + (games === 1 ? '' : 's') + ' watched · ' + views.filter(v => v.status === 'notes').length + ' with updated notes · last seen ' + fmtDate((views[0] || {}).date) + '</p><ol class="sx-timeline">' +
-    items.map(i => '<li class="sx-tl sx-tl-' + i.kind + '"><span class="sx-tl-date">' + fmtDate(i.date) + '</span><div><b>' + esc(i.title) + '</b> ' + (i.status ? statusChip(i.status) : '') + (i.meta ? '<small>' + esc(i.meta) + '</small>' : '') + (i.text ? '<p>' + esc(i.text) + '</p>' : '') + '</div></li>').join('') + '</ol>';
+  return '<p class="sx-hint">' + views.length + ' game' + (views.length === 1 ? '' : 's') + ' watched · ' + views.filter(v => v.status === 'notes').length + ' with updated notes · last seen ' + fmtDate((views[0] || {}).date) + '</p><ol class="sx-timeline">' +
+    items.map(i => '<li class="sx-tl sx-tl-' + i.kind + '"><span class="sx-tl-date">' + fmtDate(i.date) + '</span><div><b>' + esc(i.title) + '</b> ' + (i.status ? statusChip(i.status) : '') + (i.meta ? '<small>' + esc(i.meta) + '</small>' : '') + (i.text ? '<p style="white-space:pre-line">' + esc(i.text) + '</p>' : '') + '</div></li>').join('') + '</ol>';
 }
 function openPlayerLog(p) { if (!p) return; modal('<h3>' + esc(p.name) + ' · scouting history</h3>' + timelineHTML(p), true); }
 
