@@ -2050,12 +2050,19 @@ function buildClubs(){
     // never merge a browse-league team with a team from a different league (generic nicknames collide)
     if((ab||bb)&&a.lg!==b.lg)return false; return true;};
   for(let i=0;i<teams.length;i++)for(let j=i+1;j<teams.length;j++){if(crossOK(teams[i],teams[j])&&sameClub(teams[i],teams[j]))uni(i,j);}
+  const byTeamKey=new Map(teams.map((team,index)=>[team.key,index]));
+  (window.EuroScoutMergeCenter?.activeClubMerges()||[]).forEach(merge=>{
+    const left=byTeamKey.get(merge.survivor),right=byTeamKey.get(merge.source);
+    if(left!=null&&right!=null)uni(left,right);
+  });
   const groups=new Map();
   teams.forEach((t,i)=>{const r=find(i);if(!groups.has(r))groups.set(r,[]);groups.get(r).push(t);});
   CLUBS=[];CLUB_BY_TEAMKEY=new Map();
   groups.forEach(members=>{
     members.sort((a,b)=>b.name.length-a.name.length);   // keep the fullest official name
-    const club={key:(members.filter(m=>m.lg!=='bclq').map(m=>m.key).sort()[0]||members.map(m=>m.key).sort()[0]),name:members[0].name,
+    const preferred=window.EuroScoutMergeCenter?.canonicalClub(members.map(m=>m.key));
+    const preferredTeam=preferred&&members.find(m=>m.key===preferred);
+    const club={key:(preferred||members.filter(m=>m.lg!=='bclq').map(m=>m.key).sort()[0]||members.map(m=>m.key).sort()[0]),name:preferredTeam?.name||members[0].name,
       country:(members.find(m=>m.country)||{}).country||"",
       leagues:members.map(m=>({id:m.lg,name:m.lgName})),teams:members};
     CLUBS.push(club);
@@ -2315,7 +2322,7 @@ const Store = (()=>{
   const enabled = !!(window.ESAccess || (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY));
   let sb=null, user=null, role=null, member=false, cache={};
   const LKEY="euroscout:records";
-  const APP_KEYS=["euroscout:sessions:v1","euroscout:shortcuts:v1","euroscout:names:v1","euroscout:watchAlertsSeen:v1","euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1","euroscout:market:v1"];
+  const APP_KEYS=["euroscout:sessions:v1","euroscout:shortcuts:v1","euroscout:names:v1","euroscout:watchAlertsSeen:v1","euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1","euroscout:market:v1","euroscout:mergeCenter:v1"];
   const local = {
     all(){try{return JSON.parse(localStorage.getItem(LKEY))||{}}catch(e){return{}}},
     set(o){localStorage.setItem(LKEY,JSON.stringify(o))}
@@ -2425,7 +2432,7 @@ const Store = (()=>{
   async function refreshPrivate(){
     if(!window.ESAccess?.internal||privateDirty||document.visibilityState!=='visible'||document.activeElement?.matches('input,textarea,select,[contenteditable=true]')||document.querySelector('#modal.open'))return;
     try{if(!await ESAccess.refresh())return;cache=ESAccess.state.records;local.set(cache);for(const k of APP_KEYS){if(Object.hasOwn(ESAccess.state.appData,k)&&ESAccess.state.appData[k]!=null)localStorage.setItem(k,JSON.stringify(ESAccess.state.appData[k]));else localStorage.removeItem(k);}
-      OVR=ovrMerged();rebuildLinks();applyOverrides();EuroScoutMarketRecords.refresh();render();if(CURRENT)renderProfile();
+      OVR=ovrMerged();rebuildLinks();applyOverrides();if(CLUBS){buildClubs();NEXTCOMP=null;DOM27=null;}EuroScoutMarketRecords.refresh();render();if(CURRENT)renderProfile();
     }catch(e){console.warn('Shared refresh unavailable:',e.message);}
   }
   window.addEventListener('es-access-role',()=>{applyRoleClass();renderHeaderAuth();if(STATE.league)render();});
@@ -2526,9 +2533,9 @@ function applyOverrides(){
   window.EuroScoutAgencyResearch?.prepare();
   // bio/ext overrides are keyed per-person (shared across all their competitions), so look up
   // by ANY id in the merged group — editing one league's entry propagates to the others.
-  const bioFor=p=>{const ids=(p._grp&&p._grp.length?p._grp:[p]).map(x=>x.id);
+  const bioFor=p=>{const ids=[gid(p),...(p._grp&&p._grp.length?p._grp:[p]).map(x=>x.id)].filter(Boolean);
     for(const id of ids){if(OVR.bio[id])return OVR.bio[id];}return null;};
-  const extFor=p=>{const ids=(p._grp&&p._grp.length?p._grp:[p]).map(x=>x.id);
+  const extFor=p=>{const ids=[gid(p),...(p._grp&&p._grp.length?p._grp:[p]).map(x=>x.id)].filter(Boolean);
     for(const id of ids){if(OVR.ext[id])return OVR.ext[id];}return null;};
   STATE.data.leagues.forEach(L=>L.players.forEach(p=>{
     if(!p._orig)p._orig={height:p.height,weight:p.weight,country:p.country,pos:p.pos,role:p.role,born:p.born,birthDate:p.birthDate||p.dob||'',name:p.name};
@@ -2546,6 +2553,7 @@ function applyOverrides(){
       p.contractUntil=b.contractUntil||null;p.contractStatus=b.contractStatus||null;
       if(b.projLevel!=null&&b.projLevel!=="")p.projLevel=Number(b.projLevel); }
     window.EuroScoutAgencyResearch?.apply(p,b);
+    if(p.agent&&window.EuroScoutMergeCenter)p.agent=EuroScoutMergeCenter.canonicalAgent(p.agent);
     p.country=EuroScoutCountries.canonical(p.country);
     p._ext=extFor(p)||null;
   }));
@@ -2610,7 +2618,7 @@ function rebuildLinks(){
     if(role)g.forEach(x=>{if(!x.role)x.role=role;});});
   STATE._idx=null;
 }
-function gid(p){if(!p)return null;const ids=(p._grp&&p._grp.length?p._grp:[p]).map(x=>x.id);const existing=ids.filter(id=>!String(id).startsWith('bclq-'));return (existing.length?existing:ids).sort()[0];}
+function gid(p){if(!p)return null;const ids=(p._grp&&p._grp.length?p._grp:[p]).map(x=>x.id);const selected=window.EuroScoutMergeCenter?.canonicalPlayer(ids);if(selected)return selected;const existing=ids.filter(id=>!String(id).startsWith('bclq-'));return (existing.length?existing:ids).sort()[0];}
 function recOf(p){return Store.get(gid(p));}
 async function saveRec(p,patch){
  const old=recOf(p),report=parseReport(old.report);
@@ -2622,6 +2630,7 @@ function mergeGroupRecords(){
   const seen=new Set();
   allPlayersFlat().forEach(p=>{
     if(!p._grp||p._grp.length<2)return;
+    if(window.EuroScoutMergeCenter?.hasManualGroup(p._grp))return;
     const g=gid(p); if(seen.has(g))return; seen.add(g);
     const recs=p._grp.map(x=>Store.get(x.id));
     const base={...Store.get(g)};
@@ -3452,10 +3461,11 @@ function render(){if(typeof scheduleSticky==="function")scheduleSticky();
   else if(v==="scouting") renderScouting();
   else if(v==="teams") renderTeams();
   else if(v==="glossary") renderGlossary();
+  else if(v==="mergecenter") renderMergeCenter();
   else if(v==="team") renderTeam();
   else if(v==="profile") renderProfile();
   // centralized top-tab highlighting (compare/charts group under Stats; team under Teams)
-  const TOPTAB={scout:"scout",players:"players",compare:"players",charts:"players",fit:"players",agencies:"agencies",transfers:"transfers",teams:"teams",team:"teams",scouting:"scouting",watchlist:"watchlist",exhib:"exhib",glossary:"glossary"};
+  const TOPTAB={scout:"scout",players:"players",compare:"players",charts:"players",fit:"players",agencies:"agencies",transfers:"transfers",teams:"teams",team:"teams",scouting:"scouting",watchlist:"watchlist",exhib:"exhib",glossary:"glossary",mergecenter:"mergecenter"};
   const tt=TOPTAB[v];
   if(tt)$$("#tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===tt));
   updateTransferBadge();
@@ -4706,8 +4716,8 @@ function agentMap(){
   let local={};try{local=(JSON.parse(localStorage.getItem("euroscout:agents")||"{}")||JSON.parse("{}"));}catch(e){}
   return Object.assign(base,local);
 }
-function agentList(){return Object.keys(agentMap()).sort((a,b)=>a.localeCompare(b));}
-function agencyForAgent(agent){const m=agentMap();return agent&&m[agent]?normAgency(m[agent]):"";}
+function agentList(){return Object.keys(agentMap()).filter(a=>!window.EuroScoutMergeCenter||EuroScoutMergeCenter.canonicalAgent(a)===a).sort((a,b)=>a.localeCompare(b));}
+function agencyForAgent(agent){const m=agentMap();const canonical=window.EuroScoutMergeCenter?.canonicalAgent(agent)||agent;return canonical&&m[canonical]?normAgency(m[canonical]):"";}
 function addAgent(agent,agency){if(!Store.canEdit())return;agent=(agent||"").trim();if(!agent)return;
   let local={};try{local=(JSON.parse(localStorage.getItem("euroscout:agents")||"{}")||JSON.parse("{}"));}catch(e){}
   local[agent]=(agency||"").trim(); localStorage.setItem("euroscout:agents",JSON.stringify(local));try{Sync.stampKey("euroscout:agents");}catch(e){}try{Store.pushAppKey("euroscout:agents");}catch(e){}
@@ -7404,7 +7414,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260921-database-v3"></script>
+<script src="euroscout-ui.js?v=20260921-mergecenter-1"></script>
 <script src="euroscout-diagnostics.js?v=20260920-diagnostics-1"></script>
 <script src="euroscout-workflow.js?v=20260920-dashboard-workspace-1"></script>
 <script src="euroscout-database.js?v=20260921-editor-db-fix"></script>
@@ -7430,5 +7440,5 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/aba-rosters-2026.js?v=20260910-1"></script>
 <script src="euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260920-fix"></script>
 <script src="data/bclq-2026.js?v=20260921-final"></script><script src="euroscout-bclq-2026.js?v=20260921-jerseys"></script>
-<script>esSetup();boot();</script>
+<link rel="stylesheet" href="euroscout-merge-center.css?v=20260921-1"><script src="euroscout-merge-center.js?v=20260921-1"></script><script>esSetup();boot();</script>
 <script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-sessions.js?v=20260921-1"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260920-2"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260921-1"><script src="data/signal-origins.js?v=20260920-1"></script><script src="euroscout-signals.js?v=20260920-2"></script><script src="euroscout-quickstats.js?v=20260921-season-v2"></script><script src="euroscout-live-notes.js?v=20260920-2"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>
