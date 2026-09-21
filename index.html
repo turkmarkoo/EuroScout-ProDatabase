@@ -4974,60 +4974,7 @@ function rosterHistory(p){
     return season(b)-season(a)||lastGameDate(b).localeCompare(lastGameDate(a))||(Number(b.g)||0)-(Number(a.g)||0)||String(a.id).localeCompare(String(b.id));
   })[0]||p;
 }
-function renderNextRoster(club){
-  if(!STATE._extraDone&&!STATE._rosterHistoryLoading){
-    STATE._rosterHistoryLoading=true;
-    loadExtraLeagues().catch(e=>toast(e.message)).finally(()=>{STATE._rosterHistoryLoading=false;});
-  }
-  const m=next26Get();
-  const now=clubRoster2526(club), next=clubRoster2627(club,m).map(rosterHistory);
-  const nowIds=new Set(now.map(p=>gid(p))), nextIds=new Set(next.map(p=>gid(p)));
-  const staying=next.filter(p=>nowIds.has(gid(p)));
-  const arrivals=next.filter(p=>!nowIds.has(gid(p)));
-  const departures=now.filter(p=>!nextIds.has(gid(p)));
-  const ph=p=>`<span class="agpPhoto${photoOf(p)?"":" noimg"}">${photoOf(p)?`<img src="${photoOf(p)}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name)}</span>`;
-  const line=(p,extra,acts)=>`<div class="cmpRow" data-pid="${p.id}">${ph(p)}
-      <span class="cmpId"><span class="cmpNm">${p.currentJersey!=null&&p.currentJersey!==''?'#'+esc(p.currentJersey)+' · ':''}${p.name}</span><span class="cmpMeta">${posLabel(p)}${p.age?" \u00b7 "+p.age:""}${p.height?" \u00b7 "+p.height+"cm":""}${p.ppg!=null?" \u00b7 "+p.ppg.toFixed(1)+" ppg":""}</span></span>
-      ${extra||""}<span class="cmpSc">${statGradeOverall(p)!=null?statGradeOverall(p).toFixed(1):"\u2014"}</span>${acts||""}</div>`;
-  const whereTo=p=>{const k=effective26(p,m);const c=k?clubByKey(k):null;
-    return `<span class="cmpTo${c?"":" none"}">${c?"\u2192 "+esc(c.name):"unsigned"}</span>`;};
-  const whereFrom=p=>`<span class="cmpTo from">${esc(p.teamName||"\u2014")}</span>`;
-  $("#app").innerHTML=`<div class="view">
-    <button class="btn ghost" id="nextBack">\u2190 All clubs</button>
-    <h1 class="title" style="margin-top:10px">${esc(club.name)} <span class="rbClubLg">${club.leagues.map(l=>leagueFlag(l.id)).join("")} ${esc(comps2627Label(club))}</span></h1>
-    <div class="sub" style="margin-bottom:14px">Compare this season\u2019s squad with the 2026/27 roster you\u2019re building.</div>
-    <div class="cmpWrap">
-      <div class="cmpCol"><div class="cmpHead">2025/26 <span class="cmpN">${now.length}</span></div>
-        ${now.length?now.map(p=>line(p,nextIds.has(gid(p))?`<span class="cmpTag stay">stays</span>`:`<span class="cmpTag out">out</span>`)).join(""):`<div class="rbEmpty">No squad recorded.</div>`}</div>
-      <div class="cmpCol"><div class="cmpHead">2026/27 <span class="cmpN">${next.length}</span></div>
-        ${next.length?next.map(p=>line(p,nowIds.has(gid(p))?`<span class="cmpTag stay">extended</span>`:`<span class="cmpTag in">new</span>`,
-          `<button class="rbAct" data-reassign="${p.id}" title="Change club">\u21c4</button><button class="rbAct del" data-drop="${p.id}" title="Remove">\u2715</button>`)).join(""):`<div class="rbEmpty">Nobody placed yet \u2014 add players below.</div>`}
-        <div class="rbAddInline"><input class="rbTeamAdd" data-tk="${escAttr(club.key)}" data-i="0" placeholder="Add a player to ${escAttr(club.name)}\u2026" autocomplete="off"/><div class="rbSug" id="rbSug0"></div></div>
-      </div>
-    </div>
-    <div class="cmpGrid3">
-      <div class="cmpBox"><div class="cmpBoxH in">Arrivals <span class="cmpN">${arrivals.length}</span></div>
-        ${arrivals.length?arrivals.map(p=>line(p,whereFrom(p))).join(""):`<div class="rbEmpty">None yet.</div>`}</div>
-      <div class="cmpBox"><div class="cmpBoxH out">Departures <span class="cmpN">${departures.length}</span></div>
-        ${departures.length?departures.map(p=>line(p,whereTo(p))).join(""):`<div class="rbEmpty">None yet.</div>`}</div>
-      <div class="cmpBox"><div class="cmpBoxH stay">Extensions <span class="cmpN">${staying.length}</span></div>
-        ${staying.length?staying.map(p=>line(p)).join(""):`<div class="rbEmpty">None yet.</div>`}</div>
-    </div>
-  </div>`;
-  $("#nextBack").onclick=()=>{STATE.nextTeam=null;renderTeams();};
-  wireRosterCommon();
-  $$(".cmpRow[data-pid]").forEach(el=>el.addEventListener("dblclick",()=>openProfile(el.dataset.pid)));
-  $$(".cmpNm").forEach(el=>el.onclick=e=>{const row=e.target.closest(".cmpRow");if(row)openProfile(row.dataset.pid);});
-  const pool=assignPool();
-  $$(".rbTeamAdd").forEach(inp=>inp.oninput=()=>{const tk=inp.dataset.tk,box=$("#rbSug0");if(!box)return;
-    const qq=inp.value.toLowerCase().trim();if(qq.length<2){box.innerHTML="";return;}const qn=normNm(qq);
-    // identity-aware: skip anyone already assigned on any of their league entries
-    const hits=pool.filter(p=>!effective26(p,m)&&(searchFold(p.name).includes(searchFold(qq))||normNm(p.name).includes(qn))).slice(0,8);
-    box.innerHTML=hits.map(p=>{const L=leagueOf(p);const other=isOtherLeague(L.meta);
-      const tag=other?` <span class="rbSugLg">${esc(L.meta.name)}</span>`:"";
-      return `<button class="rbSugItem" data-pick="${p.id}">${esc(p.name)}${tag} <small>${posLabel(p)}${p.age?" \u00b7 "+p.age:""} \u00b7 ${esc(p.teamName||"")}</small></button>`;}).join("")||'<div class="rbSugNone">No unassigned player matches.</div>';
-    box.querySelectorAll("[data-pick]").forEach(it=>it.onclick=()=>{set26(it.dataset.pick,tk);renderTeams();});});
-}
+function renderNextRoster(club){ return window.renderNextRosterV2(club); }
 function faState(){STATE.fa=STATE.fa||{q:"",role:"",lg:"",filters:[],arch:"",archMin:25};return STATE.fa;}
 function renderFreeAgents(){
   const m=next26Get(),pool=scoutPool(),f=faState();
@@ -7534,6 +7481,8 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
 <script src="data/agency-research.js?v=20260907-13"></script>
 <script src="euroscout-agency-research.js?v=20260908-1"></script>
+<link rel="stylesheet" href="euroscout-roster-builder.css?v=20260921-v2">
+<script src="euroscout-roster-builder.js?v=20260921-v2"></script>
 <link rel="stylesheet" href="euroscout-teams-2627.css?v=20260921-entry-dialog">
 <script src="euroscout-teams-2627.js?v=20260921-entry-dialog"></script>
 <script src="data/realgm-representation.js?v=20260907-13"></script>

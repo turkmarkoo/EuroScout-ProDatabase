@@ -1,0 +1,74 @@
+.rbv2Page{max-width:1600px;margin:0 auto;padding:24px!important;color:#162534;font-family:Inter,Arial,sans-serif;line-height:1.4;background:#f8fafb}
+.rbv2Page *{box-sizing:border-box}
+.rbv2Page button,.rbv2Page select,.rbv2SearchDialog button,.rbv2SearchDialog input{font:inherit}
+.rbv2Breadcrumb{display:flex;align-items:center;gap:12px;margin-bottom:16px;color:#667788;font-size:13px}
+.rbv2Breadcrumb button{border:0;background:none;color:inherit;padding:0;cursor:pointer}
+.rbv2Breadcrumb button:hover{color:#0f6b45}
+.rbv2Identity{display:flex;align-items:center;gap:24px;min-height:140px;padding:16px 0;border-bottom:1px solid #e7ecef;background:#fff}
+.rbv2ClubLogo{display:grid;place-items:center;width:96px;min-width:96px;height:96px;border:1px solid #e7ecef;border-radius:16px;background:#fff}
+.rbv2ClubLogo .clubBadge{width:72px!important;height:72px!important;display:grid;place-items:center}
+.rbv2ClubLogo .clubBadge img{max-width:72px;max-height:72px;object-fit:contain}
+.rbv2ClubText{min-width:0;flex:1}
+.rbv2ClubText h1{font-size:clamp(28px,3vw,48px);font-weight:700;line-height:1.1;margin:0 0 8px;color:#162534}
+.rbv2ClubText p{display:flex;flex-wrap:wrap;gap:0;margin:0;color:#667788;font-size:18px;font-weight:500}
+.rbv2ClubText p span:not(:last-child):after{content:"";display:inline-block;height:16px;border-right:1px solid #d6dee3;margin:0 16px;vertical-align:middle}
+.rbv2HeaderActions{display:flex;align-items:end;justify-content:flex-end;flex-wrap:wrap;gap:12px}
+.rbv2HeaderActions label{display:grid;gap:3px;color:#667788;font-size:13px}
+.rbv2HeaderActions select,.rbv2Action,.rbv2AddTop{height:40px;border-radius:10px!important;white-space:nowrap}
+.rbv2HeaderActions select{min-width:120px;padding:0 12px;border:1px solid #d9e3e9;background:#fff;color:#162534}
+.rbv2HeaderActions .rbv2Action{padding:0 14px;border:1px solid #d9e3e9!important;background:#fff!important;color:#162534!important;box-shadow:none!important}
+.rbv2HeaderActions .rbv2Action:hover{border-color:#0f6b45!important}
+.rbv2HeaderActions .rbv2ClubWatched{color:#0f6b45!important}
+.rbv2Toolbar{display:flex;align-items:center;gap:24px;min-height:88px;margin:16px 0 24px;padding:12px 16px;border:1px solid #e7ecef;border-radius:12px;background:#fff}
+.rbv2Metrics{flex:1;display:grid;grid-template-columns:repeat(6,minmax(98px,1fr));min-width:0}
+.rbv2Metric{display:flex;align-items:center;justify-content:center;gap:9px;min-width:0;padding:0 12px;border-right:1px solid #e7ecef}
+.rbv2Metric:last-child{border:0}
+.rbv2MetricIcon{font-size:20px;color:#0f6b45;line-height:1}
+.rbv2Metric strong,.rbv2Metric small{display:block;white-space:nowrap}
+.rbv2Metric strong{font-size:20px;font-weight:700;line-height:1.15}
+.rbv2Metric small{font-size:12px;color:#667788}
+.rbv2Filters{display:flex;gap:12px;align-items:center}
+.rbv2Filters button{height:40px;min-width:64px;padding:0 16px;background:#fff;border:1px solid #d9e3e9;border-radius:10px;color:#162534;cursor:pointer}
+.rbv2Filters button.selected{border-color:#0f6b45;background:#0f6b45;color:#fff}
+.rbv2Filters button:hover:not(.selected){border-color:#0f6b45;color:#0f6b45}
+.rbv2AddTop{padding:0 18px!important;border:1px solid #0f6b45!important;background:#0f6b45!important;color:#fff!important;box-shadow:none!important}
+.rbv2Compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:stretch}
+.rbv2Panel{display:flex;flex-direction:column;min-width:0;min-height:520px;overflow:hidden;border:1px solid #e7ecef;border-radius:16px;background:#fff;box-shadow:none}
+.rbv2PanelHead{min-height:68px;padding:12px 20px 8px}
+.rbv2Previous .rbv2PanelHead{background:#fcf7f2}
+.rbv2Current .rbv2PanelHead{background:#f3faf6}
+.rbv2PanelHead h2{display:flex;align-items:center;gap:12px;margin:0;color:#162534;font-size:24px;line-height:1.2;font-weight:700}
+.rbv2PanelHead h2 span{min-width:30px;padding:2px 9px;border-radius:999px;background:#fff;color:#7b6654;text-align:center;font-size:13px}
+.rbv2Current .rbv2PanelHead h2 span{background:#e3f3eb;color:#0f6b45}
+.rbv2PanelHead p{margin:2px 0 0;color:#667788;font-size:13px}
+.rbv2Columns,.rbv2Player{display:grid;grid-template-columns:36px minmax(84px,1fr) 28px 30px 33px minmax(60px,.7fr) 70px 44px 28px 28px;column-gap:6px;align-items:center}
+.rbv2Columns{height:32px;padding:0 12px;background:#fbfcfd;border-bottom:1px solid #e7ecef;color:#667788;font-size:10px;font-weight:700;letter-spacing:.03em}
+.rbv2Columns span:first-child{grid-column:1 / 3}.rbv2Columns span:nth-child(2){grid-column:3}.rbv2Columns span:nth-child(3){grid-column:4}.rbv2Columns span:nth-child(4){grid-column:5}.rbv2Columns span:nth-child(5){grid-column:6}.rbv2Columns span:nth-child(6){grid-column:7}.rbv2Columns span:nth-child(7){grid-column:8}
+.rbv2Player{height:54px;padding:0 12px;border-bottom:1px solid #eef2f4;font-size:12px;min-width:0}
+.rbv2Player:hover{background:#f7fafc}
+.rbv2Photo{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;overflow:hidden;background:#edf3f1;color:#52676b;font-size:11px}
+.rbv2Photo img{width:100%;height:100%;object-fit:cover}
+.rbv2Name{min-width:0;padding:0;border:0;background:transparent;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#162534;cursor:pointer;font-size:13px!important;font-weight:600!important}
+.rbv2Name:hover{text-decoration:underline;color:#0f6b45}
+.rbv2Cell,.rbv2Last,.rbv2Rating{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.rbv2Last{text-align:left;color:#667788}
+.rbv2Status{display:inline-grid;place-items:center;min-width:60px;height:24px;border-radius:999px;font-size:10px;font-weight:700}
+.rbv2StatusNEW{background:#e7f6eb;color:#237a4a}.rbv2StatusOUT{background:#fdecec;color:#c94b4b}.rbv2StatusSTAYS{background:#edf7ef;color:#2e7d32}.rbv2StatusEXTENDED{background:#e9f7f3;color:#1f7a63}
+.rbv2Rating{font-size:15px;font-weight:700;color:#b96a2b}
+.rbv2Icon{width:26px;height:26px;padding:0;border:1px solid #e0e8ed;border-radius:7px;background:#fff;color:#162534;cursor:pointer;font-size:18px!important;line-height:1}
+.rbv2Icon:hover,.rbv2Icon.active{color:#b96a2b;border-color:#e8c9a9}
+.rbv2Open{font-size:22px!important}
+.rbv2Empty{padding:24px;color:#667788;font-size:13px}
+.rbv2AddRow{position:sticky;bottom:0;display:flex;align-items:center;gap:12px;width:100%;height:56px;min-height:56px;margin-top:auto;padding:0 20px;border:0;border-top:1px solid #e7ecef;background:#fff;text-align:left;color:#0f6b45;cursor:pointer;font-weight:600}
+.rbv2AddRow span{font-size:22px}.rbv2AddRow:hover{background:#f3faf6}
+.rbv2SearchDialog{width:min(560px,calc(100vw - 32px));max-height:80vh;padding:0;border:1px solid #e7ecef;border-radius:16px;box-shadow:0 20px 70px #132d2c33;color:#162534;font-family:Inter,Arial,sans-serif}
+.rbv2SearchDialog::backdrop{background:#0b1f2d80}
+.rbv2SearchHead{display:flex;align-items:start;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #e7ecef}
+.rbv2SearchHead h2{margin:0;font-size:24px}.rbv2SearchHead p{margin:4px 0 0;color:#667788;font-size:13px}
+.rbv2Close{width:32px;height:32px;border:1px solid #d9e3e9;border-radius:8px;background:#fff;cursor:pointer;font-size:22px!important}
+#rbv2SearchInput{display:block;width:calc(100% - 48px);height:42px;margin:20px 24px;padding:0 12px;border:1px solid #d9e3e9;border-radius:10px;font-size:14px}
+.rbv2SearchResults{min-height:80px;max-height:55vh;overflow:auto;padding:0 24px 20px;color:#667788;font-size:13px}
+.rbv2SearchHit{display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid #eef2f4}.rbv2SearchHit>span:nth-child(2){flex:1;min-width:0}.rbv2SearchHit strong,.rbv2SearchHit small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rbv2SearchHit strong{color:#162534;font-size:14px}.rbv2SearchHit button{height:34px}
+@media(max-width:1380px){.rbv2Toolbar{flex-wrap:wrap}.rbv2Metrics{flex-basis:100%}.rbv2Filters{margin-left:auto}.rbv2Compare{gap:16px}}
+@media(max-width:1080px){.rbv2Compare{grid-template-columns:1fr}.rbv2Panel{min-height:0}.rbv2Identity{flex-wrap:wrap}.rbv2HeaderActions{width:100%;justify-content:flex-start}.rbv2Player,.rbv2Columns{grid-template-columns:36px minmax(120px,1fr) 34px 38px 40px minmax(85px,.7fr) 75px 50px 32px 32px}}
+@media(max-width:680px){.rbv2Page{padding:16px!important}.rbv2ClubLogo{width:64px;min-width:64px;height:64px}.rbv2ClubLogo .clubBadge,.rbv2ClubLogo .clubBadge img{max-width:48px!important;max-height:48px!important}.rbv2ClubText h1{font-size:28px}.rbv2ClubText p{font-size:13px}.rbv2Metrics{grid-template-columns:repeat(3,1fr);row-gap:12px}.rbv2Metric:nth-child(3){border:0}.rbv2Filters{margin-left:0;flex-wrap:wrap}.rbv2Compare{display:block}.rbv2Panel+.rbv2Panel{margin-top:16px}.rbv2Rows,.rbv2Columns{min-width:700px}.rbv2Panel{overflow-x:auto}.rbv2Player,.rbv2Columns{grid-template-columns:36px minmax(100px,1fr) 28px 30px 33px minmax(60px,.7fr) 70px 44px 28px 28px}}
