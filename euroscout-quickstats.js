@@ -57,11 +57,11 @@ const PAGES={
 };
 
 function linesOf(p){const g=gid(p);return allPlayersEvery().filter(x=>gid(x)===g&&x.league!=='sl').sort((a,b)=>(b.min||0)-(a.min||0));}
-function seasonOf(p){const value=p.season||leagueOf(p)?.meta?.season||p._seasonLabel||'';return String(value).match(/20\d{2}\s*[/–-]\s*(?:20)?\d{2}/)?.[0].replace(/\s/g,'')||'Season unknown';}
+function seasonOf(p){const value=p.season||leagueOf(p)?.meta?.season||p._seasonLabel||'';const match=String(value).match(/(20\d{2})\s*[/–-]\s*((?:20)?\d{2})/);return match?match[1]+'/'+match[2].slice(-2):'Season unknown';}
 function paint(){
  const host=document.getElementById('qsPanel');if(!host||!current)return;
- const all=linesOf(current),seasons=[...new Set(all.map(seasonOf))].sort((a,b)=>b.localeCompare(a));
- if(!seasonChoice||!seasons.includes(seasonChoice))seasonChoice=seasons.includes(seasonOf(current))?seasonOf(current):seasons[0]||'Season unknown';
+ const all=linesOf(current),seasons=[...new Set(all.map(seasonOf))].sort((a,b)=>(parseInt(b,10)||0)-(parseInt(a,10)||0)||b.localeCompare(a));
+ if(!seasonChoice||!seasons.includes(seasonChoice))seasonChoice=seasons[0]||'Season unknown';
  const shown=all.filter(x=>seasonOf(x)===seasonChoice);
  if(!line||!shown.includes(line))line=shown.find(x=>x.league===current.league)||shown[0]||current;
  const L=leagueOf(line);
@@ -74,7 +74,7 @@ function paint(){
  const sel=host.querySelector('#qsLine');if(sel)sel.onchange=()=>{line=shown[+sel.value];paint();};
 }
 function open(p){
- if(!p)return;current=player(p.id)||p;line=null;seasonChoice=seasonOf(p);percentilePools.clear();
+ if(!p)return;current=player(p.id)||p;line=null;seasonChoice='';percentilePools.clear();
  let mask=document.getElementById('qsMask');
  if(!mask){mask=document.createElement('div');mask.id='qsMask';mask.className='qs-mask';mask.innerHTML='<aside id="qsPanel" class="qs-panel" role="dialog" aria-modal="true" aria-label="Quick stats"></aside>';mask.addEventListener('mousedown',e=>{if(e.target===mask)close();});document.body.appendChild(mask);requestAnimationFrame(()=>mask.classList.add('open'));}
  paint();
@@ -82,5 +82,5 @@ function open(p){
 function close(){const m=document.getElementById('qsMask');if(m)m.remove();current=null;}
 const isOpen=()=>!!document.getElementById('qsMask');
 document.addEventListener('keydown',e=>{if(!isOpen()||document.getElementById('mtscMask'))return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return;}if(/^[1-8]$/.test(e.key)&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();tab=TABS[+e.key-1][0];paint();}},true);
-window.ESQuickStats={open,close,isOpen,follow(p){if(isOpen()&&p){current=player(p.id)||p;line=null;seasonChoice=seasonOf(p);percentilePools.clear();paint();}}};
+window.ESQuickStats={open,close,isOpen,follow(p){if(isOpen()&&p){current=player(p.id)||p;line=null;seasonChoice='';percentilePools.clear();paint();}}};
 })();
