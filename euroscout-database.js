@@ -2,12 +2,12 @@
 (function(){
   esScoutEnhance=function(){};
   const escape=val=>String(val??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const fields=['player','pos','height','age','nationality','club','competition','contract','games','pts','reb','ast','pir','grade'];
-  const labels={player:'Player',pos:'Pos',height:'HT',age:'Age',nationality:'Nationality',club:'Club',competition:'Competition',contract:'Contract',games:'GP',pts:'PTS',reb:'REB',ast:'AST',pir:'PIR',grade:'Grade'};
+  const fields=['player','pos','height','age','nationality','club','competition','games','pts','reb','ast','pir','grade'];
+  const labels={player:'Player',pos:'Pos',height:'HT',age:'Age',nationality:'Nationality',club:'Club',competition:'Competition',games:'GP',pts:'PTS',reb:'REB',ast:'AST',pir:'PIR',grade:'Grade'};
   const FILTER_VISIBILITY_KEY='euroscout:dbFiltersCollapsed:v1';
   let filtersCollapsed=false;
   try{filtersCollapsed=localStorage.getItem(FILTER_VISIBILITY_KEY)==='1';}catch(e){}
-  function visible(){return STATE.scout.dbColumns||fields;}
+  function visible(){const saved=STATE.scout.dbColumns;return Array.isArray(saved)?saved.filter(key=>fields.includes(key)):fields;}
   function photo(p){const img=photoOf(p);return img?'<img src="'+escape(img)+'" loading="lazy" alt="" onerror="this.remove()">':escape(initials(p.name));}
   function club(p){return esCurrentRosterProfile(p);}
   function playerLeague(p){const current=club(p);return current.leagues.join(', ')||leagueOf(p)?.meta?.name||'—';}
@@ -18,9 +18,9 @@
       '<td class="es-db-check"><input type="checkbox" aria-label="Select '+escape(p.name)+'" data-select="'+escape(p.id)+'"></td><td class="es-db-rank">'+(offset+i+1)+'</td>'+
       cell('player','<div class="es-db-identity"><span class="es-db-avatar">'+photo(p)+'</span><span>'+escape(p.name)+'</span><button type="button" class="eststar '+(watched?'on':'')+'" data-star="'+escape(p.id)+'" aria-label="'+(watched?'Remove from':'Add to')+' watchlist">'+(watched?'★':'☆')+'</button></div>','es-db-name')+
       cell('pos',escape(dbPositionGroup(p)||'—'))+cell('height',p.height?escape(p.height)+' cm':'—')+cell('age',p.age!=null?escape(p.age):'—')+
-      cell('nationality',(flagEmoji(p.country)||'')+' '+escape(isoOf(p.country)||p.country||'—'))+
+      cell('nationality',(flagEmoji(p.country)?flagEmoji(p.country)+' ':'')+escape(EuroScoutCountries.canonical(p.country)||p.country||'—'))+
       cell('club','<span class="es-db-club">'+(current.logo?'<img src="'+escape(current.logo)+'" loading="lazy" alt="">':'')+escape(current.name)+'</span>')+
-      cell('competition',escape(playerLeague(p)))+cell('contract',escape(typeof p.contract==='string'?p.contract:(typeof p.contractEnd==='string'?p.contractEnd:'—')))+
+      cell('competition',escape(playerLeague(p)))+
       cell('games',p.g??'—')+cell('pts',p.ppg!=null?p.ppg.toFixed(1):'—')+cell('reb',p.rpg!=null?p.rpg.toFixed(1):'—')+
       cell('ast',p.apg!=null?p.apg.toFixed(1):'—')+cell('pir',p.pir!=null?p.pir.toFixed(1):'—')+
       cell('grade',grade!=null?'<span class="es-db-grade">'+grade.toFixed(1)+'</span>':'—')+
@@ -76,7 +76,7 @@
     for(const [mode,label] of [['table','▦  Table view'],['cards','▣  Card view']]){const b=document.createElement('button');b.type='button';b.textContent=label;b.classList.toggle('on',s.view===mode);b.onclick=()=>{s.view=mode;localStorage.setItem(SCOUT_VIEW_KEY,mode);renderScout();};left.append(b);}toolbar.append(left);
     const actions=document.createElement('div');actions.className='es-db-toolbar-actions';const save=document.createElement('button');save.textContent='♧  Save view';save.onclick=saveCurrentView;actions.append(save);
     actions.append(select('Sort',s.tsort?.key||'grade',[['grade','Stats grade'],['pts','Points'],['reb','Rebounds'],['ast','Assists'],['pir','PIR'],['name','Name'],['born','Birth year']],v=>{s.tsort={key:v,dir:v==='name'||v==='born'?1:-1};s.sort=v==='name'?'name':v==='pts'?'ppg':'grade';renderScout();}));
-    const columns=document.createElement('details');columns.className='es-db-columns';columns.innerHTML='<summary>▦  Columns</summary>';const panel=document.createElement('div');for(const key of fields){const line=document.createElement('label'),cb=document.createElement('input');cb.type='checkbox';cb.checked=visible().includes(key);cb.disabled=key==='player';cb.onchange=()=>{s.dbColumns=cb.checked?[...new Set([...visible(),key])]:visible().filter(x=>x!==key);renderScout();};line.append(cb,document.createTextNode(labels[key]));panel.append(line);}columns.append(panel);actions.append(columns);toolbar.append(actions);head.after(toolbar);
+    if(s.view==='table'){const columns=document.createElement('details');columns.className='es-db-columns';columns.innerHTML='<summary>▦  Columns</summary>';const panel=document.createElement('div');for(const key of fields){const line=document.createElement('label'),cb=document.createElement('input');cb.type='checkbox';cb.checked=visible().includes(key);cb.disabled=key==='player';cb.onchange=()=>{s.dbColumns=cb.checked?[...new Set([...visible(),key])]:visible().filter(x=>x!==key);renderScout();};line.append(cb,document.createTextNode(labels[key]));panel.append(line);}columns.append(panel);actions.append(columns);}toolbar.append(actions);head.after(toolbar);
     const content=wrap.querySelector('.scoutmain');content.addEventListener('click',e=>{const note=e.target.closest('[data-note]'),menu=e.target.closest('[data-menu]');if(note){e.stopPropagation();openProfile(note.dataset.note);esSelectTab('Notes');}else if(menu){e.stopPropagation();openProfile(menu.dataset.menu);}else if(e.target.matches('[data-select],#esSelectAll')){e.stopPropagation();if(e.target.id==='esSelectAll')content.querySelectorAll('[data-select]').forEach(c=>c.checked=e.target.checked);}},true);
     if(s.view==='table')esScrollbars(wrap);
     setupMore(wrap,s);
