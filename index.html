@@ -1755,7 +1755,7 @@ body.drawer-lock{overflow:hidden}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260921-database-v3">
 <link rel="stylesheet" href="euroscout-database.css?v=20260921-database-v5">
-<link rel="stylesheet" href="euroscout-market.css?v=16"><link rel="stylesheet" href="euroscout-freeagents-v2.css?v=20260921-1"><script src="search-fold.js?v=36"></script>
+<link rel="stylesheet" href="euroscout-market.css?v=16"><link rel="stylesheet" href="euroscout-freeagents-v2.css?v=20260921-1"><link rel="stylesheet" href="euroscout-edit-player-v2.css?v=20260921-1"><script src="search-fold.js?v=36"></script>
 <script src="feb-data.js?v=20260913"></script><script src="feb-rosters-2026.js?v=20260920"></script><script src="euroscout-feb.js?v=20260920-fix"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260920-fix"></script><script src="membership-data.js?v=20260920-fix"></script><script src="euroscout-regional-rosters.js?v=20260920-restore-1"></script><script src="euroscout-registry.js?v=20260920-restore-1"></script>
 <script src="euroscout-memberships.js?v=20260921-entry-dialog"></script>
 <style>.membership-review{margin:12px 0 18px;padding:12px 16px;background:var(--card,#fff);border:1px solid var(--border,#d9e3df);border-radius:12px;color:var(--text,#193442);font-size:13px}.membership-review details{margin-top:8px}.membership-review summary{cursor:pointer}.membership-review-row{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 0;align-items:baseline}.membership-review-row>span{flex:1 1 250px}.membership-review-row>a{white-space:nowrap}.membership-review details[open]{max-height:340px;overflow:auto}.rbFilters>select{min-width:min(320px,100%);max-width:100%;height:auto;min-height:44px;padding:10px 36px 10px 12px}</style>
@@ -2512,9 +2512,9 @@ let OVR={links:[],bio:{},ext:{}};
 function ovrSaveLocal(patch){
   if(!Store.canEdit())return;
   const l=ovrLocal();
-  if(patch.bio)Object.keys(patch.bio).forEach(id=>{const clean={};Object.keys(patch.bio[id]).forEach(k=>{const v=patch.bio[id][k];if(v!=null&&(v!==""||k==="projLevel"||k==="country"||k==="agent"||k==="agency"||k==="agentUrl"))clean[k]=k==='country'?EuroScoutCountries.canonical(v):v;});l.bio[id]={...(l.bio[id]||{}),...clean};});
+  if(patch.bio)Object.keys(patch.bio).forEach(id=>{const clean={};Object.keys(patch.bio[id]).forEach(k=>{const v=patch.bio[id][k];if(v!=null&&(v!==""||["projLevel","country","agent","agency","agentUrl","birthDate","rgm","proballers","otherLink","contractUntil","contractStatus"].includes(k)))clean[k]=k==='country'?EuroScoutCountries.canonical(v):v;});l.bio[id]={...(l.bio[id]||{}),...clean};});
   if(patch.clubs)l.clubs={...(l.clubs||{}),...patch.clubs};
-  if(patch.ext)Object.keys(patch.ext).forEach(id=>{if(patch.ext[id])l.ext[id]=patch.ext[id];else delete l.ext[id];});
+  if(patch.ext)Object.keys(patch.ext).forEach(id=>{l.ext[id]=patch.ext[id]||"";});
   if(patch.links)patch.links.forEach(pr=>{if(!l.links.some(x=>(x[0]===pr[0]&&x[1]===pr[1])||(x[0]===pr[1]&&x[1]===pr[0])))l.links.push(pr);});
   localStorage.setItem(OVR_KEY,JSON.stringify(l));
   try{Sync.stampKey(OVR_KEY);}catch(e){}
@@ -2531,14 +2531,17 @@ function applyOverrides(){
   const extFor=p=>{const ids=(p._grp&&p._grp.length?p._grp:[p]).map(x=>x.id);
     for(const id of ids){if(OVR.ext[id])return OVR.ext[id];}return null;};
   STATE.data.leagues.forEach(L=>L.players.forEach(p=>{
-    if(!p._orig)p._orig={height:p.height,weight:p.weight,country:p.country,pos:p.pos,role:p.role,born:p.born,name:p.name};
-    const o=p._orig; p.height=o.height;p.weight=o.weight;p.country=o.country;p.pos=o.pos;p.role=o.role;p.born=o.born;p.name=o.name;
+    if(!p._orig)p._orig={height:p.height,weight:p.weight,country:p.country,pos:p.pos,role:p.role,born:p.born,birthDate:p.birthDate||p.dob||'',name:p.name};
+    const o=p._orig; p.height=o.height;p.weight=o.weight;p.country=o.country;p.pos=o.pos;p.role=o.role;p.born=o.born;p.birthDate=o.birthDate;p.name=o.name;
     const b=bioFor(p);
-    p.hand=null;p.license=null;p.agent=null;p.agency=null;p.agentUrl=null;p._rgm=null;p.projLevel=null;
+    p.hand=null;p.license=null;p.agent=null;p.agency=null;p.agentUrl=null;p._rgm=null;p._proballers=null;p._otherLink=null;p.contractUntil=null;p.contractStatus=null;p.projLevel=null;
     if(b){ if(b.height!=null&&b.height!=="")p.height=Number(b.height); if(b.weight!=null&&b.weight!=="")p.weight=Number(b.weight);
       if(Object.prototype.hasOwnProperty.call(b,'country'))p.country=b.country; if(b.pos)p.pos=b.pos; if(b.role){const _r=(b.role==="Wing"?"Forward":b.role);p.role=_r;p.pos=_r;} if(b.born!=null&&b.born!=="")p.born=Number(b.born); if(b.name)p.name=b.name;
       if(b.hand)p.hand=b.hand; if(b.license)p.license=b.license;
+      if(b.birthDate){p.birthDate=b.birthDate;p.born=Number(b.birthDate.slice(0,4));}
       if(b.agent)p.agent=b.agent; if(b.agency)p.agency=normAgency(b.agency); if(b.agentUrl)p.agentUrl=b.agentUrl; if(b.rgm)p._rgm=b.rgm;
+      if(b.proballers)p._proballers=b.proballers;if(b.otherLink)p._otherLink=b.otherLink;
+      p.contractUntil=b.contractUntil||null;p.contractStatus=b.contractStatus||null;
       if(b.projLevel!=null&&b.projLevel!=="")p.projLevel=Number(b.projLevel); }
     window.EuroScoutAgencyResearch?.apply(p,b);
     p.country=EuroScoutCountries.canonical(p.country);
@@ -2657,84 +2660,7 @@ function esel(lab,id,val,opts){
   const optHtml=['<option value="">— none —</option>'].concat(opts.map(o=>'<option value="'+esc(o)+'"'+(o===cur?' selected':'')+'>'+esc(o)+'</option>')).join("");
   return '<div class="efld"><label>'+lab+'</label><select id="'+id+'">'+optHtml+'</select></div>';
 }
-function openEditModal(id){
-  if(!Store.canEdit())return;
-  const p=player(id); if(!p)return; const grp=p._grp||[p];
-  const html='<h3>Edit \u2014 '+esc(p.name)+'</h3>'
-   +'<div class="editgrid">'
-   +'<div class="efld" style="grid-column:1/-1"><label>Player name</label><input type="text" id="eName" value="'+esc(p.name||"")+'" autocomplete="off"/></div>'
-   +efld("Height (cm)","eHeight",p.height||"")+efld("Weight (kg)","eWeight",p.weight||"")
-   +ecountryField(p.country||"")+esel("Position","ePos",p.role||"",["Guard","Forward","Big"])
-   +efld("Year of birth","eBorn",p.born||"")+efld("Eurobasket / external profile link","eExt",p._ext||"")
-   +esel("Dominant hand","eHand",p.hand||"",["Right","Left"])
-   +'<div class="efld"><label>Agent</label><select id="eAgent"><option value="">— none —</option>'
-     +agentList().map(a=>'<option value="'+esc(a)+'"'+(a===(p.agent||"")?' selected':'')+'>'+esc(a)+'</option>').join("")
-     +'<option value="__new"'+((p.agent&&!agentList().includes(p.agent))?' selected':'')+'>+ add new agent…</option></select></div>'
-   +efld("New agent name","eAgentNew",(p.agent&&!agentList().includes(p.agent))?p.agent:"")
-   +esel("Agency","eAgency",p.agency||"",agencyList())+efld("Add new agency","eAgencyNew","")
-   +'<div class="efld"><label>Projected level</label><select id="eProj">'
-     +'<option value="">Auto (production + your rating)</option>'
-     +LEVEL_BANDS.map((lab,i)=>'<option value="'+i+'"'+((p.projLevel!=null&&Number(p.projLevel)===i)?' selected':'')+'>'+lab+'</option>').reverse().join("")
-     +'</select></div>'
-   +'</div>'
-   +'<div class="hint" style="margin-top:6px">Bio edits apply to this player across every competition. Agency dropdown lists agencies you\u2019ve added \u2014 type a new one in \u201cAdd new agency\u201d to save it.</div>'
-   +'<div class="nlab" style="margin-top:16px">Linked competitions ('+grp.length+')</div>'
-   +'<div>'+grp.map(x=>'<div class="lnkrow"><span>'+esc(leagueOf(x).meta.name)+' \u00b7 '+esc(x.teamName)+(x.id===id?' <b>(this profile)</b>':'')+'</span>'+(x.id!==id?'<button class="btn ghost sm" data-open="'+x.id+'">Open</button>':'')+'</div>').join("")+'</div>'
-   +'<div class="nlab" style="margin-top:12px">Link another player (same person, other competition)</div>'
-   +'<input type="text" id="linkSearch" placeholder="Type a name to find & link\u2026" autocomplete="off" style="width:100%;box-sizing:border-box"/>'
-   +'<div id="linkResults" class="lnkres"></div>'
-   +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:center">'
-   +'<button class="btn" id="editSave">Save changes</button>'
-   +'<button class="btn ghost sm" id="ovrExport">Export overrides.js</button>'
-   +'<label class="btn ghost sm" style="cursor:pointer">Import\u2026<input type="file" id="ovrImport" accept=".js,.json" style="display:none"/></label>'
-   +'<span class="hint">Saved in this browser \u00b7 export &amp; send me the file to bake it into the site</span></div>';
-  showModal(html,true);
-  // searchable country dropdown (type to filter; free text still allowed)
-  (function(){const inp=$("#eCountry"), list=$("#eCountryList"); if(!inp||!list)return;
-    const paint=q=>{const qq=(q||"").trim().toLowerCase();
-      const ms=(qq?COUNTRY_LIST.filter(c=>searchFold(c).includes(searchFold(qq))):COUNTRY_LIST);
-      if(!ms.length){list.classList.add("hidden");list.innerHTML="";return;}
-      list.innerHTML=ms.slice(0,60).map(c=>{const fe=flagEmoji(c);
-        return '<div class="ecombo-opt" data-c="'+esc(c)+'">'+(fe?'<span class="ecflag">'+fe+'</span>':'<span class="ecflag"></span>')+esc(c)+'</div>';}).join("");
-      list.classList.remove("hidden");
-      $$("#eCountryList .ecombo-opt").forEach(o=>o.onmousedown=e=>{e.preventDefault();inp.value=o.dataset.c;list.classList.add("hidden");});};
-    inp.onfocus=()=>paint(inp.value);
-    inp.oninput=()=>paint(inp.value);
-    inp.onblur=()=>setTimeout(()=>list.classList.add("hidden"),160);
-  })();
-  // agent → agency auto-fill
-  const agSel=$("#eAgent"), agcySel=$("#eAgency"), agNew=$("#eAgentNew");
-  if(agSel){agSel.onchange=()=>{
-    const v=agSel.value;
-    if(v==="__new"){if(agNew)agNew.focus();return;}
-    const agcy=agencyForAgent(v);
-    if(agcy&&agcySel){ // ensure the option exists, then select it
-      if(![...agcySel.options].some(o=>o.value===agcy)){const o=document.createElement("option");o.value=agcy;o.textContent=agcy;agcySel.appendChild(o);}
-      agcySel.value=agcy;
-    }
-  };}
-  const ls=$("#linkSearch");
-  if(ls) ls.oninput=()=>{const q=ls.value.trim().toLowerCase();const box=$("#linkResults");
-    if(q.length<2){box.innerHTML="";return;}
-    const inG=new Set((player(id)._grp||[p]).map(x=>x.id));
-    const res=allPlayersFlat().filter(x=>!inG.has(x.id)&&searchFold(x.name).includes(searchFold(q))).sort((a,b)=>(b.pir||0)-(a.pir||0)).slice(0,8);
-    box.innerHTML=res.length?res.map(x=>'<div class="gsitem" data-link="'+x.id+'"><div class="gi"><div class="gn">'+esc(x.name)+'</div><div class="gm">'+esc(leagueOf(x).meta.name)+' \u00b7 '+esc(x.teamName)+' \u00b7 b. '+(x.born||"?")+'</div></div><span class="glg">link</span></div>').join(""):'<div class="gsempty">No match</div>';
-    $$("#linkResults [data-link]").forEach(el=>el.onclick=()=>{ovrSaveLocal({links:[[id,el.dataset.link]]});toast("Linked");renderProfile();openEditModal(id);});
-  };
-  $("#editSave").onclick=()=>{const g=k=>{const el=$("#"+k);return el?el.value.trim():"";};
-    const newAg=g("eAgencyNew"); if(newAg)addAgency(newAg);
-    const agency=newAg||g("eAgency");
-    // agent: dropdown value, unless "+ add new" chosen → use the free-text name
-    let agent=g("eAgent"); if(agent==="__new")agent=g("eAgentNew"); else if(!agent&&g("eAgentNew"))agent=g("eAgentNew");
-    if(agent)addAgent(agent,agency); // remember this agent→agency for next time
-    // key the bio to the person (group canonical id) so it applies across all their competitions
-    const key=gid(p)||id;
-    ovrSaveLocal({bio:{[key]:{name:g("eName"),height:g("eHeight"),weight:g("eWeight"),country:g("eCountry"),role:g("ePos"),born:g("eBorn"),hand:g("eHand"),agent:agent,agency:agency,agentUrl:g("eAgentUrl"),rgm:g("eRgm"),projLevel:g("eProj")}},ext:{[key]:g("eExt")}});
-    toast("Saved");hideModal();renderProfile();};
-  const ex=$("#ovrExport"); if(ex)ex.onclick=ovrExportBlob;
-  const im=$("#ovrImport"); if(im)im.onchange=e=>{if(e.target.files[0])ovrImportFile(e.target.files[0]);};
-  $$("#modal .lnkrow [data-open]").forEach(b=>b.onclick=()=>{hideModal();openProfile(b.dataset.open);});
-}
+function openEditModal(id){return window.EuroScoutEditPlayerV2?.open(id);}
 /* ---------- live-scouting matchup switcher ---------- */
 const MU_KEY="euroscout:matchup";
 function muState(){try{return JSON.parse(localStorage.getItem(MU_KEY))||{}}catch(e){return{}}}
@@ -2993,6 +2919,7 @@ async function boot(){
   window.EuroScoutMemberships?.apply(raw);
   window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
   STATE.data = raw;
+  window.EuroScoutEditPlayerV2?.prune(raw);
   injectExhibitions(raw);
   raw.leagues.forEach(L=>L.players.forEach(p=>{
     const g=p.gameLog||[]; if(!g.length){p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);return;} const t={min:0,pts:0,fgm:0,fga:0,f3m:0,f3a:0,ftm:0,fta:0,reb:0,ast:0,stl:0,blk:0,tov:0,pir:0};
@@ -3004,6 +2931,7 @@ async function boot(){
   OVR=ovrMerged(); applyOverrides(); rebuildLinks();
   muInit();
   await Store.load();
+  if(window.EuroScoutEditPlayerV2?.prune(raw)){rebuildLinks();STATE._idx=null;}
   mergeGroupRecords();
   // Other-league packs load only when a section/search needs them.
   const sel=$("#leagueSel");
@@ -6155,6 +6083,7 @@ async function loadExtraPack(label){
     window.EuroScoutExpansion?.apply(STATE.data);
     window.EuroScoutMemberships?.apply(STATE.data);
     window.EuroScoutBBL?.apply(STATE.data);window.EuroScoutOfficialRosters?.apply(STATE.data);window.EuroScoutBCLQ?.apply(STATE.data);
+    window.EuroScoutEditPlayerV2?.prune(STATE.data);
     // derived per-player fields the core boot computes (astto etc.) for the new leagues
     pack.leagues.forEach(L=>L.players.forEach(p=>{
       if(p.astto==null)p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);
@@ -7585,6 +7514,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-market-records.js?v=16"></script>
 <script src="euroscout-market.js?v=20260921-fa-v2"></script>
 <script src="euroscout-freeagents-v2.js?v=20260921-1"></script>
+<script src="euroscout-edit-player-v2.js?v=20260921-1"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
 <script src="euroscout-transfer-confirmations.js?v=20260915-verified"></script>
 <script src="euroscout-transfer-verification.js?v=20260920-v1"></script>
