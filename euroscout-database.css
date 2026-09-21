@@ -84,8 +84,11 @@ body.es-redesign.es-database-page.es-nav-collapsed{--es-nav:72px!important;paddi
 @media(min-width:701px){
   .es-database-page .scoutwrap.es-db-rail-hidden{grid-template-columns:0 minmax(0,1fr)!important}
   .es-database-page .scoutwrap.es-db-rail-hidden .scoutrail{display:none!important}
-  .es-database-page .scoutwrap.es-db-rail-hidden .scoutmain{padding-left:0}
+.es-database-page .scoutwrap.es-db-rail-hidden .scoutmain{padding-left:0}
 }
+.es-database-page .es-db-position{grid-template-columns:repeat(4,minmax(0,1fr))}
+.es-database-page .es-db-position button{font-size:12px;font-weight:600}
+.es-database-page .es-db-table,.es-database-page .es-db-table th,.es-database-page .es-db-table td,.es-database-page .es-db-table button{font-family:var(--body),system-ui,sans-serif!important}
 @media(max-width:700px){
   .es-database-page .es-db-toolbar{align-items:stretch}
   .es-database-page .es-db-view,.es-database-page .es-db-toolbar-actions{width:100%}

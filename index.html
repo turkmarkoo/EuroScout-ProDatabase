@@ -1754,8 +1754,8 @@ body.drawer-lock{overflow:hidden}
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260921-database-v3">
-<link rel="stylesheet" href="euroscout-database.css?v=20260921-database-v5">
-<link rel="stylesheet" href="euroscout-market.css?v=16"><link rel="stylesheet" href="euroscout-freeagents-v2.css?v=20260921-polish"><link rel="stylesheet" href="euroscout-edit-player-v2.css?v=20260921-1"><script src="search-fold.js?v=36"></script>
+<link rel="stylesheet" href="euroscout-database.css?v=20260921-editor-db-fix">
+<link rel="stylesheet" href="euroscout-market.css?v=16"><link rel="stylesheet" href="euroscout-freeagents-v2.css?v=20260921-filters-fix"><link rel="stylesheet" href="euroscout-edit-player-v2.css?v=20260921-1"><script src="search-fold.js?v=36"></script>
 <script src="feb-data.js?v=20260913"></script><script src="feb-rosters-2026.js?v=20260920"></script><script src="euroscout-feb.js?v=20260920-fix"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260920-fix"></script><script src="membership-data.js?v=20260920-fix"></script><script src="euroscout-regional-rosters.js?v=20260920-restore-1"></script><script src="euroscout-registry.js?v=20260920-restore-1"></script>
 <script src="euroscout-memberships.js?v=20260921-entry-dialog"></script>
 <style>.membership-review{margin:12px 0 18px;padding:12px 16px;background:var(--card,#fff);border:1px solid var(--border,#d9e3df);border-radius:12px;color:var(--text,#193442);font-size:13px}.membership-review details{margin-top:8px}.membership-review summary{cursor:pointer}.membership-review-row{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 0;align-items:baseline}.membership-review-row>span{flex:1 1 250px}.membership-review-row>a{white-space:nowrap}.membership-review details[open]{max-height:340px;overflow:auto}.rbFilters>select{min-width:min(320px,100%);max-width:100%;height:auto;min-height:44px;padding:10px 36px 10px 12px}</style>
@@ -2538,7 +2538,9 @@ function applyOverrides(){
     if(b){ if(b.height!=null&&b.height!=="")p.height=Number(b.height); if(b.weight!=null&&b.weight!=="")p.weight=Number(b.weight);
       if(Object.prototype.hasOwnProperty.call(b,'country'))p.country=b.country; if(b.pos)p.pos=b.pos; if(b.role){const _r=(b.role==="Wing"?"Forward":b.role);p.role=_r;p.pos=_r;} if(b.born!=null&&b.born!=="")p.born=Number(b.born); if(b.name)p.name=b.name;
       if(b.hand)p.hand=b.hand; if(b.license)p.license=b.license;
-      if(b.birthDate){p.birthDate=b.birthDate;p.born=Number(b.birthDate.slice(0,4));}
+      if(Object.prototype.hasOwnProperty.call(b,'birthDate'))p.birthDate=b.birthDate;
+      if(b.birthDate)p.born=Number(b.birthDate.slice(0,4));
+      if(b.born!=null&&b.born!=="")p.age=new Date().getFullYear()-Number(p.born);
       if(b.agent)p.agent=b.agent; if(b.agency)p.agency=normAgency(b.agency); if(b.agentUrl)p.agentUrl=b.agentUrl; if(b.rgm)p._rgm=b.rgm;
       if(b.proballers)p._proballers=b.proballers;if(b.otherLink)p._otherLink=b.otherLink;
       p.contractUntil=b.contractUntil||null;p.contractStatus=b.contractStatus||null;
@@ -6466,6 +6468,15 @@ function scoutSeasonPool(s){
 }
 function scoutSeasonControls(s){const year=s.season||'2025/26',stats=s.statsSeason||year;return `<div class="seasonFilters"><label>Roster season<select id="scoutSeason"><option value="2025/26" ${year==='2025/26'?'selected':''}>2025/26</option><option value="2026/27" ${year==='2026/27'?'selected':''}>2026/27</option></select></label><label>Competition group<select id="scoutCompetition"><option value="all">All competitions</option><option value="bclq" ${s.competition==='bclq'?'selected':''}>BCL Qualifiers · 2026/27</option></select></label><label>Statistics season<select id="scoutStatsSeason"><option value="2025/26" ${stats==='2025/26'?'selected':''}>2025/26</option><option value="2026/27" ${stats==='2026/27'?'selected':''}>2026/27</option></select></label><p class="hint" style="flex-basis:100%;margin:0">Roster season selects the player group. Statistics season selects the numbers shown. Missing statistics stay blank. Open a profile for its full history.</p></div>`;}
 
+function dbPositionGroup(p){
+  const role=String(p.role||'').toLowerCase();
+  if(['guard','forward','big'].includes(role))return role[0].toUpperCase()+role.slice(1);
+  const pos=String(p.pos||'').toLowerCase();
+  if(/guard|^(pg|sg|g)$/.test(pos))return 'Guard';
+  if(/center|centre|^(c|pf)$/.test(pos))return 'Big';
+  if(/forward|wing|^(sf|f)$/.test(pos))return 'Forward';
+  return '';
+}
 function renderScout(){
   const s=STATE.scout;
   if(!s._viewInit){s.railHidden=false;try{const v=localStorage.getItem(SCOUT_VIEW_KEY);if(v==="table"||v==="cards")s.view=v;}catch(e){}
@@ -6477,7 +6488,7 @@ function renderScout(){
   // filters
   // Competition membership is resolved before deduplicating seasonal records.
   if(s.roles.size)   pool=pool.filter(p=>s.roles.has(p.role));
-  if(s.dbPos) pool=pool.filter(p=>String(p.pos||p.role||"").toUpperCase().split(/[\s/,-]+/).includes(s.dbPos));
+  if(s.dbPos) pool=pool.filter(p=>dbPositionGroup(p)===s.dbPos);
   if(s.dbCountry) pool=pool.filter(p=>p.country===s.dbCountry);
   if(s.dbAgeMin!=null) pool=pool.filter(p=>p.age!=null&&p.age>=s.dbAgeMin);
   if(s.dbAgeMax!=null) pool=pool.filter(p=>p.age!=null&&p.age<=s.dbAgeMax);
@@ -7509,12 +7520,12 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-ui.js?v=20260921-database-v3"></script>
 <script src="euroscout-diagnostics.js?v=20260920-diagnostics-1"></script>
 <script src="euroscout-workflow.js?v=20260920-dashboard-workspace-1"></script>
-<script src="euroscout-database.js?v=20260921-database-v5"></script>
+<script src="euroscout-database.js?v=20260921-editor-db-fix"></script>
 
 <script src="euroscout-market-records.js?v=16"></script>
 <script src="euroscout-market.js?v=20260921-fa-v2"></script>
-<script src="euroscout-freeagents-v2.js?v=20260921-polish"></script>
-<script src="euroscout-edit-player-v2.js?v=20260921-1"></script>
+<script src="euroscout-freeagents-v2.js?v=20260921-filters-fix"></script>
+<script src="euroscout-edit-player-v2.js?v=20260921-editor-db-fix"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
 <script src="euroscout-transfer-confirmations.js?v=20260915-verified"></script>
 <script src="euroscout-transfer-verification.js?v=20260920-v1"></script>
