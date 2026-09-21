@@ -44,8 +44,7 @@
   window.renderTeamsNext = function () {
     try {
       if (STATE.nextTeam) return original();
-      var st = T(), m = next26Get(), mb = next26bGet(), byTeam = new Map();
-      assignPool().forEach(function (p) { effective26keys(p, m, mb).forEach(function (k) { if (k && !isStatus(k)) { if (!byTeam.has(k)) byTeam.set(k, []); byTeam.get(k).push(p); } }); });
+      var st = T(), m = next26Get(), byTeam = roster2627Assignments(m, next26bGet());
       var clubs = allClubs(), comps = competitions(byTeam, clubs), sel = STATE.next26Lg || '', comp = comps.find(function (c) { return c.value === sel; }) || null;
       var q = normClub(STATE.next26Q || ''), placed = Array.from(byTeam.values()).reduce(function (s, a) { return s + a.length; }, 0);
       var inSel = clubs.filter(function (c) { return inComp(c, sel); });

@@ -28,11 +28,11 @@
     if (STATE.rbv2Club !== club.key) { STATE.rbv2Club = club.key; STATE.rbv2Position = 'All'; }
     const assignment = next26Get();
     const previous = clubRoster2526(club);
-    const current = clubRoster2627(club, assignment).map(rosterHistory);
-    const previousIds = new Set(previous.map(gid));
-    const currentIds = new Set(current.map(gid));
-    const arrived = current.filter(p => !previousIds.has(gid(p)));
-    const departed = previous.filter(p => !currentIds.has(gid(p)));
+    const current = uniqueRosterPeople(clubRoster2627(club, assignment).map(rosterHistory));
+    const inPrevious = p => previous.some(x => sameRosterPerson(x,p));
+    const inCurrent = p => current.some(x => sameRosterPerson(x,p));
+    const arrived = current.filter(p => !inPrevious(p));
+    const departed = previous.filter(p => !inCurrent(p));
     const age = current.map(p => numeric(p.age)).filter(v => v != null && v > 0);
     const height = current.map(p => numeric(p.height)).filter(v => v != null && v > 0);
     const avg = list => list.length ? (list.reduce((a,b) => a+b, 0) / list.length).toFixed(1) : '—';
@@ -45,10 +45,10 @@
     const profileButton = clubTeam ? `<button class="btn ghost rbv2Action" id="rbv2ClubProfile" type="button">View club profile ↗</button>` : '';
     const metric = (value, label, icon) => `<div class="rbv2Metric"><span class="rbv2MetricIcon" aria-hidden="true">${icon}</span><span><strong>${value}</strong><small>${label}</small></span></div>`;
     const status = (p, onCurrent) => onCurrent
-      ? (previousIds.has(gid(p)) ? 'STAYS' : 'NEW')
-      : (currentIds.has(gid(p)) ? 'STAYS' : 'OUT');
+      ? (inPrevious(p) ? 'STAYS' : 'NEW')
+      : (inCurrent(p) ? 'STAYS' : 'OUT');
     const lastTeam = (p, onCurrent) => {
-      if (!onCurrent || previousIds.has(gid(p))) return club.name;
+      if (!onCurrent || inPrevious(p)) return club.name;
       const name = p.teamName || '';
       return normClub(name) === normClub(club.name) ? '—' : (name || '—');
     };
@@ -70,7 +70,7 @@
       </div>`;
     };
     const panel = (year, subtitle, players, onCurrent) => `<section class="rbv2Panel ${onCurrent ? 'rbv2Current' : 'rbv2Previous'}">
-      <header class="rbv2PanelHead"><div><h2>${year} <span>${players.length}</span></h2><p>${subtitle}</p></div></header>
+      <div class="rbv2PanelHead"><div><h2>${year} <span>${players.length}</span></h2><p>${subtitle}</p></div></div>
       <div class="rbv2Columns" aria-hidden="true"><span>PLAYER</span><span>POS</span><span>AGE</span><span>HT</span><span>LAST TEAM</span><span>STATUS</span><span>RATING</span><span></span><span></span></div>
       <div class="rbv2Rows">${players.filter(keep).length ? players.filter(keep).map(p => row(p,onCurrent)).join('') : `<div class="rbv2Empty">${players.length ? 'No players at this position.' : 'No roster recorded yet.'}</div>`}</div>
       ${onCurrent ? `<button type="button" class="rbv2AddRow" id="rbv2AddBottom"><span>＋</span> Add a player to ${esc(club.name)}...</button>` : ''}
@@ -78,7 +78,7 @@
 
     $('#app').innerHTML = `<div class="view rbv2Page">
       <nav class="rbv2Breadcrumb"><button type="button" id="rbv2Back">←&nbsp; Teams</button><span>›</span><span>${esc(club.name)}</span></nav>
-      <header class="rbv2Identity"><div class="rbv2ClubLogo">${clubBadge(club,72)}</div><div class="rbv2ClubText"><h1>${esc(club.name)}</h1><p>${country ? `<span>${esc(country)}</span>` : ''}${comps.map(c => `<span>${esc(c)}</span>`).join('')}</p></div><div class="rbv2HeaderActions"><label>Season<select id="rbv2Season"><option value="2026/27" selected>2026/27</option><option value="2025/26">2025/26</option></select></label>${profileButton}<button class="btn ghost rbv2Action${watched ? ' rbv2ClubWatched' : ''}" id="rbv2ClubWatch" type="button" aria-pressed="${watched}">${watched ? '★ Watching club' : '☆ Add to watchlist'}</button></div></header>
+      <div class="rbv2Identity"><div class="rbv2ClubLogo">${clubBadge(club,72)}</div><div class="rbv2ClubText"><h1>${esc(club.name)}</h1><p>${country ? `<span>${esc(country)}</span>` : ''}${comps.map(c => `<span>${esc(c)}</span>`).join('')}</p></div><div class="rbv2HeaderActions"><label>Season<select id="rbv2Season"><option value="2026/27" selected>2026/27</option><option value="2025/26">2025/26</option></select></label>${profileButton}<button class="btn ghost rbv2Action${watched ? ' rbv2ClubWatched' : ''}" id="rbv2ClubWatch" type="button" aria-pressed="${watched}">${watched ? '★ Watching club' : '☆ Add to watchlist'}</button></div></div>
       <div class="rbv2Toolbar"><div class="rbv2Metrics">${metric(previous.length,'Players','♙')}${metric(current.length,'Confirmed','✓')}${metric(arrived.length,'New','＋')}${metric(departed.length,'Departures','↗')}${metric(avg(age),'Average age','⌁')}${metric(avg(height)+' cm','Average height','↕')}</div><div class="rbv2Filters" role="group" aria-label="Filter by position">${['All','Guard','Forward','Big'].map(pos => `<button type="button" class="${position === pos ? 'selected' : ''}" data-position="${pos}" aria-pressed="${position === pos}">${pos === 'All' ? 'All' : pos + 's'}</button>`).join('')}</div><button type="button" class="btn rbv2AddTop" id="rbv2AddTop">＋ Add player</button></div>
       <main class="rbv2Compare">${panel('2025/26','Previous season roster',previous,false)}${panel('2026/27','Current roster',current,true)}</main>
     </div>`;

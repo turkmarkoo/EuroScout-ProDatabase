@@ -4910,15 +4910,63 @@ function wireTransferInbox(){
   $$("[data-approve]").forEach(b=>b.onclick=()=>approveTransfer(b.dataset.approve,b.dataset.pid,b.dataset.tk||null));
   $$("[data-reject]").forEach(b=>b.onclick=()=>rejectTransfer(b.dataset.reject));
   $$(".trName[data-pid]").forEach(el=>el.onclick=()=>openProfile(el.dataset.pid));}
-function clubRoster2526(club){ // this season's squad across every competition the club plays
-  const seen=new Set(),out=[];
-  (club.teams||[]).forEach(t=>{const L=(STATE.data.leagues||[]).find(x=>x.meta.id===t.lg);if(!L)return;
-    L.players.filter(p=>p.team===t.code).forEach(p=>{const k=gid(p);if(seen.has(k))return;seen.add(k);out.push(p);});});
-  return out.sort((a,b)=>(statGradeOverall(b)??-1)-(statGradeOverall(a)??-1));
+function sameRosterPerson(a,b){
+  if(gid(a)===gid(b))return true;
+  const ay=Number(a.born)||null,by=Number(b.born)||null;
+  if(ay&&by&&ay!==by)return false;
+  const ah=Number(a.height)||null,bh=Number(b.height)||null;
+  if(ah&&bh&&Math.abs(ah-bh)>3)return false;
+  const an=normName(a.name),bn=normName(b.name);
+  if(an&&an===bn)return true;
+  if(!ay||!by)return false;
+  const tokens=s=>s.split(' ').filter(x=>x&&x!=='jr'&&x!=='ii'&&x!=='iii');
+  const at=tokens(an),bt=tokens(bn);
+  return at.length>=2&&bt.length>=2&&at.at(-1)===bt.at(-1)&&
+    (at.every(x=>bt.includes(x))||bt.every(x=>at.includes(x)));
 }
-function clubRoster2627(club,m){m=m||next26Get();const mb=next26bGet();
-  return assignPool().filter(p=>effective26keys(p,m,mb).includes(club.key)).sort((a,b)=>(statGradeOverall(b)??-1)-(statGradeOverall(a)??-1));
+function uniqueRosterPeople(players){
+  const out=[];
+  for(const p of players){const i=out.findIndex(x=>sameRosterPerson(x,p));
+    if(i<0)out.push(p);
+    else if((Number(p.g)||0)>(Number(out[i].g)||0))out[i]=p;
+  }
+  return out;
 }
+function clubRoster2526(club){
+  const out=[];
+  (club.teams||[]).forEach(t=>{const L=(STATE.data.leagues||[]).find(x=>x.meta.id===t.lg);
+    if(!L||!/^2025\s*[\/-]\s*26$/.test(String(L.meta.season||'')))return;
+    L.players.filter(p=>p.team===t.code&&!p._rosterOnly&&!p._exhib&&Number(p.g)>0).forEach(p=>out.push(p));});
+  return uniqueRosterPeople(out).sort((a,b)=>(statGradeOverall(b)??-1)-(statGradeOverall(a)??-1));
+}
+function roster2627Assignments(m,mb){
+  m=m||next26Get();mb=mb||next26bGet();
+  const pool=assignPool(),auto=autoAppliedGet(),manualBySurname=new Map(),manualById=new Map();
+  const surname=p=>normName(p.name).split(' ').at(-1)||'';
+  const corrections=(window.EuroScoutABA?.data?.roster||[]).filter(r=>r.correctedAt).map(r=>{
+    const p=pool.find(x=>r.ids.includes(x.id)||(x._grp||[]).some(y=>r.ids.includes(y.id)));
+    return p?{p,key:window.EuroScoutABA.key(p),staleKey:r.staleKey?canonKey(r.staleKey):null}:null;
+  }).filter(x=>x?.key);
+  for(const p of pool){const ids=[gid(p),p.id,...(p._grp||[]).map(x=>x.id)];
+    const id=ids.find(x=>m[x]&&!auto[x]);if(!id)continue;
+    const item={p,key:canonKey(m[id])},last=surname(p);
+    if(!manualBySurname.has(last))manualBySurname.set(last,[]);
+    manualBySurname.get(last).push(item);manualById.set(gid(p),item);}
+  const byClub=new Map();
+  for(const p of pool){
+    const candidates=(manualBySurname.get(surname(p))||[]).filter(x=>sameRosterPerson(x.p,p));
+    const corrected=corrections.find(x=>sameRosterPerson(x.p,p));
+    const baseline=corrected?.staleKey||candidates.map(x=>window.EuroScoutABA?.key(x.p)).find(Boolean)||window.EuroScoutABA?.key(p)||null;
+    const manual=candidates.find(x=>baseline&&x.key!==baseline)||manualById.get(gid(p))||candidates[0];
+    const override=manual&&(!corrected||manual.key!==corrected.staleKey)?manual:(corrected||manual);
+    const keys=override?(isStatus(override.key)?[]:[override.key]):effective26keys(p,m,mb);
+    for(const key of keys){if(!byClub.has(key))byClub.set(key,[]);byClub.get(key).push(p);}
+  }
+  for(const [key,players] of byClub)byClub.set(key,uniqueRosterPeople(players)
+    .sort((a,b)=>(statGradeOverall(b)??-1)-(statGradeOverall(a)??-1)));
+  return byClub;
+}
+function clubRoster2627(club,m){return roster2627Assignments(m).get(club.key)||[];}
 
 function compactTeamTags(club,historical=false){
  const short={bbl:'BBL',acb:'ACB',lba:'Serie A',aba:'ABA',euroleague:'EL',eurocup:'EuroCup',bcl:'BCL',fec:'FEC',enbl:'ENBL',lnb:'Betclic',bsl:'BSL',gbl:'GBL',lkl:'LKL',slo:'KZS',hrv:'Premijer',proa:'ProA',seriea2:'Serie A2',tbl:'TBL',ncaam:'NCAA'};
@@ -4930,8 +4978,7 @@ function renderTeamsNext(){
   if(STATE.nextTeam){const c=allClubs().find(x=>x.key===STATE.nextTeam);
     if(c)return renderNextRoster(c); STATE.nextTeam=null;}
   const m=next26Get();
-  const byTeam=new Map();const mb=next26bGet();
-  assignPool().forEach(p=>{effective26keys(p,m,mb).forEach(k=>{if(k&&!isStatus(k)){if(!byTeam.has(k))byTeam.set(k,[]);byTeam.get(k).push(p);}});});
+  const byTeam=roster2627Assignments(m,next26bGet());
   const clubs=allClubs();
   const lgs=[...new Set(allDbTeams().map(t=>t.lgName))];
   const S=(STATE.data||{}).season2627, nextLgs=S&&S.comps?Object.entries(S.comps).map(([id,c])=>({id,name:c.name})):[];
@@ -7373,15 +7420,15 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/agency-research.js?v=20260907-13"></script>
 <script src="euroscout-agency-research.js?v=20260908-1"></script>
 <link rel="stylesheet" href="euroscout-roster-builder.css?v=20260921-v3-header">
-<script src="euroscout-roster-builder.js?v=20260921-v2"></script>
-<link rel="stylesheet" href="euroscout-team-workspace.css?v=20260921-v1">
-<script src="euroscout-team-workspace.js?v=20260921-v1"></script>
+<script src="euroscout-roster-builder.js?v=20260921-roster-fix"></script>
+<link rel="stylesheet" href="euroscout-team-workspace.css?v=20260921-v2">
+<script src="euroscout-team-workspace.js?v=20260921-v2"></script>
 <link rel="stylesheet" href="euroscout-teams-2627.css?v=20260921-entry-dialog">
-<script src="euroscout-teams-2627.js?v=20260921-entry-dialog"></script>
+<script src="euroscout-teams-2627.js?v=20260921-roster-fix"></script>
 <script src="data/realgm-representation.js?v=20260907-13"></script>
 <script src="euroscout-representation.js?v=20260907-13"></script>
 <script src="data/aba-rosters-2026.js?v=20260910-1"></script>
-<script src="euroscout-aba-rosters.js?v=20260910-1"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260920-fix"></script>
+<script src="euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260920-fix"></script>
 <script src="data/bclq-2026.js?v=20260921-final"></script><script src="euroscout-bclq-2026.js?v=20260921-jerseys"></script>
 <script>esSetup();boot();</script>
 <script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-sessions.js?v=20260921-1"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260920-2"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260921-1"><script src="data/signal-origins.js?v=20260920-1"></script><script src="euroscout-signals.js?v=20260920-2"></script><script src="euroscout-quickstats.js?v=20260921-season-v2"></script><script src="euroscout-live-notes.js?v=20260920-2"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>
