@@ -1753,7 +1753,7 @@ body.drawer-lock{overflow:hidden}
 
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
-<link rel="stylesheet" href="euroscout-ui.css?v=20260920-dashboard-workspace-1">
+<link rel="stylesheet" href="euroscout-ui.css?v=20260921-dashboard-focus-1">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
 <script src="feb-data.js?v=20260913"></script><script src="feb-rosters-2026.js?v=20260920"></script><script src="euroscout-feb.js?v=20260920-fix"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260920-fix"></script><script src="membership-data.js?v=20260920-fix"></script><script src="euroscout-regional-rosters.js?v=20260920-restore-1"></script><script src="euroscout-registry.js?v=20260920-restore-1"></script>
 <script src="euroscout-memberships.js?v=20260913-expansion"></script>
@@ -1838,7 +1838,6 @@ body.drawer-lock{overflow:hidden}
 /* ============================ EuroScout app ============================ */
 /* Capture any deep-link hash (#p=<id>) before anything can wipe it. */
 const __DEEPHASH=(location.hash||"");
-document.documentElement.dataset.theme='light';
 const $ = (s,r=document)=>r.querySelector(s);
 const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
 const fmt = (v,d=1)=> (v===undefined||v===null||isNaN(v))?"—":Number(v).toFixed(d);
@@ -3013,7 +3012,8 @@ async function boot(){
   $$("#scopeSeg button").forEach(b=>b.onclick=()=>setScopeMode(b.dataset.scope));
   updateScopeLabel();
   wireGlobalSearch();
-  document.addEventListener("focusin",e=>{if(e.target.matches("#globalSearch, #gSearch, #searchAll"))loadExtraLeagues().catch(e=>toast(e.message));});
+  // Keep the header search responsive: merely focusing it must not load every extra league.
+  document.addEventListener("focusin",e=>{if(e.target.matches("#gSearch, #searchAll"))loadExtraLeagues().catch(e=>toast(e.message));});
   scheduleSticky();
   const sc=$("#scrim");if(sc)sc.onclick=closeDrawer;
   document.addEventListener("keydown",onGlobalKey);
@@ -3202,10 +3202,9 @@ function openFromHash(h){
 }
 
 function goHome(){
-  STATE.view="scout";
+  STATE.view="dashboard";
   const inp=$("#globalSearch");if(inp)inp.value="";
   const box=$("#gsResults");if(box){box.classList.add("hidden");box.innerHTML="";}
-  $$("#tabs button").forEach((x,i)=>x.classList.toggle("active",i===0));
   render();
 }
 
@@ -3228,7 +3227,7 @@ function allPlayersIndexed(){
   const idx=[],seen=new Set();
   STATE.data.leagues.forEach(L=>L.players.forEach(p=>{
     const g=gid(p); if(seen.has(g))return; seen.add(g);
-    const n=newestOf(p); idx.push({p:n,L:leagueOf(n)});
+    const n=newestOf(p); idx.push({p:n,L:leagueOf(n),nameKey:normName(n.name),nameFold:searchFold(n.name),aliasKeys:(n._abaAliases||[]).map(searchFold)});
   }));
   STATE._idx=idx; return idx;
 }
@@ -3241,7 +3240,7 @@ function openGlobal(leagueId,id){
 }
 function wireGlobalSearch(){
   const inp=$("#globalSearch"),box=$("#gsResults");if(!inp||!box)return;
-  let active=-1,results=[];
+  let active=-1,results=[],searchTimer=null,extraRequested=false,extraFailed=false;
   const close=()=>{box.classList.add("hidden");box.innerHTML="";active=-1;};
   const paint=()=>{
     box.innerHTML=results.map(({p,L},i)=>`<div class="gsitem${i===active?" active":""}" data-i="${i}">
@@ -3255,14 +3254,27 @@ function wireGlobalSearch(){
     const q=searchFold(inp.value.trim());active=-1;
     if(q.length<2){close();return;}
     const qn=normName(q);
-    results=allPlayersIndexed().filter(({p})=>normName(p.name).includes(qn)||searchFold(p.name).includes(searchFold(q))||(p._abaAliases||[]).some(n=>searchFold(n).includes(q)))
-      .sort((a,b)=>(b.p.pir||0)-(a.p.pir||0)).slice(0,12);
-    if(!results.length){box.innerHTML='<div class="gsempty">No players found</div>';box.classList.remove("hidden");return;}
+    results=[];
+    for(const item of allPlayersIndexed()){
+      if((qn&&item.nameKey.includes(qn))||item.nameFold.includes(q)||item.aliasKeys.some(key=>key.includes(q))){
+        results.push(item);
+        if(results.length>12){results.sort((a,b)=>(b.p.pir||0)-(a.p.pir||0));results.length=12;}
+      }
+    }
+    results.sort((a,b)=>(b.p.pir||0)-(a.p.pir||0));
+    if(!results.length){box.innerHTML='<div class="gsempty">'+(!STATE._extraDone&&!extraFailed?'Checking additional leagues…':extraFailed?'No local matches; additional leagues are unavailable':'No players found')+'</div>';box.classList.remove("hidden");return;}
     paint();
   };
   const move=d=>{if(!results.length)return;active=(active+d+results.length)%results.length;paint();
     const el=$$("#gsResults .gsitem")[active];if(el)el.scrollIntoView({block:"nearest"});};
-  inp.oninput=search;
+  inp.oninput=()=>{
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(search,90);
+    if(!extraRequested&&!STATE._extraDone&&inp.value.trim().length>=2){
+      extraRequested=true;
+      setTimeout(()=>loadExtraLeagues().then(()=>{extraFailed=false;}).catch(e=>{extraRequested=false;extraFailed=true;search();console.warn("Extra-league search unavailable",e);}),300);
+    }
+  };
   inp.onfocus=()=>{if(inp.value.trim().length>=2)search();};
   inp.onkeydown=e=>{
     if(box.classList.contains("hidden"))return;
@@ -3993,7 +4005,7 @@ function closeDrawer(silent){
 }
 function switchComp(leagueId,id){const L=STATE.data.leagues.find(x=>x.meta.id===leagueId);
   if(L){STATE.league=L;const sel=$("#leagueSel");if(sel)sel.value=leagueId;}openProfile(id);}
-function applyTheme(t){document.documentElement.dataset.theme="light";}
+function applyTheme(){window.MTSTheme?.apply();}
 function syncStickyTop(){const h=document.querySelector("header");if(!h)return;
   const off=Math.round(h.getBoundingClientRect().height);
   document.documentElement.style.setProperty("--stick-top",off+"px");}
@@ -6137,6 +6149,7 @@ async function loadExtraPack(label){
     }));
     DBTEAM_LIST=null; DBTEAM_BYKEY=null; CLUBS=null; CLUB_BY_TEAMKEY=null; DOM27=null; NEXTCOMP=null;   // invalidate club caches
     PLAYER_BY_NAME=null;   // invalidate transfer name index so NBA/GL/NCAA players become resolvable
+    STATE._idx=null;       // include the newly loaded leagues in global search
     applyOverrides(); rebuildLinks();
     try{ mergeGroupRecords(); }catch(e){}
     // now that these players + their clubs exist, apply any auto-flagged transfers targeting them
@@ -7538,7 +7551,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 </script>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
-<script src="euroscout-ui.js?v=20260920-dashboard-workspace-1"></script>
+<script src="euroscout-ui.js?v=20260921-dashboard-focus-1"></script>
 <script src="euroscout-diagnostics.js?v=20260920-diagnostics-1"></script>
 <script src="euroscout-workflow.js?v=20260920-dashboard-workspace-1"></script>
 
