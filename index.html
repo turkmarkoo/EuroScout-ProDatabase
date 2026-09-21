@@ -1754,7 +1754,7 @@ body.drawer-lock{overflow:hidden}
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260921-database-v3">
-<link rel="stylesheet" href="euroscout-database.css?v=20260921-database-v3">
+<link rel="stylesheet" href="euroscout-database.css?v=20260921-database-v4">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><script src="search-fold.js?v=36"></script>
 <script src="feb-data.js?v=20260913"></script><script src="feb-rosters-2026.js?v=20260920"></script><script src="euroscout-feb.js?v=20260920-fix"></script><script src="elite2-data.js?v=20260913"></script><script src="euroscout-elite2.js?v=20260913"></script><link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script><script src="expansion-data.js?v=20260913-expansion"></script><script src="expansion-seriea2.js?v=20260913-expansion"></script><script src="expansion-proa.js?v=20260913-expansion"></script><script src="expansion-tbl.js?v=20260913-expansion"></script><script src="expansion-britain.js?v=20260913-expansion"></script><script src="expansion-swiss.js?v=20260913-expansion"></script><script src="expansion-denmark.js?v=20260913-expansion"></script><script src="expansion-slovakia.js?v=20260913-expansion"></script><script src="expansion-bosnia.js?v=20260913-expansion"></script><script src="expansion-montenegro.js?v=20260913-expansion"></script><script src="expansion-macedonia.js?v=20260913-expansion"></script><script src="expansion-kosovo.js?v=20260913-expansion"></script><script src="expansion-iceland.js?v=20260913-expansion"></script><script src="euroscout-expansion.js?v=20260913-expansion"></script><script src="bbl-rosters-2026.js?v=20260914"></script><script src="euroscout-bbl-rosters.js?v=20260920-fix"></script><script src="membership-data.js?v=20260920-fix"></script><script src="euroscout-regional-rosters.js?v=20260920-restore-1"></script><script src="euroscout-registry.js?v=20260920-restore-1"></script>
 <script src="euroscout-memberships.js?v=20260913-expansion"></script>
@@ -2020,6 +2020,14 @@ for(const pair of [...(window.EUROSCOUT_MEMBERSHIPS?.identityPairs||[]),...(wind
 const CROSS_COMPETITION_CLUB_GROUPS=[["plk|AW","fec|AW"],["bsl|PET","fec|AP"],["cyp|ANOR","fec|AF"],["denmark|rgteam-914","fec|BB"],["bbl|BRA","fec|BLB"],["kosovo|rgteam-1707","fec|BCB"],["elb|KAL","fec|KC"],["slovakia|rgteam-564","fec|BCP"],["kosovo|rgteam-1748","fec|BCT"],["bsl|BUR","bcl|BUR"],["acb|CAZ","fec|CZ"],["rou|VAL","fec|CSV"],["rou|BRA","fec|CB"],["rou|ORA","fec|RO"],["seriea2|lnp-9503","fec|DS"],["lnb|CHA","bcl|ELAN"],["hun|FEK","fec|FVE"],["por|FCP","fec|FCP"],["bnxt|OOS","bcl|OOST"],["lnb|DIJ","fec|JDB"],["gbl|KAR","bcl|KARD"],["aba|BOS","fec|BT","bosnia|rgteam-40"],["macedonia|rgteam-1273","fec|KKP"],["acb|LLT","bcl|LLTF"],["lnb|LEM","bcl|MSB"],["proa|proa-488","bcl|HDB"],["hun|NHS","bcl|OLAJ"],["lba|RE","fec|PR"],["lba|TSS","bcl|TS"],["gbl|PAOK","fec|PAO"],["slovakia|rgteam-977","bcl|LEV"],["gbl|PER","fec|PB"],["plk|PSL","fec|PSL"],["cze|BRN","fec|PBB"],["bbl|VEC","fec|RV"],["bul|RI1","fec|RS"],["bbl|HRO","fec|RS2"],["acb|SBB","fec|SBB"],["elb|TAR","fec|TUM"],["bsl|TOF","bcl|TOF"],["acb|UCM","fec|UM"],["bnxt|ANT","fec|WGA"],["hrv|ALK","enbl|ALK"],["hrv|DU1","enbl|DUB"],["hrv|DIN","enbl|DIN"],["gbl|IRA","enbl|IRA"],["elb|KEI","enbl|KEI"],["elb|VAL","enbl|VAL"],["bosnia|rgteam-2781","aba2|BAS"],["bosnia|rgteam-877","aba|IGO"],["bosnia|rgteam-249","aba|SIR","directory|aba-2026-6"],["montenegro|rgteam-67","aba|BUD"],["slo|ECE","aba2|ECE"],["slo|GGD","aba2|GGD"],["kls|HERCEGOVACALINGCONEL","aba2|HER"],["slo|KAN","aba2|KAN"],["macedonia|rgteam-2785","aba2|MAD"],["montenegro|rgteam-434","aba2|MOR"],["macedonia|rgteam-398","aba2|MZT"],["montenegro|rgteam-900","aba2|POD"],["montenegro|rgteam-899","aba2|PRI"],["montenegro|rgteam-1321","aba|SCD"],["montenegro|rgteam-487","aba2|SUT"],["macedonia|rgteam-2430","aba2|TFT"],["kls|VOJVODINAMTS","aba2|VOJ"],["kls|VRSACMERIDIANBET","aba2|VRŠ"],["hrv|ZAD","aba|ZAD"],["kls|ZLATIBORMOZZART","aba2|ZLA"],["lba|SCF","directory|italy-scafati-basket"],["swiss|rgteam-929","directory|entry-switzerland-lionsdegeneve"],["bosnia|rgteam-171","aba2|SLO"],["kls|SLOBODA","aba2|SL1"]];
 for(const group of CROSS_COMPETITION_CLUB_GROUPS)for(let i=0;i<group.length;i++)for(let j=i+1;j<group.length;j++)VERIFIED_CLUB_PAIRS.add([group[i],group[j]].sort().join('~'));
 function sameClub(a,b){
+ // Qualifier team codes differ from domestic codes. Match only the same official
+ // FIBA team page, so similarly named clubs cannot be merged by accident.
+ if(a.lg==='bclq'||b.lg==='bclq'){
+   const qualifier=a.lg==='bclq'?a:b,other=a.lg==='bclq'?b:a;
+   const eventTeam=window.EUROSCOUT_BCLQ_2026?.teams?.find(t=>t.code===qualifier.code);
+   const entry=window.EUROSCOUT_OFFICIAL_ROSTERS?.qualifiers?.teams?.find(t=>t.key===other.key);
+   if(eventTeam&&entry&&eventTeam.source===entry.source)return true;
+ }
  if(['plk|ETS','fec|ETS'].includes(a.key)&&['plk|ETS','fec|ETS'].includes(b.key))return true;
  if((window.EUROSCOUT_OFFICIAL_ROSTERS?.identityPairs||[]).some(pair=>pair.includes(a.key)&&pair.includes(b.key)))return true;
  if(VERIFIED_CLUB_PAIRS.has([a.key,b.key].sort().join('~')))return true;
@@ -2047,7 +2055,7 @@ function buildClubs(){
   CLUBS=[];CLUB_BY_TEAMKEY=new Map();
   groups.forEach(members=>{
     members.sort((a,b)=>b.name.length-a.name.length);   // keep the fullest official name
-    const club={key:members.map(m=>m.key).sort()[0],name:members[0].name,
+    const club={key:(members.filter(m=>m.lg!=='bclq').map(m=>m.key).sort()[0]||members.map(m=>m.key).sort()[0]),name:members[0].name,
       country:(members.find(m=>m.country)||{}).country||"",
       leagues:members.map(m=>({id:m.lg,name:m.lgName})),teams:members};
     CLUBS.push(club);
@@ -5049,7 +5057,7 @@ function renderNextRoster(club){
   const departures=now.filter(p=>!nextIds.has(gid(p)));
   const ph=p=>`<span class="agpPhoto${photoOf(p)?"":" noimg"}">${photoOf(p)?`<img src="${photoOf(p)}" loading="lazy" onerror="this.parentNode.classList.add('noimg');this.remove()"/>`:initials(p.name)}</span>`;
   const line=(p,extra,acts)=>`<div class="cmpRow" data-pid="${p.id}">${ph(p)}
-      <span class="cmpId"><span class="cmpNm">${p.name}</span><span class="cmpMeta">${posLabel(p)}${p.age?" \u00b7 "+p.age:""}${p.height?" \u00b7 "+p.height+"cm":""}${p.ppg!=null?" \u00b7 "+p.ppg.toFixed(1)+" ppg":""}</span></span>
+      <span class="cmpId"><span class="cmpNm">${p.currentJersey!=null&&p.currentJersey!==''?'#'+esc(p.currentJersey)+' · ':''}${p.name}</span><span class="cmpMeta">${posLabel(p)}${p.age?" \u00b7 "+p.age:""}${p.height?" \u00b7 "+p.height+"cm":""}${p.ppg!=null?" \u00b7 "+p.ppg.toFixed(1)+" ppg":""}</span></span>
       ${extra||""}<span class="cmpSc">${statGradeOverall(p)!=null?statGradeOverall(p).toFixed(1):"\u2014"}</span>${acts||""}</div>`;
   const whereTo=p=>{const k=effective26(p,m);const c=k?clubByKey(k):null;
     return `<span class="cmpTo${c?"":" none"}">${c?"\u2192 "+esc(c.name):"unsigned"}</span>`;};
@@ -7572,7 +7580,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-ui.js?v=20260921-database-v3"></script>
 <script src="euroscout-diagnostics.js?v=20260920-diagnostics-1"></script>
 <script src="euroscout-workflow.js?v=20260920-dashboard-workspace-1"></script>
-<script src="euroscout-database.js?v=20260921-database-v3"></script>
+<script src="euroscout-database.js?v=20260921-database-v4"></script>
 
 <script src="euroscout-market-records.js?v=16"></script>
 <script src="euroscout-market.js?v=20260913-batch"></script>
@@ -7588,9 +7596,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-representation.js?v=20260907-13"></script>
 <script src="data/aba-rosters-2026.js?v=20260910-1"></script>
 <script src="euroscout-aba-rosters.js?v=20260910-1"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260920-fix"></script>
-<script src="data/bclq-2026.js?v=20260921-final"></script><script src="euroscout-bclq-2026.js?v=20260921-final"></script>
+<script src="data/bclq-2026.js?v=20260921-final"></script><script src="euroscout-bclq-2026.js?v=20260921-jerseys"></script>
 <script>esSetup();boot();</script>
 <script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-sessions.js?v=20260921-1"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260920-2"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260921-1"><script src="data/signal-origins.js?v=20260920-1"></script><script src="euroscout-signals.js?v=20260920-2"></script><script src="euroscout-quickstats.js?v=20260921-1"></script><script src="euroscout-live-notes.js?v=20260920-2"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>
-
-
 

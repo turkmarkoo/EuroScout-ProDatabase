@@ -37,9 +37,12 @@ function apply(raw){
  // Update stable biographical details, but keep each historical league's jersey and club intact.
  const all=new Map(raw.leagues.flatMap(l=>l.players).filter(p=>p.league!=='bclq').map(p=>[p.id,p]));
  for(const r of data.players){const match=rosterByIdentity.get(key(r.name,r.born));if(!match)continue;
+  // A qualifier jersey is a 2026/27 registration, not a historical league jersey.
+  if(r.jersey!==null&&r.jersey!==undefined&&r.jersey!=='')match.number=String(r.jersey);
   for(const id of match.ids||[]){const p=all.get(id);if(!p)continue;
    if(r.height)p.height=r.height;if(r.born)p.born=Number(r.born.slice(0,4));
    const country=window.EuroScoutCountries?.canonical(r.nationality);if(country)p.country=country;
+   if(r.jersey!==null&&r.jersey!==undefined&&r.jersey!==''&&p._officialRoster?.teamId===r.teamId){p.currentJersey=String(r.jersey);p._officialRoster.number=String(r.jersey);}
    p._officialBCLQ={source:r.source,checked:data.checked,personId:r.id,teamId:r.teamId,number:r.jersey,position:r.position,nationality:r.nationality,games:r.g||0};
   }
  }

@@ -58,3 +58,16 @@ body.es-redesign.es-database-page.es-nav-collapsed{--es-nav:72px!important;paddi
 @media(max-width:1400px){.es-database-page .board{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:1180px){body.es-redesign.es-database-page,body.es-redesign.es-database-page.es-nav-collapsed{--es-nav:0px!important;padding-left:0!important}.es-database-page .es-sidebar,.es-database-page.es-nav-collapsed .es-sidebar{width:292px!important;height:100dvh;transform:translateX(-100%)!important}.es-database-page.es-nav-open .es-sidebar{transform:none!important}.es-database-page main#app{padding:14px}.es-database-page .scoutwrap{grid-template-columns:250px minmax(0,1fr)!important}.es-database-page .scoutrail{width:250px!important}}
 @media(max-width:700px){.es-database-page .scoutwrap{display:block!important;min-height:0}.es-database-page .scoutrail{display:none!important;position:relative!important;top:auto!important;width:100%!important;height:auto;max-height:65dvh!important}.es-database-page .scoutwrap.es-db-filters-open .scoutrail{display:flex!important}.es-database-page .scoutmain{padding:0}.es-db-filter-toggle{display:inline-flex;margin:0 0 10px}.es-database-page .board{grid-template-columns:1fr}.es-database-page .es-db-toolbar{flex-wrap:wrap}.es-database-page .estwrap{max-height:65dvh}}
+
+/* Keep the watchlist and injected review action together, with the grade below. */
+.es-database-page .es-db-card-top{align-items:flex-start;min-height:100px}
+.es-database-page .es-db-card-id{flex:1;min-width:0;padding-right:0}
+.es-database-page .es-db-card-controls{display:flex;flex:none;flex-wrap:wrap;justify-content:flex-end;align-content:flex-start;align-items:center;gap:5px;width:82px;min-width:82px}
+.es-database-page .es-db-card-controls .cardwatch,
+.es-database-page .es-db-card-controls .es-quick-review,
+.es-database-page .es-db-card-controls .es-db-grade{position:static!important;transform:none!important;margin:0;z-index:auto}
+.es-database-page .es-db-card-controls .cardwatch,
+.es-database-page .es-db-card-controls .es-quick-review{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;flex:none;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--txt);font-size:17px;cursor:pointer}
+.es-database-page .es-db-card-controls .cardwatch{color:var(--gold)}
+.es-database-page .es-db-card-controls .es-db-grade{display:block;width:100%;text-align:center;padding:5px 7px}
+.es-database-page .es-db-card-controls button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
