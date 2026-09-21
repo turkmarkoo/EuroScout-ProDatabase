@@ -82,7 +82,7 @@ body.es-redesign.es-database-page.es-nav-collapsed{--es-nav:72px!important;paddi
 .es-database-page .es-db-toolbar-actions .es-db-filter{display:flex;align-items:center;gap:8px;margin:0;padding:0 0 0 8px;font-size:12px;font-weight:600;color:var(--muted)}
 .es-database-page .es-db-toolbar-actions select{min-width:144px;min-height:40px;border-radius:9px;border-color:var(--line);background:var(--panel);color:var(--txt);font-weight:600}
 @media(min-width:701px){
-  .es-database-page .scoutwrap.es-db-rail-hidden{grid-template-columns:0 minmax(0,1fr)!important}
+  .es-database-page .scoutwrap.es-db-rail-hidden{grid-template-columns:minmax(0,1fr)!important}
   .es-database-page .scoutwrap.es-db-rail-hidden .scoutrail{display:none!important}
 .es-database-page .scoutwrap.es-db-rail-hidden .scoutmain{padding-left:0}
 }
