@@ -6,10 +6,13 @@ const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLo
 const preferred={US:'United States',GB:'United Kingdom',BA:'Bosnia and Herzegovina',TR:'Turkey',CZ:'Czechia',CD:'DR Congo',CG:'Republic of the Congo',CI:'Ivory Coast',CV:'Cape Verde',KR:'South Korea',KP:'North Korea',MK:'North Macedonia'};
 for(const code of codes){const name=preferred[code]||names.of(code);byCode[code]=name;byName.set(norm(code),code);byName.set(norm(name),code);byName.set(norm(names.of(code)),code);}
 const aliases={USA:'US','United States of America':'US',UK:'GB',ENG:'GB',England:'GB','Great Britain':'GB','Gran bretaña':'GB','BÜYÜK BRİTANYA VE KU':'GB',SVN:'SI',SLO:'SI',HRV:'HR',CRO:'HR',LVA:'LV',NGA:'NG',GRC:'GR',BHS:'BS',BGR:'BG',DEU:'DE',PAN:'PA',AGO:'AO',PRI:'PR',MLT:'MT',GAB:'GA',GHA:'GH',SSD:'SS',BEL:'BE',HUN:'HU',LTU:'LT',BIH:'BA',MKD:'MK',MNE:'ME',SRB:'RS',POR:'PT',UKR:'UA',EST:'EE',RUS:'RU',FRA:'FR',ESP:'ES',ITA:'IT',CAN:'CA',AUS:'AU',BRA:'BR',ARG:'AR',TUR:'TR',CZE:'CZ',POL:'PL',SWE:'SE',FIN:'FI',DEN:'DK',DNK:'DK',NED:'NL',NLD:'NL',SUI:'CH',CHE:'CH',GER:'DE',AUT:'AT',ROU:'RO',ROM:'RO',SVK:'SK',ISR:'IL',CHN:'CN',JPN:'JP',KOR:'KR',NZL:'NZ',RSA:'ZA',ZAF:'ZA',COD:'CD',COG:'CG',SEN:'SN',CMR:'CM',CIV:'CI',CPV:'CV',DOM:'DO',PUR:'PR',IRI:'IR',IRN:'IR',GEO:'GE',KOS:'XK',TOG:'TG',MEX:'MX',VEN:'VE',URU:'UY',URY:'UY',AZE:'AZ',ARM:'AM',BLR:'BY',BAHAMALAR:'BS',ESTONYA:'EE',GANA:'GH',GABON:'GA',Dinamarca:'DK',Ucrania:'UA','R. checa':'CZ',Belgica:'BE','San cristobal y nieves':'KN',Noruega:'NO',Polonia:'PL','Bosnia-herzergovina':'BA','Bosnia-Herzegovina':'BA',Rusia:'RU',Islandia:'IS','Iran (Islamic Republic of)':'IR',Turkiye:'TR',Türkiye:'TR','Czech Republic':'CZ'};
+Object.assign(aliases,{GBR:'GB',BAH:'BS',GRE:'GR',LCA:'LC',CYP:'CY',GUI:'GN',BUL:'BG',ANG:'AO',LAT:'LV',NGR:'NG',SCG:'SCG'});
+byCode.SCG='Serbia and Montenegro';
+byName.set(norm('Serbia and Montenegro'),'SCG');
 for(const [name,code]of Object.entries(aliases))byName.set(norm(name),code);
 function iso(value){return byName.get(norm(value))||'';}
 function canonical(value){return byCode[iso(value)]||'';}
-function flag(value){const code=iso(value);return code?[...code].map(c=>String.fromCodePoint(127397+c.charCodeAt(0))).join(''):'';}
+function flag(value){const code=iso(value);return code.length===2?[...code].map(c=>String.fromCodePoint(127397+c.charCodeAt(0))).join(''):'';}
 function label(value){const name=canonical(value);return name?flag(name)+' '+name:'';}
 window.EuroScoutCountries={canonical,iso,flag,label,names:Object.values(byCode).sort((a,b)=>a.localeCompare(b))};
 })();
