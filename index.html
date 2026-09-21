@@ -7229,116 +7229,7 @@ function renderCurRoster(lgId,code){
 let CURRENT_TEAM=null;
 function openTeam(code){CURRENT_TEAM=code;STATE.view="team";
   $$("#tabs button").forEach(x=>x.classList.remove("active"));renderTeam();}
-function renderTeam(){
-  const L=STATE.league, t=L.teams.find(x=>x.code===CURRENT_TEAM);
-  if(!t){STATE.view="teams";render();return;}
-  const jn=p=>{const v=(p.jersey===0||p.jersey==="0")?0:parseInt(p.jersey);return isNaN(v)?999:v;};
-  const roster=L.players.filter(p=>p.team===t.code||(t.name&&p.teamName===t.name)||(t.teamName&&p.teamName===t.teamName)).sort((a,b)=>jn(a)-jn(b)||b.ppg-a.ppg);
-  const grp=teamGroup(L.meta.id,t.code);
-  const agg=teamAgg(L)[t.code]||{};
-  const mkCards=list=>list.map(([k,lab,hi])=>{
-    const v=agg[k];if(v==null||isNaN(v))return "";
-    const r=teamRank(L,t.code,k,hi);
-    const rstyle=`color:${tRankColor(r.rank,r.n)};background:color-mix(in srgb,${tRankColor(r.rank,r.n)} 15%,var(--panel));border:1px solid color-mix(in srgb,${tRankColor(r.rank,r.n)} 30%,var(--line))`;
-    return `<div class="statcard clk" data-tk="${k}" data-tl="${lab}" data-th="${hi}" title="Tap for the ${lab} team ranking">
-      <div class="sc-v">${(k==="net"||k==="orebdiff")&&v>0?"+":""}${fmt(v)}${lab.includes("%")&&!lab.includes("RATE")?"%":""}</div>
-      <div class="sc-k">${lab}</div>
-      <div class="sc-rank" style="${rstyle}">${ordinal(r.rank)}/${r.n}</div>
-    </div>`;}).join("");
-  const cards=mkCards(TEAM_CARDS), advCards=mkCards(TEAM_CARDS_ADV);
-  const games=(L.games||[]).filter(g=>g.h===t.code||g.a===t.code).sort((a,b)=>a.date.localeCompare(b.date));
-  const glrows=games.map(g=>{
-    const home=g.h===t.code, opp=home?g.a:g.h, ts=home?g.hs:g.as, os=home?g.as:g.hs, win=ts>os;
-    const on=(L.teams.find(x=>x.code===opp)||{}).name||opp;
-    return `<tr><td class="l" style="color:var(--muted);white-space:nowrap">${fullDate(g.date)}</td>
-      <td class="l">${home?"vs ":"@ "}<span class="tlink" onclick="openTeamIn('${L.meta.id}','${opp}')">${on}</span></td>
-      <td class="l" style="color:${win?"var(--good)":"var(--bad)"};font-weight:700">${win?"W":"L"}</td>
-      <td style="font-family:var(--mono)">${ts}\u2013${os}</td></tr>`;}).join("");
-  const myGroup=t.group||"";
-  const stTeams=t.newFor2627?[]:L.teams.filter(x=>!x.newFor2627&&(x.group||"")===myGroup).sort((a,b)=>(a.rank??999)-(b.rank??999));
-  let strows=stTeams.length?"":`<tr><td colspan="8">No standings for this club in ${esc(L.meta.season||"the recorded season")}. Future entrants are listed separately from results.</td></tr>`;
-  if(myGroup&&stTeams.length)strows+=`<tr class="stgrouprow"><td colspan="8">Group ${myGroup}</td></tr>`;
-  stTeams.forEach(x=>{
-    strows+=`<tr class="${x.code===t.code?"me":""}" data-tc="${x.code}">
-      <td class="rk">${x.rank??"—"}</td><td class="l">${x.name}</td>
-      <td>${x.w}</td><td>${x.l}</td><td class="pfpa">${x.pf!=null?x.pf:"–"}</td><td class="pfpa">${x.pa!=null?x.pa:"–"}</td>
-      <td style="color:${x.net>0?"var(--good)":x.net<0?"var(--bad)":"var(--muted)"}">${x.net>0?"+":""}${fmt(x.net)}</td></tr>`;});
-  $("#app").innerHTML=`<div class="view">
-    <button class="backlink" onclick="STATE.view='teams';render()">\u2190 Back to teams</button>
-    <div class="panel">
-      <div class="teamhead">
-        <div class="teamcrest">${t.code}</div>
-        <div style="flex:1;min-width:220px">
-          <div class="phname"><h1>${t.name}</h1></div>
-          <div class="phclub">
-            <span class="tlink" onclick="setScope('${L.meta.id}');STATE.view='players';render()">${L.meta.name} ${L.meta.season}</span>
-            <span class="phsep">\u00b7</span><span>${t.city}, ${t.country}</span>
-            ${t.group?`<span class="phsep">\u00b7</span><span>Group ${t.group}</span>`:""}
-          </div>
-          <div class="comptabs" style="margin-top:8px">${grp.length>1?`<span class="hint" style="align-self:center;margin-right:2px">Competitions:</span>${grp.map(x=>`<button class="comptab ${x.league===L.meta.id&&x.code===t.code?"active":""}" onclick="openTeamIn('${x.league}','${x.code}')" title="${x.L.meta.name} \u00b7 ${x.team.name}">${x.L.meta.name}</button>`).join("")}<span class="phsep" style="align-self:center">\u00b7</span>`:""}
-            <div class="seg seg-sm inscope">
-              <button onclick="setScopeMode('league')" class="${STATE.profileScope!=='all'?'active':''}">vs&nbsp;Lg</button>
-              <button onclick="setScopeMode('all')" class="${STATE.profileScope==='all'?'active':''}">vs&nbsp;All</button>
-            </div></div>
-        </div>
-        <div class="statline">
-          <div class="s"><div class="v">${t.w}-${t.l}</div><div class="k">Record</div></div>
-          <div class="s"><div class="v">${fmt(t.winPct)}</div><div class="k">Win%</div></div>
-          <div class="s"><div class="v">${t.group?t.group+t.rank:t.rank}</div><div class="k">Rank</div></div>
-        </div>
-      </div>
-    </div>
-    <div class="panel" style="margin-top:16px">
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px">
-        <h3 style="margin:0">Team averages \u00b7 ${L.meta.name}</h3>
-        <div class="seg"><button class="${(STATE.tsMode||'basic')==='basic'?'active':''}" onclick="STATE.tsMode='basic';renderTeam()">Basic</button><button class="${STATE.tsMode==='adv'?'active':''}" onclick="STATE.tsMode='adv';renderTeam()">Advanced</button></div>
-        <span class="scopeflag">ranked ${STATE.profileScope==='all'?'across all competitions':'in '+L.meta.name}</span>
-      </div>
-      <div class="cardgrid smgrid">${STATE.tsMode==='adv'?advCards:cards}</div>
-      <p class="hint" style="margin-top:8px">Tap any stat for the full ${L.teams.length}-team ranking \u00b7 badge = rank vs. the league${STATE.tsMode==='adv'?' \u00b7 ratings per 100 possessions':''}.</p>
-    </div>
-    ${teamNeedsHTML(roster)}
-    <div class="twocol" style="margin-top:16px">
-      <div class="panel"><h3>Standings \u00b7 ${L.meta.name} · ${esc(L.meta.season||"Recorded season")}${t.group?" \u00b7 Group "+t.group:""}</h3>
-        <div class="tablewrap stwrap"><table class="sttbl">
-          <thead><tr><th class="rk">#</th><th class="l">TEAM</th><th>W</th><th>L</th><th title="Points for">PF</th><th title="Points against">PA</th><th>NET</th></tr></thead>
-          <tbody>${strows}</tbody></table></div>
-      </div>
-      <div class="panel"><h3>Game log \u00b7 ${games.length} games</h3>
-        ${games.length?`<div class="glogscroll tablewrap"><table class="glog">
-          <thead><tr><th class="l">DATE</th><th class="l">OPPONENT</th><th class="l">W/L</th><th>SCORE</th></tr></thead>
-          <tbody>${glrows}</tbody></table></div>`
-        :`<p class="hint">No game data in this build \u2014 regenerate data.json with the updated build_all.py.</p>`}
-      </div>
-    </div>
-    <div class="panel" style="margin-top:16px" id="rosterPanel">
-      <h3>Roster \u00b7 ${roster.length} players</h3>
-      <div class="rostergrid">${roster.length?roster.map(p=>{const rec=recOf(p);
-        return `<button class="pcard" data-id="${p.id}">
-          <span class="pc-watch ${isWatched(p)?"on":""}" data-star="${p.id}" title="Watchlist">${isWatched(p)?"\u2605":"\u2606"}</span>
-          <div class="pc-top">
-            <div class="pc-ava">${p.img?`<img src="${p.img}" loading="lazy" onerror="this.style.display='none'"/>`:initials(p.name)}</div>
-            <div class="pc-num">${p.jersey||'<span class="pc-tbd">#</span>'}</div>
-            <div class="pc-id">
-              <div class="pc-name">${p.name}</div>
-              <div class="pc-meta">${p.pos&&p.pos!=="-"?p.pos:(p.role||"\u2013")}<span class="pc-dot">\u00b7</span>${p.height?(p.height/100).toFixed(2)+"m":"\u2013"}<span class="pc-dot">\u00b7</span>${p.born?"'"+String(p.born).slice(2):"\u2013"}</div>
-            </div>
-          </div>
-          <div class="pc-stats">
-            <div class="s"><div class="v">${fmt(p.ppg)}</div><div class="k">PPG</div></div>
-            <div class="s"><div class="v">${fmt(p.rpg)}</div><div class="k">RPG</div></div>
-            <div class="s"><div class="v">${fmt(p.apg)}</div><div class="k">APG</div></div>
-            <div class="s"><div class="v">${fmt(p.pir)}</div><div class="k">PIR</div></div>
-          </div>
-        </button>`;}).join(""):'<p class="hint">No players matched to this team.</p>'}</div>
-    </div>
-  </div>`;
-  $$("#app .pcard[data-id]").forEach(cd=>cd.onclick=e=>{
-    if(e.target.dataset.star){e.stopPropagation();toggleWatch(e.target.dataset.star).then(renderTeam);return;}
-    openProfile(cd.dataset.id);});
-  $$("#app .statcard.clk[data-tk]").forEach(c=>c.onclick=()=>openTeamBoard(c.dataset.tk,c.dataset.tl,c.dataset.th==="1"));
-  $$("#app .sttbl tr[data-tc]").forEach(tr=>tr.onclick=()=>openTeam(tr.dataset.tc));
-}
+function renderTeam(){ return window.renderTeamScoutingV2(); }
 
 /* ---------- Glossary ---------- */
 function renderGlossary(){
@@ -7481,8 +7372,10 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
 <script src="data/agency-research.js?v=20260907-13"></script>
 <script src="euroscout-agency-research.js?v=20260908-1"></script>
-<link rel="stylesheet" href="euroscout-roster-builder.css?v=20260921-v2">
+<link rel="stylesheet" href="euroscout-roster-builder.css?v=20260921-v3-header">
 <script src="euroscout-roster-builder.js?v=20260921-v2"></script>
+<link rel="stylesheet" href="euroscout-team-workspace.css?v=20260921-v1">
+<script src="euroscout-team-workspace.js?v=20260921-v1"></script>
 <link rel="stylesheet" href="euroscout-teams-2627.css?v=20260921-entry-dialog">
 <script src="euroscout-teams-2627.js?v=20260921-entry-dialog"></script>
 <script src="data/realgm-representation.js?v=20260907-13"></script>
