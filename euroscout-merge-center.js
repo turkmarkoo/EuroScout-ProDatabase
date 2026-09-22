@@ -10,6 +10,10 @@
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fold = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const playerFold = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[đð]/g, 'dj').replace(/ł/g, 'l').replace(/[şș]/g, 's')
+    .replace(/ı/g, 'i').replace(/ħ/g, 'h').replace(/ø/g, 'o').replace(/æ/g, 'ae')
+    .replace(/[^a-z0-9]+/g, ' ').trim();
   let cachedRaw, cachedState;
   const current = () => {
     const raw=localStorage.getItem(KEY);
@@ -99,7 +103,7 @@
     const fibaA=externalId(a.fiba,'fiba'),fibaB=externalId(b.fiba,'fiba');
     if(euroA&&euroB&&euroA!==euroB || fibaA&&fibaB&&fibaA!==fibaB)return 0;
     if(euroA&&euroB&&euroA===euroB || fibaA&&fibaB&&fibaA===fibaB)return 99;
-    const nameA=fold(a.name),nameB=fold(b.name),exactName=nameA&&nameA===nameB;
+    const nameA=playerFold(a.name),nameB=playerFold(b.name),exactName=nameA&&nameA===nameB;
     const lastA=nameA.split(' ').at(-1),lastB=nameB.split(' ').at(-1);
     if(!exactName&&(!lastA||lastA!==lastB))return 0;
     if(a.born&&b.born&&String(a.born)!==String(b.born))return 0;
@@ -117,7 +121,7 @@
   function realgmId(entity){const p=entity.player||{};return String(p.realgmId||p.realGMId||p.profile_url?.match(/\/Summary\/(\d+)/i)?.[1]||'');}
   function sameClubContext(a,b){const words=value=>new Set(fold(value).split(' ').filter(word=>word.length>3&&!['basketball','club','team'].includes(word)));const left=words(a.team),right=words(b.team);if(!left.size||!right.size)return false;const shared=[...left].filter(word=>right.has(word)).length;return shared>=2||shared>=1&&Math.min(left.size,right.size)===1;}
   function automaticPlayerMatch(a,b){
-    if(!a||!b||a.id===b.id||!fold(a.name)||fold(a.name)!==fold(b.name))return false;
+    if(!a||!b||a.id===b.id||!playerFold(a.name)||playerFold(a.name)!==playerFold(b.name))return false;
     const bornA=birthYear(a.born),bornB=birthYear(b.born);if(bornA&&bornB&&bornA!==bornB)return false;
     const heightA=Number(a.height),heightB=Number(b.height),heightKnown=!!(heightA&&heightB);
     if(heightKnown&&Math.abs(heightA-heightB)>5)return false;
@@ -131,11 +135,14 @@
     if(sharedProfile)return true;
     const signals=Number(heightKnown&&Math.abs(heightA-heightB)<=3)+Number(countryKnown&&countryA===countryB)+
       Number(positionA&&positionA===positionB)+Number(sameClubContext(a,b));
-    if(bornA&&bornB)return signals>=2;
-    // A missing birth year needs height, nationality and playing role to agree.
-    // With neither birth year recorded, require a shared club as a fourth signal.
-    return !!(heightKnown&&countryKnown&&positionA&&positionA===positionB&&
-      (bornA||bornB||sameClubContext(a,b)));
+    // An equal known birth year plus an exact normalized name is a clear identity
+    // unless one of the hard-conflict checks above rejected the pair.
+    if(bornA&&bornB)return true;
+    // If only one feed has a birth year, require two matching bio/context signals.
+    if(bornA||bornB)return signals>=2;
+    // With no birth year in either feed, require three independent agreements.
+    // This safely resolves the common 77% duplicate class (name + height + country + role).
+    return signals>=3;
   }
   function chooseAutomaticSurvivor(a,b){const quality=x=>{
     const p=x.player||{},r=x.report||{},body=String(r.report||'');return (birthYear(x.born)?40:0)+(Number(p.g)>0?25:0)+(Number(p.ppg)>0?8:0)+(body&&body!=='{}'?15:0)+(r.rating?8:0)+(r.watch?5:0)+(x.photo?3:0)+(p.profile_provider==='RealGM'?0:4);
@@ -170,14 +177,14 @@
     const byName=new Map(),byBirthSurname=new Map(),byEurobasket=new Map(),byFiba=new Map();
     const add=(map,key,item)=>{if(!key)return;if(!map.has(key))map.set(key,[]);map.get(key).push(item);};
     entities('player').forEach(existing=>{
-      const name=fold(existing.name);add(byName,name,existing);
+      const name=playerFold(existing.name);add(byName,name,existing);
       if(existing.born)add(byBirthSurname,name.split(' ').at(-1)+'|'+existing.born,existing);
       add(byEurobasket,externalId(existing.external,'eurobasket'),existing);
       add(byFiba,externalId(existing.fiba,'fiba'),existing);
     });
     const flagged=(players||[]).flatMap(incoming=>{
       const probe={name:incoming.name,born:incoming.born||'',height:incoming.height||'',country:incoming.country||'',position:incoming.role||incoming.pos||'',external:incoming._ext||incoming.eurobasketId||'',fiba:incoming.fibaId||incoming._fiba||''};
-      const key=fold(probe.name);
+      const key=playerFold(probe.name);
       const matches=[...new Map([...(byName.get(key)||[]),...(probe.born?byBirthSurname.get(key.split(' ').at(-1)+'|'+probe.born)||[]:[]),...(byEurobasket.get(externalId(probe.external,'eurobasket'))||[]),...(byFiba.get(externalId(probe.fiba,'fiba'))||[])].map(item=>[item.id,item])).values()];
       const candidates=matches.map(existing=>({id:existing.id,name:existing.name,score:playerConfidence(probe,existing)})).filter(x=>x.score>=60).sort((a,b)=>b.score-a.score);
       return candidates.length?[{id:incoming.id,name:incoming.name,candidates,requiresAdminConfirmation:true}]:[];
@@ -195,8 +202,8 @@
       if (type === 'player') {
         indexPairs(items,x => externalId(x.external,'eurobasket'),playerConfidence,'Same Eurobasket profile',out);
         indexPairs(items,x => externalId(x.fiba,'fiba'),playerConfidence,'Same FIBA profile',out);
-        indexPairs(items,x => fold(x.name),playerConfidence,'Name, birth year and bio comparison',out);
-        indexPairs(items,x => x.born ? fold(x.name).split(' ').at(-1)+'|'+x.born : '',playerConfidence,'Same surname and birth year',out);
+        indexPairs(items,x => playerFold(x.name),playerConfidence,'Name, birth year and bio comparison',out);
+        indexPairs(items,x => x.born ? playerFold(x.name).split(' ').at(-1)+'|'+x.born : '',playerConfidence,'Same surname and birth year',out);
       } else if (type === 'club') {
         indexPairs(items,x => fold(x.name)+'|'+fold(x.country),92,'Same club name and country',out);
         indexPairs(items,x => fold(x.name),80,'Same club name',out);
@@ -454,9 +461,10 @@
     }
   }
   function summary() {
-    const list=detect(), players=entities('player');
+    const list=detect(), players=entities('player'),reviewed=state().reviewed;
+    const pending=type=>list[type].filter(candidate=>!reviewed[candidate.id]).length;
     return [
-      ['Players',list.player.length,'player'],['Clubs',list.club.length,'club'],['Agents',list.agent.length,'agent'],
+      ['Players',pending('player'),'player'],['Clubs',pending('club'),'club'],['Agents',pending('agent'),'agent'],
       ['Missing photos',players.filter(p=>!p.photo).length,'photo'],
       ['Missing Eurobasket links',players.filter(p=>!/eurobasket\.com/i.test(p.external)).length,'eurobasket'],
       ['Missing birth years',players.filter(p=>!p.born).length,'birth'],
@@ -534,7 +542,7 @@
     const counters=summary(),log=state().merges.slice().reverse().filter(m=>!m.batchId||state().batches.find(b=>b.id===m.batchId)?.pairs[0]===pairKey('player',m.survivor,m.source));
     app.innerHTML='<div class="mc-page"><div class="mc-head"><div><h1>Merge Center</h1><p>Maintain database quality. Merge duplicate players, clubs and agents.</p></div><button class="es-button" id="mcRefresh">↻ Refresh detection</button></div>'+
       '<div class="mc-quality">'+counters.map(([label,count,target])=>'<button data-mc-quality="'+target+'"><strong>'+count+'</strong><span>'+esc(label)+'</span></button>').join('')+'</div>'+
-      '<div class="mc-tabs" role="tablist">'+[['player','Players'],['club','Clubs'],['agent','Agents']].map(([key,label])=>'<button data-mc-tab="'+key+'" class="'+(view.type===key?'active':'')+'">'+label+' <span>'+all[key].length+'</span></button>').join('')+'</div>'+
+      '<div class="mc-tabs" role="tablist">'+[['player','Players'],['club','Clubs'],['agent','Agents']].map(([key,label])=>'<button data-mc-tab="'+key+'" class="'+(view.type===key?'active':'')+'">'+label+' <span>'+all[key].filter(candidate=>!reviewed[candidate.id]).length+'</span></button>').join('')+'</div>'+
       (view.type==='player'?'<h2>Identity Resolution queue</h2><p>Clear identity matches merge automatically. Ambiguous cross-league matches remain here for review.'+(importQueue.length?' '+importQueue.length+' incoming records were flagged before joining the registry.':'')+'</p>':'')+
       '<details class="mc-manual"><summary>Review a pair manually</summary><p>Find both records, compare them, then choose which survives.</p><div class="mc-manual-grid"><div><label for="mcManualA">First record</label><input id="mcManualA" type="search" placeholder="Search name or ID"><div id="mcResultsA" class="mc-manual-results"></div></div><div><label for="mcManualB">Second record</label><input id="mcManualB" type="search" placeholder="Search name or ID"><div id="mcResultsB" class="mc-manual-results"></div></div></div><button class="es-button" id="mcCompareManual" disabled>Compare selected records</button></details>'+
       '<div class="mc-toolbar"><input id="mcSearch" type="search" placeholder="Search player, club or agent" value="'+esc(view.query)+'">'+
@@ -570,3 +578,4 @@
   window.EuroScoutMergeCenter={canonicalPlayer,canonicalClub,canonicalAgent,activeClubMerges,hasManualGroup,detect,merge,undo,resolveImport,previewImport,playerConfidence,automaticPlayerMatch,automaticPlan,autoMergeBatch,openPair};
   window.renderMergeCenter=renderMergeCenter;
 })();
+
