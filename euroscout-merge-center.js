@@ -55,7 +55,7 @@
   const app = document.getElementById('app');
   const view = { type:'player', query:'', confidence:'all', status:'pending', reviewed:'all', pair:null, manualCandidate:null, manualA:null, manualB:null, quality:null, options:null, survivor:null, candidates:[], extraAttempted:false, extraLoading:false };
   let detectionCache = null, detectionSignature = '', entityCache = {}, importQueue = [];
-  let automaticRunning=false, automaticAttempted='';
+  let automaticRunning=false, automaticAttempted='',automaticMerged=0;
   const AUTO_OPTIONS={reports:true,notes:true,statistics:true,timeline:true,watchlist:true,review:true,external:true,images:true};
 
   function entities(type) {
@@ -324,7 +324,6 @@
       const pending=[...Object.entries(after.records).map(([id,record])=>Store.save(id,record)),...changed.map(key=>Store.pushAppKey(key)),saveState(next)];
       if((await Promise.all(pending)).some(result=>result===false))throw Error('Cloud save did not complete.');
       OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache=null;entityCache={};
-      toast(rewrites.length+' clear player duplicates merged. Undo is available for 30 days.');
       return rewrites.length;
     }catch(error){
       const rollback=[];
@@ -510,11 +509,12 @@
     if(plan.length&&!automaticRunning&&automaticAttempted!==signature){
       automaticRunning=true;automaticAttempted=signature;
       app.innerHTML='<div class="mc-page"><h1>Merge Center</h1><p>Consolidating '+plan.length+' clear player duplicates…</p></div>';
-      autoMergeBatch(plan).catch(error=>toast('Automatic merge failed: '+error.message)).finally(()=>{
+      autoMergeBatch(plan).then(count=>{automaticMerged+=count;}).catch(error=>toast('Automatic merge failed: '+error.message)).finally(()=>{
         automaticRunning=false;if(STATE.view==='mergecenter')renderMergeCenter();
       });return;
     }
     if(automaticRunning)return;
+    if(automaticMerged){toast(automaticMerged+' clear player duplicates merged. Undo is available for 30 days.');automaticMerged=0;}
     if (view.manualCandidate) { renderReview(view.manualCandidate); return; }
     if (view.quality) {
       const quality=view.quality, items=entities('player').filter(p=>quality==='photo'?!p.photo:quality==='eurobasket'?!/eurobasket\.com/i.test(p.external):quality==='birth'?!p.born:!p.country);
