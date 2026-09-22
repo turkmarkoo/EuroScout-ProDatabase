@@ -1,0 +1,16 @@
+html.es-preload:not([data-hub-embed="1"]) header,
+html.es-preload:not([data-hub-embed="1"]) #esSidebar,
+html.es-preload:not([data-hub-embed="1"]) #app{visibility:hidden}
+#esSplash{display:flex}
+#esSplash{position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:#f6f9f7;color:#15382d;text-align:center;transition:opacity .25s ease}
+#esSplash .es-splash-content{display:grid;justify-items:center;gap:12px;padding:24px}
+#esSplash img{width:72px;height:72px;object-fit:contain}
+#esSplash strong{font-family:var(--disp,system-ui);font-size:29px}
+#esSplash span{font-size:15px;color:#66766f}
+#esSplash small{font-size:13px;color:#66766f}
+#esSplash .es-splash-spinner{width:26px;height:26px;border:3px solid #dbe8e1;border-top-color:#007a50;border-radius:50%;animation:es-spin .8s linear infinite}
+@keyframes es-spin{to{transform:rotate(360deg)}}
+html[data-hub-embed="1"] #esSplash{display:none!important}
+html.es-preload[data-hub-embed="1"] #app>.empty{min-height:55vh;color:transparent!important;background:linear-gradient(90deg,#f2f6f3 25%,#e9f0eb 45%,#f2f6f3 65%);background-size:200% 100%;animation:es-skeleton 1.4s ease-in-out infinite;border-radius:12px;margin:24px}
+@keyframes es-skeleton{to{background-position-x:-200%}}
+html.es-ready #esSplash{opacity:0;pointer-events:none}

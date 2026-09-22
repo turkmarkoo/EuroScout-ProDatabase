@@ -31,10 +31,10 @@
     const {L,t}=getTeam(); if(!L||!t){STATE.view='teams';render();return;}
     const group=teamGroup(L.meta.id,t.code);
     const season=STATE.tswSeason||'2026/27';
-    const current=is2627(season), hasStats=!current||is2627(L.meta.season);
+    const current=is2627(season), hasStats=is2627(L.meta.season)===current;
     const club=currentClub(L,t);
     const currentRoster=current&&club&&typeof clubRoster2627==='function'?clubRoster2627(club):[];
-    const roster=(current&&!is2627(L.meta.season)?currentRoster:L.players.filter(p=>p.team===t.code||(t.name&&p.teamName===t.name)||(t.teamName&&p.teamName===t.teamName)))
+    const roster=(current&&!is2627(L.meta.season)?currentRoster:hasStats?L.players.filter(p=>p.team===t.code||(t.name&&p.teamName===t.name)||(t.teamName&&p.teamName===t.teamName)):[])
       .sort((a,b)=>(N(a.jersey)??999)-(N(b.jersey)??999)||(N(b.ppg)??0)-(N(a.ppg)??0));
     const agg=hasStats?teamAgg(L)[t.code]||{}:{};
     const mode=STATE.tswMode||'basic', view=STATE.tswRosterView||'grid';

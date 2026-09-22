@@ -41,8 +41,8 @@
   const hasManualGroup = group => { const ids=new Set(group.map(p=>p.id)); return active('player').some(m=>ids.has(m.survivor)&&ids.has(m.source)); };
   const pairKey = (type, a, b) => type + ':' + [a,b].sort().join('|');
   const app = document.getElementById('app');
-  const view = { type:'player', query:'', confidence:'all', status:'pending', reviewed:'all', pair:null, manualCandidate:null, manualA:null, manualB:null, quality:null, options:null, survivor:null, candidates:[] };
-  let detectionCache = null, detectionSignature = '', entityCache = {};
+  const view = { type:'player', query:'', confidence:'all', status:'pending', reviewed:'all', pair:null, manualCandidate:null, manualA:null, manualB:null, quality:null, options:null, survivor:null, candidates:[], extraAttempted:false, extraLoading:false };
+  let detectionCache = null, detectionSignature = '', entityCache = {}, importQueue = [];
 
   function entities(type) {
     if(entityCache[type])return entityCache[type];
@@ -50,8 +50,8 @@
       const map = new Map();
       allPlayersEvery().forEach(p => { const id = gid(p); if (!map.has(id) || p.id === id) map.set(id, p); });
       return entityCache[type]=[...map.entries()].map(([id,p]) => ({ id, name:p.name, born:p.born || '', country:p.country || '',
-        height:p.height || '', team:p.teamName || '', league:p.league || '', photo:photoOf(p) || '',
-        external:p._ext || '', player:p, report:Store.get(id) }));
+        height:p.height || '', position:p.role || p.pos || '', team:p.teamName || '', league:p.league || '', photo:photoOf(p) || '',
+        external:p._ext || '', fiba:p.fibaId || p._fiba || '', player:p, report:Store.get(id) }));
     }
     if (type === 'club') return entityCache[type]=allClubs().map(c => ({ id:c.key, name:c.name, country:c.country || '',
       competitions:(c.leagues || []).map(l => l.name).join(', '), roster:(c.teams || []).length,
@@ -69,9 +69,57 @@
       for (let i=0;i<bucket.length;i++) for (let j=i+1;j<bucket.length;j++) {
         const a=bucket[i], b=bucket[j]; if (a.id === b.id) continue;
         const type = out.type, id=pairKey(type,a.id,b.id);
-        const old=out.map.get(id); if (!old || score > old.score) out.map.set(id,{ id,type,a,b,score,reason });
+        const grade=typeof score==='function'?score(a,b):score;
+        if(!grade)continue;
+        const old=out.map.get(id); if (!old || grade > old.score) out.map.set(id,{ id,type,a,b,score:grade,reason });
       }
     }
+  }
+  function externalId(value, provider) {
+    const text=String(value||'');
+    const match=provider==='eurobasket'?text.match(/(?:eurobasket\.com\/player\/[^?#]*?\/)(\d+)(?:[/?#]|$)/i):text.match(/(?:fiba\.basketball\/[^?#]*?\/players?\/)([\w-]+)(?:[/?#]|$)/i);
+    return match?match[1]:text&&!text.includes('/')?text:'';
+  }
+  function playerConfidence(a,b) {
+    const euroA=externalId(a.external,'eurobasket'),euroB=externalId(b.external,'eurobasket');
+    const fibaA=externalId(a.fiba,'fiba'),fibaB=externalId(b.fiba,'fiba');
+    if(euroA&&euroB&&euroA===euroB || fibaA&&fibaB&&fibaA===fibaB)return 99;
+    if(euroA&&euroB&&euroA!==euroB || fibaA&&fibaB&&fibaA!==fibaB)return 0;
+    const nameA=fold(a.name),nameB=fold(b.name),exactName=nameA&&nameA===nameB;
+    const lastA=nameA.split(' ').at(-1),lastB=nameB.split(' ').at(-1);
+    if(!exactName&&(!lastA||lastA!==lastB))return 0;
+    if(a.born&&b.born&&String(a.born)!==String(b.born))return 0;
+    let score=exactName?60:24;
+    if(a.born&&b.born)score+=23;
+    const heightA=Number(a.height),heightB=Number(b.height);
+    if(heightA&&heightB){const diff=Math.abs(heightA-heightB);if(diff>10)return 0;score+=diff<=3?8:2;}
+    if(a.country&&b.country){if(fold(a.country)===fold(b.country))score+=6;else score-=15;}
+    if(a.position&&b.position){const pa=fold(a.position),pb=fold(b.position);if(pa===pb)score+=3;else if(pa.includes(pb)||pb.includes(pa))score+=1;}
+    return Math.max(0,Math.min(98,score));
+  }
+  function resolveImport(incoming) {
+    const player={id:'incoming',name:incoming.name||'',born:incoming.born||incoming.birthYear||'',country:incoming.country||incoming.nationality||'',height:incoming.height||'',position:incoming.position||incoming.role||incoming.pos||'',external:incoming.eurobasketId||incoming.eurobasket||incoming._ext||'',fiba:incoming.fibaId||incoming.fiba||incoming._fiba||''};
+    const candidates=entities('player').map(existing=>({id:existing.id,name:existing.name,born:existing.born,score:playerConfidence(player,existing)})).filter(x=>x.score>=60).sort((a,b)=>b.score-a.score).slice(0,20);
+    return {status:candidates.length?'review':'new',candidates,requiresAdminConfirmation:!!candidates.length};
+  }
+  function previewImport(players) {
+    const byName=new Map(),byBirthSurname=new Map(),byEurobasket=new Map(),byFiba=new Map();
+    const add=(map,key,item)=>{if(!key)return;if(!map.has(key))map.set(key,[]);map.get(key).push(item);};
+    entities('player').forEach(existing=>{
+      const name=fold(existing.name);add(byName,name,existing);
+      if(existing.born)add(byBirthSurname,name.split(' ').at(-1)+'|'+existing.born,existing);
+      add(byEurobasket,externalId(existing.external,'eurobasket'),existing);
+      add(byFiba,externalId(existing.fiba,'fiba'),existing);
+    });
+    const flagged=(players||[]).flatMap(incoming=>{
+      const probe={name:incoming.name,born:incoming.born||'',height:incoming.height||'',country:incoming.country||'',position:incoming.role||incoming.pos||'',external:incoming._ext||incoming.eurobasketId||'',fiba:incoming.fibaId||incoming._fiba||''};
+      const key=fold(probe.name);
+      const matches=[...new Map([...(byName.get(key)||[]),...(probe.born?byBirthSurname.get(key.split(' ').at(-1)+'|'+probe.born)||[]:[]),...(byEurobasket.get(externalId(probe.external,'eurobasket'))||[]),...(byFiba.get(externalId(probe.fiba,'fiba'))||[])].map(item=>[item.id,item])).values()];
+      const candidates=matches.map(existing=>({id:existing.id,name:existing.name,score:playerConfidence(probe,existing)})).filter(x=>x.score>=60).sort((a,b)=>b.score-a.score);
+      return candidates.length?[{id:incoming.id,name:incoming.name,candidates,requiresAdminConfirmation:true}]:[];
+    });
+    importQueue=[...new Map([...importQueue,...flagged].map(item=>[item.id,item])).values()];
+    return flagged;
   }
   function detect(force=false) {
     const signature=state().merges.map(m=>m.id+':'+(m.undoneAt||'')).join('|');
@@ -81,10 +129,10 @@
     for (const type of Object.keys(result)) {
       const items=entities(type), out={type,map:new Map()};
       if (type === 'player') {
-        indexPairs(items,x => (x.external.match(/eurobasket\.com[^?#]*/i)||[])[0]?.toLowerCase(),99,'Same Eurobasket profile',out);
-        indexPairs(items,x => x.born ? fold(x.name)+'|'+x.born : '',92,'Same name and birth year',out);
-        indexPairs(items,x => x.height&&x.team ? fold(x.name)+'|'+x.height+'|'+fold(x.team) : '',84,'Same name, height and club',out);
-        indexPairs(items,x => x.born ? fold(x.name).split(' ').at(-1)+'|'+x.born : '',72,'Same surname and birth year',out);
+        indexPairs(items,x => externalId(x.external,'eurobasket'),playerConfidence,'Same Eurobasket profile',out);
+        indexPairs(items,x => externalId(x.fiba,'fiba'),playerConfidence,'Same FIBA profile',out);
+        indexPairs(items,x => fold(x.name),playerConfidence,'Name, birth year and bio comparison',out);
+        indexPairs(items,x => x.born ? fold(x.name).split(' ').at(-1)+'|'+x.born : '',playerConfidence,'Same surname and birth year',out);
       } else if (type === 'club') {
         indexPairs(items,x => fold(x.name)+'|'+fold(x.country),92,'Same club name and country',out);
         indexPairs(items,x => fold(x.name),80,'Same club name',out);
@@ -297,6 +345,16 @@
   }
   function renderMergeCenter() {
     if (!Store.canEdit()) { app.innerHTML='<div class="mc-page"><h1>Administrator access required</h1></div>'; return; }
+    if (!view.extraAttempted && !STATE._extraDone) {
+      view.extraAttempted=true; view.extraLoading=true;
+      app.innerHTML='<div class="mc-page"><h1>Merge Center</h1><p>Checking all player leagues, including NCAA…</p></div>';
+      loadExtraLeagues().catch(error=>console.warn('Additional player leagues could not be checked',error)).finally(()=>{
+        view.extraLoading=false; detectionCache=null; entityCache={};
+        if (STATE.view==='mergecenter') renderMergeCenter();
+      });
+      return;
+    }
+    if (view.extraLoading) return;
     const all=detect();
     if (view.manualCandidate) { renderReview(view.manualCandidate); return; }
     if (view.quality) {
@@ -318,6 +376,7 @@
     app.innerHTML='<div class="mc-page"><div class="mc-head"><div><h1>Merge Center</h1><p>Maintain database quality. Merge duplicate players, clubs and agents.</p></div><button class="es-button" id="mcRefresh">↻ Refresh detection</button></div>'+
       '<div class="mc-quality">'+counters.map(([label,count,target])=>'<button data-mc-quality="'+target+'"><strong>'+count+'</strong><span>'+esc(label)+'</span></button>').join('')+'</div>'+
       '<div class="mc-tabs" role="tablist">'+[['player','Players'],['club','Clubs'],['agent','Agents']].map(([key,label])=>'<button data-mc-tab="'+key+'" class="'+(view.type===key?'active':'')+'">'+label+' <span>'+all[key].length+'</span></button>').join('')+'</div>'+
+      (view.type==='player'?'<h2>Identity Resolution queue</h2><p>Possible cross-league identities stay separate until an administrator compares and confirms them.'+(importQueue.length?' '+importQueue.length+' incoming records were flagged before joining the registry.':'')+'</p>':'')+
       '<details class="mc-manual"><summary>Review a pair manually</summary><p>Find both records, compare them, then choose which survives.</p><div class="mc-manual-grid"><div><label for="mcManualA">First record</label><input id="mcManualA" type="search" placeholder="Search name or ID"><div id="mcResultsA" class="mc-manual-results"></div></div><div><label for="mcManualB">Second record</label><input id="mcManualB" type="search" placeholder="Search name or ID"><div id="mcResultsB" class="mc-manual-results"></div></div></div><button class="es-button" id="mcCompareManual" disabled>Compare selected records</button></details>'+
       '<div class="mc-toolbar"><input id="mcSearch" type="search" placeholder="Search player, club or agent" value="'+esc(view.query)+'">'+
       '<select id="mcConfidence"><option value="all">All confidence</option><option value="high">95%+</option><option value="medium">80–94%</option><option value="low">Below 80%</option></select>'+
@@ -348,6 +407,6 @@
     const original=EuroScoutAgencyResearch.agentsOf;
     EuroScoutAgencyResearch.agentsOf=p=>[...new Set(original(p).map(canonicalAgent))];
   }
-  window.EuroScoutMergeCenter={canonicalPlayer,canonicalClub,canonicalAgent,activeClubMerges,hasManualGroup,detect,merge,undo};
+  window.EuroScoutMergeCenter={canonicalPlayer,canonicalClub,canonicalAgent,activeClubMerges,hasManualGroup,detect,merge,undo,resolveImport,previewImport,playerConfidence};
   window.renderMergeCenter=renderMergeCenter;
 })();
