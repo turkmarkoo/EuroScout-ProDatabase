@@ -18,9 +18,21 @@
   };
   const state = () => { const value=current(); return { merges:[...(value.merges||[])], batches:[...(value.batches||[])], reviewed:{...(value.reviewed||{})}, autoSkipped:{...(value.autoSkipped||{})}, scannedAt:value.scannedAt||'' }; };
   const active = type => (current().merges||[]).filter(x => x.type === type && !x.undoneAt);
+  let canonicalState=null,canonicalParent=new Map(),canonicalLinked=new Set();
   const canonicalPlayer = ids => {
-    const set = new Set(ids);
-    for (const m of active('player')) if (set.has(m.survivor) || set.has(m.source)) return m.survivor;
+    const snapshot=current();
+    if(canonicalState!==snapshot){
+      const merges=(snapshot.merges||[]).filter(m=>m.type==='player'&&!m.undoneAt);
+      canonicalParent=new Map(merges.map(m=>[m.source,m.survivor]));
+      canonicalLinked=new Set(merges.flatMap(m=>[m.source,m.survivor]));
+      canonicalState=snapshot;
+    }
+    for(const id of ids){
+      if(!canonicalLinked.has(id))continue;
+      let current=id;const seen=new Set();
+      while(canonicalParent.has(current)&&!seen.has(current)){seen.add(current);current=canonicalParent.get(current);}
+      if(!seen.has(current))return current;
+    }
     return null;
   };
   const canonicalClub = ids => {
@@ -43,7 +55,7 @@
   const app = document.getElementById('app');
   const view = { type:'player', query:'', confidence:'all', status:'pending', reviewed:'all', pair:null, manualCandidate:null, manualA:null, manualB:null, quality:null, options:null, survivor:null, candidates:[], extraAttempted:false, extraLoading:false };
   let detectionCache = null, detectionSignature = '', entityCache = {}, importQueue = [];
-  let automaticRunning=false, automaticAttempted='';
+  let automaticRunning=false, automaticAttempted='',automaticMerged=0;
   const AUTO_OPTIONS={reports:true,notes:true,statistics:true,timeline:true,watchlist:true,review:true,external:true,images:true};
 
   function entities(type) {
@@ -85,8 +97,8 @@
   function playerConfidence(a,b) {
     const euroA=externalId(a.external,'eurobasket'),euroB=externalId(b.external,'eurobasket');
     const fibaA=externalId(a.fiba,'fiba'),fibaB=externalId(b.fiba,'fiba');
-    if(euroA&&euroB&&euroA===euroB || fibaA&&fibaB&&fibaA===fibaB)return 99;
     if(euroA&&euroB&&euroA!==euroB || fibaA&&fibaB&&fibaA!==fibaB)return 0;
+    if(euroA&&euroB&&euroA===euroB || fibaA&&fibaB&&fibaA===fibaB)return 99;
     const nameA=fold(a.name),nameB=fold(b.name),exactName=nameA&&nameA===nameB;
     const lastA=nameA.split(' ').at(-1),lastB=nameB.split(' ').at(-1);
     if(!exactName&&(!lastA||lastA!==lastB))return 0;
@@ -95,7 +107,7 @@
     if(a.born&&b.born)score+=23;
     const heightA=Number(a.height),heightB=Number(b.height);
     if(heightA&&heightB){const diff=Math.abs(heightA-heightB);if(diff>10)return 0;score+=diff<=3?8:2;}
-    if(a.country&&b.country){if(fold(a.country)===fold(b.country))score+=6;else score-=15;}
+    if(a.country&&b.country){if((countryKey(a.country)||fold(a.country))===(countryKey(b.country)||fold(b.country)))score+=6;else score-=15;}
     if(a.position&&b.position){const pa=fold(a.position),pb=fold(b.position);if(pa===pb)score+=3;else if(pa.includes(pb)||pb.includes(pa))score+=1;}
     return Math.max(0,Math.min(98,score));
   }
@@ -107,26 +119,47 @@
   function automaticPlayerMatch(a,b){
     if(!a||!b||a.id===b.id||!fold(a.name)||fold(a.name)!==fold(b.name))return false;
     const bornA=birthYear(a.born),bornB=birthYear(b.born);if(bornA&&bornB&&bornA!==bornB)return false;
-    const heightA=Number(a.height),heightB=Number(b.height);if(!heightA||!heightB||Math.abs(heightA-heightB)>3)return false;
-    const countryA=countryKey(a.country),countryB=countryKey(b.country);if(!countryA||!countryB||countryA!==countryB)return false;
-    const positionA=positionKey(a.position),positionB=positionKey(b.position);if(!positionA||positionA!==positionB)return false;
+    const heightA=Number(a.height),heightB=Number(b.height),heightKnown=!!(heightA&&heightB);
+    if(heightKnown&&Math.abs(heightA-heightB)>5)return false;
+    const countryA=countryKey(a.country),countryB=countryKey(b.country),countryKnown=!!(countryA&&countryB);
+    if(countryKnown&&countryA!==countryB)return false;
+    const positionA=positionKey(a.position),positionB=positionKey(b.position);
     const realgmA=realgmId(a),realgmB=realgmId(b);if(realgmA&&realgmB&&realgmA!==realgmB)return false;
     const euroA=externalId(a.external,'eurobasket'),euroB=externalId(b.external,'eurobasket');if(euroA&&euroB&&euroA!==euroB)return false;
     const fibaA=externalId(a.fiba,'fiba'),fibaB=externalId(b.fiba,'fiba');if(fibaA&&fibaB&&fibaA!==fibaB)return false;
-    if(!bornA&&!bornB && !(realgmA&&realgmA===realgmB) && !(euroA&&euroA===euroB) && !(fibaA&&fibaA===fibaB) && !sameClubContext(a,b))return false;
-    return true;
+    const sharedProfile=!!(realgmA&&realgmA===realgmB||euroA&&euroA===euroB||fibaA&&fibaA===fibaB);
+    if(sharedProfile)return true;
+    const signals=Number(heightKnown&&Math.abs(heightA-heightB)<=3)+Number(countryKnown&&countryA===countryB)+
+      Number(positionA&&positionA===positionB)+Number(sameClubContext(a,b));
+    if(bornA&&bornB)return signals>=2;
+    // A missing birth year needs height, nationality and playing role to agree.
+    // With neither birth year recorded, require a shared club as a fourth signal.
+    return !!(heightKnown&&countryKnown&&positionA&&positionA===positionB&&
+      (bornA||bornB||sameClubContext(a,b)));
   }
   function chooseAutomaticSurvivor(a,b){const quality=x=>{
     const p=x.player||{},r=x.report||{},body=String(r.report||'');return (birthYear(x.born)?40:0)+(Number(p.g)>0?25:0)+(Number(p.ppg)>0?8:0)+(body&&body!=='{}'?15:0)+(r.rating?8:0)+(r.watch?5:0)+(x.photo?3:0)+(p.profile_provider==='RealGM'?0:4);
   };return quality(a)>quality(b)?a.id:quality(b)>quality(a)?b.id:[a.id,b.id].sort()[0];}
   function automaticPlan(all=detect().player){
-    const groups=new Map(),currentState=state(),reviewed=currentState.reviewed;
-    entities('player').forEach(p=>{const key=fold(p.name);if(key)(groups.get(key)||groups.set(key,[]).get(key)).push(p);});
-    return [...groups.values()].filter(group=>group.length===2).map(([a,b])=>{
-      const candidate=all.find(c=>c.id===pairKey('player',a.id,b.id));
-      if(!candidate||reviewed[candidate.id]||currentState.autoSkipped[candidate.id]||candidate.score<70||!automaticPlayerMatch(a,b))return null;
-      const survivor=chooseAutomaticSurvivor(a,b);return {candidate,survivor,source:survivor===a.id?b.id:a.id};
-    }).filter(Boolean).sort((a,b)=>a.candidate.id.localeCompare(b.candidate.id));
+    const currentState=state(),used=new Set(),plan=[];
+    const blocked=new Set();
+    Object.entries({...currentState.reviewed,...currentState.autoSkipped}).forEach(([id,status])=>{
+      if(status!=='dismissed'&&status!==true)return;
+      if(!id.startsWith('player:'))return;
+      id.slice(7).split('|').forEach(playerId=>blocked.add(playerId));
+    });
+    const eligible=all.filter(candidate=>candidate.score>=70&&!currentState.reviewed[candidate.id]&&
+      !currentState.autoSkipped[candidate.id]&&!blocked.has(candidate.a.id)&&!blocked.has(candidate.b.id)&&
+      automaticPlayerMatch(candidate.a,candidate.b));
+    eligible.sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id));
+    for(const candidate of eligible){
+      if(used.has(candidate.a.id)||used.has(candidate.b.id))continue;
+      used.add(candidate.a.id);used.add(candidate.b.id);
+      const survivor=chooseAutomaticSurvivor(candidate.a,candidate.b);
+      plan.push({candidate,survivor,source:survivor===candidate.a.id?candidate.b.id:candidate.a.id});
+      if(plan.length===25)break;
+    }
+    return plan;
   }
   function resolveImport(incoming) {
     const player={id:'incoming',name:incoming.name||'',born:incoming.born||incoming.birthYear||'',country:incoming.country||incoming.nationality||'',height:incoming.height||'',position:incoming.position||incoming.role||incoming.pos||'',external:incoming.eurobasketId||incoming.eurobasket||incoming._ext||'',fiba:incoming.fibaId||incoming.fiba||incoming._fiba||''};
@@ -291,7 +324,6 @@
       const pending=[...Object.entries(after.records).map(([id,record])=>Store.save(id,record)),...changed.map(key=>Store.pushAppKey(key)),saveState(next)];
       if((await Promise.all(pending)).some(result=>result===false))throw Error('Cloud save did not complete.');
       OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache=null;entityCache={};
-      toast(rewrites.length+' clear player duplicates merged. Undo is available for 30 days.');
       return rewrites.length;
     }catch(error){
       const rollback=[];
@@ -477,11 +509,12 @@
     if(plan.length&&!automaticRunning&&automaticAttempted!==signature){
       automaticRunning=true;automaticAttempted=signature;
       app.innerHTML='<div class="mc-page"><h1>Merge Center</h1><p>Consolidating '+plan.length+' clear player duplicates…</p></div>';
-      autoMergeBatch(plan).catch(error=>toast('Automatic merge failed: '+error.message)).finally(()=>{
+      autoMergeBatch(plan).then(count=>{automaticMerged+=count;}).catch(error=>toast('Automatic merge failed: '+error.message)).finally(()=>{
         automaticRunning=false;if(STATE.view==='mergecenter')renderMergeCenter();
       });return;
     }
     if(automaticRunning)return;
+    if(automaticMerged){toast(automaticMerged+' clear player duplicates merged. Undo is available for 30 days.');automaticMerged=0;}
     if (view.manualCandidate) { renderReview(view.manualCandidate); return; }
     if (view.quality) {
       const quality=view.quality, items=entities('player').filter(p=>quality==='photo'?!p.photo:quality==='eurobasket'?!/eurobasket\.com/i.test(p.external):quality==='birth'?!p.born:!p.country);
