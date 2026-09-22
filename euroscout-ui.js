@@ -168,7 +168,46 @@ function esDossierNextGame(p){const card=esPanel('Next game');card.classList.add
 function esDossierFreshness(p){const card=esPanel('Data freshness');card.classList.add('es-dossier-freshness');const m=leagueOf(p).meta||{},stamp=m.fetchedAt||m.updatedAt||STATE.data?.generated||'';const row=esEl('div','es-dossier-fresh-row');row.appendChild(esEl('i'));const copy=esEl('span');copy.appendChild(esEl('b',null,stamp?'Stats updated: '+String(stamp).slice(0,10):'Update date unavailable'));copy.appendChild(esEl('small',null,'Source: '+(m.source||m.name||'competition data')));row.appendChild(copy);card.appendChild(row);return card;}
 function esOpenLeaderboardFor(p,key,label){const current=CURRENT,currentLeague=STATE.league;CURRENT=p.id;STATE.league=leagueOf(p);try{openLeaderboard(key,label);}finally{CURRENT=current;STATE.league=currentLeague;}}
 function esSwitchProfileStats(p){const scroller=$('#drawer .dr-scroll'),top=scroller?.scrollTop||0;$$('#drawer .es-dossier-stats').forEach(old=>old.replaceWith(esDossierStats(p)));const summaries=$$('#drawer .es-stat-summary'),summaryHTML=statSummaryPanelHTML(p);if(summaryHTML){const shell=document.createElement('div');shell.innerHTML=summaryHTML;const summary=shell.firstElementChild;summary.classList.add('es-stat-summary');summaries.forEach(old=>old.replaceWith(summary.cloneNode(true)));}else summaries.forEach(old=>old.remove());if(scroller)scroller.scrollTop=top;}
-function esDossierStats(p){const panel=esPanel('Season statistics');panel.classList.add('es-dossier-stats');const head=panel.querySelector('h3'),controls=esEl('div','es-dossier-stat-controls'),records=p._grp&&p._grp.length?p._grp:[p],competition=esEl('select');records.forEach(r=>{const o=new Option(leagueOf(r).meta.name,r.id);o.selected=r.id===p.id;competition.appendChild(o);});competition.setAttribute('aria-label','Statistics competition');competition.onchange=()=>{const r=records.find(x=>x.id===competition.value);if(r)esSwitchProfileStats(r);};controls.appendChild(competition);const season=esEl('select');season.appendChild(new Option(scoutSeason(p)||leagueOf(p).meta.season||'Current season',''));season.disabled=true;season.setAttribute('aria-label','Statistics season');controls.appendChild(season);head.after(controls);const grid=esEl('div','es-dossier-statgrid'),pool=scopePool(p);[['PTS','ppg',1],['REB','rpg',1],['AST','apg',1],['STL','spg',1],['BLK','bpg',1],['2P','f2p',1],['3P','f3p',1],['FT','ftp',1],p.league==='bclq'?['EFF','eff',1]:['PIR','pir',1]].forEach(([label,key,d])=>{const tile=esButton('',()=>esOpenLeaderboardFor(p,key,label),'es-dossier-stat');tile.title='Open the '+label+' league ranking';const value=p[key];tile.appendChild(esEl('b',null,value==null?'—':fmt(value,d)+(key.startsWith('f')?'%':'')));tile.appendChild(esEl('small',null,label));let rank=null;try{rank=rankOf(pool,key,p);}catch(e){}tile.appendChild(esEl('span',null,rank?.rank?rank.rank+'/'+rank.total:'—'));grid.appendChild(tile);});panel.appendChild(grid);if(p.league==='bclq')panel.appendChild(esEl('p','hint','BCL Qualifiers 2026/27 · '+p.teamName+(p.jersey?' · #'+p.jersey:'')+(p.officialPosition?' · '+p.officialPosition:'')+(p.nationalities?.length>1?' · '+p.nationalities.join(' / '):'')+' · Small sample. EFF is FIBA efficiency, not PIR.'));return panel;}
+function esStatsSeasonChoices(p){
+ const records=p._grp&&p._grp.length?p._grp:[p];
+ const selectedSeason=scoutSeason(p)||'Current season';
+ return {
+   records,selectedSeason,
+   seasons:[...new Set(records.map(r=>scoutSeason(r)||'Current season'))].sort((a,b)=>b.localeCompare(a)),
+   competitions:records.filter(r=>(scoutSeason(r)||'Current season')===selectedSeason)
+ };
+}
+function esDossierStats(p){
+ const panel=esPanel('Season statistics');panel.classList.add('es-dossier-stats');
+ const head=panel.querySelector('h3'),controls=esEl('div','es-dossier-stat-controls');
+ const {records,selectedSeason,seasons,competitions}=esStatsSeasonChoices(p);
+ const season=esEl('select');
+ seasons.forEach(label=>{const option=new Option(label,label);option.selected=label===selectedSeason;season.appendChild(option);});
+ season.disabled=seasons.length<2;season.setAttribute('aria-label','Statistics season');
+ season.onchange=()=>{
+   const matching=records.filter(r=>(scoutSeason(r)||'Current season')===season.value);
+   const best=matching.sort((a,b)=>Number(b.g||0)-Number(a.g||0))[0];
+   if(best)esSwitchProfileStats(best);
+ };
+ const competition=esEl('select');
+ competitions.forEach(r=>{
+   const league=leagueOf(r);const option=new Option(league?.meta?.name||r.league||'Competition',r.id);
+   option.selected=r.id===p.id;competition.appendChild(option);
+ });
+ competition.setAttribute('aria-label','Statistics competition');
+ competition.onchange=()=>{const r=records.find(x=>x.id===competition.value);if(r)esSwitchProfileStats(r);};
+ controls.append(competition,season);head.after(controls);
+ const grid=esEl('div','es-dossier-statgrid'),pool=scopePool(p);
+ [['PTS','ppg',1],['REB','rpg',1],['AST','apg',1],['STL','spg',1],['BLK','bpg',1],['2P','f2p',1],['3P','f3p',1],['FT','ftp',1],p.league==='bclq'?['EFF','eff',1]:['PIR','pir',1]].forEach(([label,key,d])=>{
+   const tile=esButton('',()=>esOpenLeaderboardFor(p,key,label),'es-dossier-stat');tile.title='Open the '+label+' league ranking';
+   const value=p[key];tile.appendChild(esEl('b',null,value==null?'—':fmt(value,d)+(key.startsWith('f')?'%':'')));
+   tile.appendChild(esEl('small',null,label));let rank=null;try{rank=rankOf(pool,key,p);}catch(e){}
+   tile.appendChild(esEl('span',null,rank?.rank?rank.rank+'/'+rank.total:'—'));grid.appendChild(tile);
+ });
+ panel.appendChild(grid);
+ if(p.league==='bclq')panel.appendChild(esEl('p','hint','BCL Qualifiers 2026/27 · '+p.teamName+(p.jersey?' · #'+p.jersey:'')+(p.officialPosition?' · '+p.officialPosition:'')+(p.nationalities?.length>1?' · '+p.nationalities.join(' / '):'')+' · Small sample. EFF is FIBA efficiency, not PIR.'));
+ return panel;
+}
 function esDossierSummary(p){const panel=esPanel('Scout summary'),rep=effectiveReport(p),cols=esEl('div','es-dossier-summary-grid');const block=(title,text,kind)=>{const box=esEl('section','es-dossier-summary-block '+kind);box.appendChild(esEl('h4',null,title));const items=bulletParse(text||'');if(items.length){const ul=esEl('ul');items.forEach(v=>ul.appendChild(esEl('li',null,v)));box.appendChild(ul);}else box.appendChild(esEl('p','hint','Nothing recorded yet.'));return box;};cols.append(block('Offense',rep.nOff,'offense'),block('Defense',rep.nDef,'defense'));panel.appendChild(cols);const projection=esEl('section','es-dossier-projection'),projLines=bulletParse(rep.nProj||rep.overall||'');projection.append(esEl('small',null,'Projection'),esEl('b',null,projLines.length?projLines.join(' '):(levelBand(p)?.label||'Not recorded')));panel.appendChild(projection);return panel;}
 function esDossierRecentNotes(p){const panel=esPanel('Recent notes'),rep=effectiveReport(p),date=esNoteDate(p),items=[['Offense',rep.nOff],['Defense',rep.nDef],['Athleticism',rep.nAth],['Intel',rep.nIntel]].filter(([,v])=>v&&String(v).trim());const top=esButton('View all →',()=>esSelectTab('Notes'),'es-dossier-text-button');panel.querySelector('h3').after(top);if(!items.length)panel.appendChild(esEl('p','hint','No notes recorded yet.'));items.slice(0,3).forEach(([label,value])=>{const row=esEl('div','es-dossier-note');row.appendChild(esEl('i'));const body=esEl('div');body.appendChild(esEl('small',null,(date?String(date).slice(0,10)+' · ':'')+label));body.appendChild(esEl('p',null,String(value).split('\n').find(x=>x.trim())||value));row.appendChild(body);panel.appendChild(row);});return panel;}
 function esDossierQuickActions(p){const panel=esPanel('Quick actions');panel.classList.add('es-dossier-actions');const grid=esEl('div');grid.appendChild(esButton('▤  Add note',()=>esSelectTab('Notes')));grid.appendChild(esButton((isWatched(p)?'★  On watchlist':'☆  Add to watchlist'),()=>toggleProfileFollow(p.id)));grid.appendChild(esButton('☑  Add to review queue',async()=>{if(!Store.canEdit())return;await wfWrite(p,w=>{w.review={...(w.review||{}),status:'open',question:w.review?.question||'',updatedAt:wfNow()};});toast('Added to review queue');}));grid.appendChild(esButton('⇄  Compare player',()=>toggleCompare(p.id)));panel.appendChild(grid);if(p.league==='bclq')panel.appendChild(esEl('p','hint','BCL Qualifiers 2026/27 · '+p.teamName+(p.jersey?' · #'+p.jersey:'')+(p.officialPosition?' · '+p.officialPosition:'')+(p.nationalities?.length>1?' · '+p.nationalities.join(' / '):'')+' · Small sample. EFF is FIBA efficiency, not PIR.'));return panel;}
