@@ -44,6 +44,7 @@ document.addEventListener('click',function(e){var b=e.target.closest('#esTheme,#
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="euroscout-loading.css?v=20260922-1">
+<link rel="stylesheet" href="global-command-palette.css?v=20260922-1">
 <style>
 :root{
   --bg:#F6F4EE; --bg2:#F0ECE3; --panel:#FFFFFF; --panel2:#FBFAF5; --line:#E7E2D6; --line-soft:#EFEBE1;
@@ -317,9 +318,8 @@ table.glog th,table.glog td{padding:6px 9px}
 
 /* global search */
 .gsearch{position:relative}
-.gsearch input{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:8px 14px;border-radius:999px;font-size:13px;width:190px;outline:none;transition:width .18s,border-color .12s;box-shadow:var(--shadow)}
-.gsearch input:focus{border-color:var(--accent2);width:240px}
-.gsresults{position:absolute;top:calc(100% + 6px);right:0;width:400px;max-width:calc(100vw - 32px);max-height:64vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lift);z-index:120;padding:6px}
+.gsearch input{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:8px 14px;border-radius:999px;font-size:13px;width:250px;outline:none;box-shadow:var(--shadow)}
+.gsearch input:focus{border-color:var(--accent2)}
 .gsitem{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer}
 .gsitem:hover,.gsitem.active{background:var(--panel2)}
 .gsitem img{width:32px;height:32px;border-radius:8px;object-fit:cover;object-position:top;background:var(--panel2);flex-shrink:0}
@@ -328,7 +328,7 @@ table.glog th,table.glog td{padding:6px 9px}
 .gsitem .gm{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
 .gsitem .glg{font-size:10px;font-weight:700;padding:2px 8px;border-radius:7px;background:var(--chip);color:var(--muted);flex-shrink:0;font-family:var(--mono);margin-top:1px;white-space:nowrap}
 .gsempty{padding:16px;color:var(--muted);font-size:12.5px;text-align:center}
-@media(max-width:640px){.gsearch input{width:130px}.gsearch input:focus{width:150px}.gsresults{width:calc(100vw - 32px)}}
+@media(max-width:640px){.gsearch input{width:150px}}
 
 /* team page */
 .teamhead{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
@@ -1815,8 +1815,7 @@ body.drawer-lock{overflow:hidden}
     </nav>
     <span class="spacer"></span>
     <div class="gsearch">
-      <input type="text" id="globalSearch" placeholder="Search player…" autocomplete="off" aria-label="Search players"/>
-      <div class="gsresults hidden" id="gsResults"></div>
+      <input type="search" id="globalSearch" placeholder="Search players, clubs, agencies, competitions..." autocomplete="off" aria-label="Open global search"/>
     </div>
     <div class="seg hdr-scope" id="scopeSeg" title="Ranking scope used on player profiles">
       <button data-scope="league" class="active">vs&nbsp;<span id="scopeLg">League</span></button>
@@ -2324,7 +2323,7 @@ const Store = (()=>{
   const enabled = !!(window.ESAccess || (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY));
   let sb=null, user=null, role=null, member=false, cache={};
   const LKEY="euroscout:records";
-  const APP_KEYS=["euroscout:sessions:v1","euroscout:shortcuts:v1","euroscout:names:v1","euroscout:watchAlertsSeen:v1","euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1","euroscout:market:v1","euroscout:mergeCenter:v1","euroscout:agencyLogos:v1","euroscout:agencyNotes:v1"];
+  const APP_KEYS=["euroscout:sessions:v1","euroscout:shortcuts:v1","euroscout:names:v1","euroscout:watchAlertsSeen:v1","euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1","euroscout:market:v1","euroscout:mergeCenter:v1","euroscout:agencyLogos:v1","euroscout:agencyNotes:v1","euroscout:manualPlayers:v1"];
   const local = {
     all(){try{return JSON.parse(localStorage.getItem(LKEY))||{}}catch(e){return{}}},
     set(o){localStorage.setItem(LKEY,JSON.stringify(o))}
@@ -2569,7 +2568,7 @@ function rebuildLinks(){
   const uni=(a,b)=>{if(byId[a]&&byId[b]){const ra=find(a),rb=find(b);if(ra!==rb)parent[ra]=rb;}};
   const nameKey=p=>normName(p.name).split(" ").filter(Boolean).sort().join(" ");
   // leagues whose feed has no birth year can't be safely name-matched across leagues
-  const NO_BIO_MERGE=new Set(["ncaam"]);
+  const NO_BIO_MERGE=new Set(["ncaam","custom"]);
   const nameMergeable=p=>!NO_BIO_MERGE.has(p.league);
   const byCode={},byName={};
   // player codes are only comparable within a code-space: EuroLeague+EuroCup share FIBA codes,
@@ -2933,6 +2932,7 @@ async function boot(){
   window.EuroScoutExpansion?.apply(raw);
   window.EuroScoutMemberships?.apply(raw);
   window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
+  window.EuroScoutManualPlayers?.apply(raw);
   STATE.data = raw;
   window.EuroScoutEditPlayerV2?.prune(raw);
   injectExhibitions(raw);
@@ -3150,7 +3150,22 @@ function parsePlayerHash(h){
 }
 function openFromHash(h){
   const id=parsePlayerHash(h);
-  if(!id){ if(DRAWER_OPEN&&!/^#p=/.test(location.hash))closeDrawer(); return; }
+  if(!id){
+    if(DRAWER_OPEN&&!/^#p=/.test(location.hash))closeDrawer();
+    const route=new URLSearchParams(String(h||'').replace(/^#/,''));
+    const view=route.get('view'),create=route.get('create');
+    if(view&&['players','teams','agencies','mergecenter'].includes(view)){
+      const competition=route.get('competition');
+      if(competition){const match=STATE.data?.leagues?.filter(L=>searchFold(L.meta.name)===searchFold(competition)).sort((a,b)=>String(b.meta.season||'').localeCompare(String(a.meta.season||'')))[0];if(match){STATE.league=match;STATE.allLeagues=false;}}
+      goView(view);
+      const agency=route.get('agency');if(view==='agencies'&&agency)openAgencyPage('agency',agency);
+      const club=route.get('club');if(view==='teams'&&club){const match=allClubs().find(c=>searchFold(c.name)===searchFold(club));const team=match?.teams?.find(t=>t.lg!=='directory')||match?.teams?.[0];if(team)openTeamIn(team.lg,team.code);}
+      if(create==='player')setTimeout(()=>window.EuroScoutManualPlayers?.openCreate(),50);
+      if(create==='club')setTimeout(()=>window.EuroScoutClubs?.addForm(),50);
+      if(create==='agency')setTimeout(()=>{if(!Store.canEdit())return;const name=prompt('New agency name');if(name?.trim()){addAgency(name.trim());openAgencyPage('agency',name.trim());}},50);
+    }
+    return;
+  }
   if(CURRENT===id&&DRAWER_OPEN)return;      // already showing this player
   if(player(id))openProfile(id);
 }
@@ -3193,51 +3208,7 @@ function openGlobal(leagueId,id){
   openProfile(id);
 }
 function wireGlobalSearch(){
-  const inp=$("#globalSearch"),box=$("#gsResults");if(!inp||!box)return;
-  let active=-1,results=[],searchTimer=null,extraRequested=false,extraFailed=false;
-  const close=()=>{box.classList.add("hidden");box.innerHTML="";active=-1;};
-  const paint=()=>{
-    box.innerHTML=results.map(({p,L},i)=>`<div class="gsitem${i===active?" active":""}" data-i="${i}">
-      ${p.img?`<img src="${p.img}" loading="lazy" onerror="this.style.visibility='hidden'"/>`:'<img alt=""/>'}
-      <div class="gi"><div class="gn">${p.name}</div><div class="gm">${esc((effective26(p)&&clubByKey(effective26(p))?.name)||p.teamName)} · ${fmt(p.ppg)} pts · PIR ${fmt(p.pir)}</div></div>
-      <span class="glg">${L.meta.name}</span></div>`).join("");
-    $$("#gsResults .gsitem").forEach(el=>el.onclick=()=>{const r=results[+el.dataset.i];openGlobal(r.L.meta.id,r.p.id);});
-    box.classList.remove("hidden");
-  };
-  const search=()=>{
-    const q=searchFold(inp.value.trim());active=-1;
-    if(q.length<2){close();return;}
-    const qn=normName(q);
-    results=[];
-    for(const item of allPlayersIndexed()){
-      if((qn&&item.nameKey.includes(qn))||item.nameFold.includes(q)||item.aliasKeys.some(key=>key.includes(q))){
-        results.push(item);
-        if(results.length>12){results.sort((a,b)=>(b.p.pir||0)-(a.p.pir||0));results.length=12;}
-      }
-    }
-    results.sort((a,b)=>(b.p.pir||0)-(a.p.pir||0));
-    if(!results.length){box.innerHTML='<div class="gsempty">'+(!STATE._extraDone&&!extraFailed?'Checking additional leagues…':extraFailed?'No local matches; additional leagues are unavailable':'No players found')+'</div>';box.classList.remove("hidden");return;}
-    paint();
-  };
-  const move=d=>{if(!results.length)return;active=(active+d+results.length)%results.length;paint();
-    const el=$$("#gsResults .gsitem")[active];if(el)el.scrollIntoView({block:"nearest"});};
-  inp.oninput=()=>{
-    clearTimeout(searchTimer);
-    searchTimer=setTimeout(search,90);
-    if(!extraRequested&&!STATE._extraDone&&inp.value.trim().length>=2){
-      extraRequested=true;
-      setTimeout(()=>loadExtraLeagues().then(()=>{extraFailed=false;}).catch(e=>{extraRequested=false;extraFailed=true;search();console.warn("Extra-league search unavailable",e);}),300);
-    }
-  };
-  inp.onfocus=()=>{if(inp.value.trim().length>=2)search();};
-  inp.onkeydown=e=>{
-    if(box.classList.contains("hidden"))return;
-    if(e.key==="ArrowDown"){move(1);e.preventDefault();}
-    else if(e.key==="ArrowUp"){move(-1);e.preventDefault();}
-    else if(e.key==="Enter"){if(active>=0){const r=results[active];openGlobal(r.L.meta.id,r.p.id);}}
-    else if(e.key==="Escape"){close();inp.blur();}
-  };
-  document.addEventListener("click",e=>{if(!e.target.closest(".gsearch"))close();});
+  window.EuroScoutCommandPalette?.init();
 }
 
 /* ---------- auth gate + roles (Supabase shared-team mode) ---------- */
@@ -7254,5 +7225,5 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260920-fix"></script>
 <script src="data/bclq-2026.js?v=20260921-final"></script><script src="euroscout-bclq-2026.js?v=20260921-jerseys"></script>
 <link rel="stylesheet" href="euroscout-merge-center.css?v=20260921-1"><script src="euroscout-merge-center.js?v=20260922-1"></script>
-<link rel="stylesheet" href="euroscout-agencies-v2.css?v=20260921-1"><script src="euroscout-agencies-v2.js?v=20260921-1"></script><script>esSetup();boot().catch(function(error){console.error('EuroScout initialization failed',error);document.getElementById('app').textContent='EuroScout could not finish loading. Please reload.';}).finally(function(){var root=document.documentElement;root.classList.remove('es-preload');root.classList.add('es-ready');setTimeout(function(){document.getElementById('esSplash')?.remove();},300);});</script>
+<link rel="stylesheet" href="euroscout-agencies-v2.css?v=20260921-1"><script src="euroscout-agencies-v2.js?v=20260921-1"></script><script src="global-command-palette.js?v=20260922-1"></script><script src="euroscout-manual-players.js?v=20260922-1"></script><script src="euroscout-command-palette.js?v=20260922-1"></script><script>esSetup();boot().catch(function(error){console.error('EuroScout initialization failed',error);document.getElementById('app').textContent='EuroScout could not finish loading. Please reload.';}).finally(function(){var root=document.documentElement;root.classList.remove('es-preload');root.classList.add('es-ready');setTimeout(function(){document.getElementById('esSplash')?.remove();},300);});</script>
 <script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-sessions.js?v=20260921-1"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260920-2"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260921-1"><script src="data/signal-origins.js?v=20260920-1"></script><script src="euroscout-signals.js?v=20260920-2"></script><script src="euroscout-quickstats.js?v=20260921-season-v2"></script><script src="euroscout-live-notes.js?v=20260920-2"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>
