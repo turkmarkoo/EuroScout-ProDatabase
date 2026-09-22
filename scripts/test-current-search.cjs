@@ -39,6 +39,7 @@ const context = {
   document: { getElementById: () => null }
 };
 vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, '../euroscout-command-palette.js'), 'utf8'), context);
+assert.deepEqual(Object.keys(context.window.EuroScoutCommandPalette.search('C')), [], 'one-letter searches must not scan the database');
 const result = () => context.window.EuroScoutCommandPalette.search('Cowan').Players.items[0];
 assert.deepEqual(Array.from(result().chips), ['ABA League', 'EuroCup']);
 assert.equal(result().club, 'Cedevita Olimpija');
@@ -56,4 +57,8 @@ assignment = '__free_agent';
 assert.equal(result().club, 'Free Agent · Last club: Galatasaray');
 assert.deepEqual(Array.from(result().chips), ['ABA League']);
 assert.equal(result().season, '2025/26');
+const adapterSource = fs.readFileSync(path.resolve(__dirname, '../euroscout-command-palette.js'), 'utf8');
+assert.doesNotMatch(adapterSource, /afterOpen:\(\)=>[\s\S]*loadExtraLeagues/, 'opening search must not load and merge full data packs');
+assert.match(adapterSource, /inputDelay:160/);
+assert.match(adapterSource, /noteCursor\+15/);
 console.log('Current-season search identity checks passed.');

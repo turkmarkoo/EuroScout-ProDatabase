@@ -1,17 +1,19 @@
 (function () {
   'use strict';
-  let palette=null,cache=null,backgroundQueued=false,loadingExtra=false;
+  let palette=null,cache=null,backgroundQueued=false;
   const api=()=>window.GlobalCommandPalette;
   const folded=value=>api().fold(value);
   const searchKeys=new WeakMap();
-  function scored(query,items,title,extra){
+  const matchCache=new Map();
+  function scored(query,items,title,extra,scope){
     const q=folded(query),words=q.split(/\s+/).filter(Boolean),best=[];
-    let total=0;
-    for(const item of items){
+    const previous=matchCache.get(scope),source=previous&&previous.base===items&&previous.size===items.length&&previous.query&&q.startsWith(previous.query)?previous.matches:items;
+    const matches=[];
+    for(const item of source){
       let key=searchKeys.get(item);
       if(!key){key={title:folded(title(item)),all:folded(title(item)+' '+extra(item))};searchKeys.set(item,key);}
       if(!words.every(word=>key.all.includes(word)))continue;
-      total++;
+      matches.push(item);
       const rank=key.title===q?1000:key.title.startsWith(q)?700:key.title.split(/\s+/).some(word=>word.startsWith(q))?500:key.title.includes(q)?300:100;
       const hit={item,rank,name:key.title};
       let at=best.findIndex(other=>rank>other.rank||(rank===other.rank&&key.title<other.name));
@@ -19,7 +21,8 @@
       if(at<5)best.splice(at,0,hit);
       if(best.length>5)best.pop();
     }
-    return {total,items:best};
+    matchCache.set(scope,{base:items,size:items.length,query:q,matches});
+    return {total:matches.length,items:best};
   }
   const season=value=>String(value||'').replace(/(\d{4})-(\d{2})/,'$1/$2');
   function notesFor(player) {
@@ -72,30 +75,32 @@
     const run=()=>{
       backgroundQueued=false;
       if(!cache||cache.notesReady)return;
-      const end=Math.min(cache.noteCursor+80,cache.players.length);
+      if(!palette?.isOpen())return;
+      const end=Math.min(cache.noteCursor+15,cache.players.length);
       for(let i=cache.noteCursor;i<end;i++)cache.notes.push(...notesFor(cache.players[i].p));
       cache.noteCursor=end;
-      if(end<cache.players.length)queueBackgroundIndex();
+      if(end<cache.players.length)setTimeout(queueBackgroundIndex,120);
       else {cache.notesReady=true;palette?.refresh();}
     };
     if(window.requestIdleCallback)requestIdleCallback(run,{timeout:1000});else setTimeout(run,20);
   }
-  function index(){if(cache)return cache;
-    const players=allPlayersIndexed();
+  function index(){const players=allPlayersIndexed();if(cache&&cache.players===players)return cache;
+    matchCache.clear();
     cache={players,dupes:likelyDuplicates(players),clubs:allClubs(),agencies:window.EuroScoutAgenciesV2?.buildDirectory()?.agencies||[],
       competitions:STATE.data.leagues.filter(L=>!L.meta.teamsOnly).map(L=>L.meta),notes:[],noteCursor:0,notesReady:false,sessions:window.ESSessions?.all()||[]};
-    queueBackgroundIndex();
     return cache;
   }
   function search(query){
     if(!STATE.data?.leagues)return {};
+    if(folded(query).length<2)return {};
     const {players,dupes,clubs,agencies,competitions,notes,sessions}=index();
-    const playerMatches=scored(query,players,x=>x.p.name,x=>[x.p.teamName,x.p.country,x.L.meta.name].join(' '));
-    const clubMatches=scored(query,clubs,x=>x.name,x=>[x.country,...x.leagues.map(l=>l.name)].join(' '));
-    const agencyMatches=scored(query,agencies,x=>x.name,x=>[x.last?.player,x.last?.from,x.last?.to].join(' '));
-    const compMatches=scored(query,competitions,x=>x.name,x=>[x.season,x.id].join(' '));
-    const noteMatches=scored(query,notes,x=>x.player.name,x=>x.label+' '+x.text);
-    const sessionMatches=scored(query,sessions,x=>[x.a?.name,x.b?.name].filter(Boolean).join(' vs '),x=>[x.competition?.name,x.gameDate,x.note].join(' '));
+    const playerMatches=scored(query,players,x=>x.p.name,x=>[x.p.teamName,x.p.country,x.L.meta.name].join(' '),'players');
+    const clubMatches=scored(query,clubs,x=>x.name,x=>[x.country,...x.leagues.map(l=>l.name)].join(' '),'clubs');
+    const agencyMatches=scored(query,agencies,x=>x.name,x=>[x.last?.player,x.last?.from,x.last?.to].join(' '),'agencies');
+    const compMatches=scored(query,competitions,x=>x.name,x=>[x.season,x.id].join(' '),'competitions');
+    const noteMatches=scored(query,notes,x=>x.player.name,x=>x.label+' '+x.text,'notes');
+    const sessionMatches=scored(query,sessions,x=>[x.a?.name,x.b?.name].filter(Boolean).join(' vs '),x=>[x.competition?.name,x.gameDate,x.note].join(' '),'events');
+    if(folded(query).length>=3)queueBackgroundIndex();
     const agencyLogo=name=>{try{const map=JSON.parse(localStorage.getItem('euroscout:agencyLogos:v1')||'{}');return map[folded(name).replace(/[^a-z0-9]+/g,' ')]?.data||'';}catch{return '';}};
     return {
       Players:{total:playerMatches.total,items:playerMatches.items.map(({item})=>playerItem(item.p,dupes)),seeAll:()=>goView('scout')},
@@ -115,14 +120,7 @@
   ];}
   function init(){if(palette)return;const header=document.getElementById('globalSearch');if(!header)return;
     header.placeholder='Search players, clubs, agencies, competitions...';header.setAttribute('aria-label','Open global search');header.setAttribute('aria-haspopup','dialog');
-    palette=api().create({search,actions,afterOpen:()=>{
-      if(STATE._extraDone||loadingExtra)return;
-      loadingExtra=true;
-      const load=()=>loadExtraLeagues().then(()=>{cache=null;palette.refresh();})
-        .catch(error=>console.warn('Extra leagues unavailable in global search',error))
-        .finally(()=>{loadingExtra=false;});
-      if(window.requestIdleCallback)requestIdleCallback(load,{timeout:2000});else setTimeout(load,250);
-    },afterClose:()=>{header.value='';}});
+    palette=api().create({search,actions,minQueryLength:2,inputDelay:160,afterClose:()=>{header.value='';}});
     palette.bind(header);
   }
   window.EuroScoutCommandPalette={init,open:query=>palette?.open(query),refresh:()=>palette?.refresh(),search};

@@ -35,7 +35,7 @@ function runSelection(method) {
   vm.runInNewContext(source, context);
   const palette = context.window.GlobalCommandPalette.create({
     search: () => ({ Players: { total: 1, items: [{ type: 'player', title: 'Test Player', onOpen() { opened++; } }] } }),
-    actions: () => [], afterClose: () => { header.value = ''; }
+    actions: () => [], minQueryLength: 2, inputDelay: 160, afterClose: () => { header.value = ''; }
   });
   palette.bind(header);
   header.value = 'Test Player';
@@ -52,4 +52,6 @@ function runSelection(method) {
 
 runSelection('click');
 runSelection('keyboard');
+assert.match(source, /fold\(query\)\.length>=minQueryLength/);
+assert.match(source, /Math\.max\(65,Number\(config\.inputDelay\)\|\|65\)/);
 console.log('Palette result navigation checks passed.');
