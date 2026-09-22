@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
+const path = require('node:path');
 
 const seasons = {
   aba: { meta: { id: 'aba', name: 'ABA League', season: '2025/26' } },
@@ -33,7 +34,7 @@ const context = {
   openGlobal: () => {}, goView: () => {},
   document: { getElementById: () => null }
 };
-vm.runInNewContext(fs.readFileSync(__dirname + '/euroscout-command-palette.js', 'utf8'), context);
+vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, '../euroscout-command-palette.js'), 'utf8'), context);
 const result = () => context.window.EuroScoutCommandPalette.search('Cowan').Players.items[0];
 assert.deepEqual(Array.from(result().chips), ['ABA League', 'EuroCup']);
 assert.equal(result().club, 'Cedevita Olimpija');
