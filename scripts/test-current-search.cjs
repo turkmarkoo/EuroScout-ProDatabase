@@ -14,11 +14,15 @@ const historical = [{ ...old, id: 'cowan-bcl', league: 'bcl' }, { ...old, id: 'c
 const group = [old, ...historical];
 old._grp = group;
 let assignment = 'cedevita';
+const indexed = [{ p: old, L: seasons.aba }, ...Array.from({ length: 2000 }, (_, i) => ({
+  p: { ...old, id: 'other-' + i, name: 'Other Cowan prospect ' + i, _grp: [] }, L: seasons.aba
+}))];
 const context = {
   console,
-  window: { GlobalCommandPalette: { fold: x => String(x).toLowerCase(), score: (q, title) => title.toLowerCase().includes(q.toLowerCase()) ? 1 : -1 }, EuroScoutMergeCenter: { detect: () => ({ player: [] }) } },
+  setTimeout: () => 0,
+  window: { GlobalCommandPalette: { fold: x => String(x).toLowerCase(), score: (q, title) => title.toLowerCase().includes(q.toLowerCase()) ? 1 : -1 }, EuroScoutMergeCenter: { detect: () => { throw new Error('Full duplicate detection must not run while typing'); } } },
   STATE: { data: { leagues: Object.values(seasons) } },
-  allPlayersIndexed: () => [{ p: old, L: seasons.aba }],
+  allPlayersIndexed: () => indexed,
   allClubs: () => [],
   Store: { get: () => ({ report: '{}' }) },
   gid: p => p.id,
@@ -40,6 +44,8 @@ assert.deepEqual(Array.from(result().chips), ['ABA League', 'EuroCup']);
 assert.equal(result().club, 'Cedevita Olimpija');
 assert.equal(result().season, '2026/27');
 assert.deepEqual(Array.from(result().stats, x => x.value), ['—', '—']);
+assert.equal(context.window.EuroScoutCommandPalette.search('Cowan').Players.total, 2001);
+assert.equal(context.window.EuroScoutCommandPalette.search('Cowan').Players.items.length, 5);
 
 const current = { ...old, id: 'cowan-current', league: 'current', ppg: 12.3, pir: 14.1, g: 3 };
 group.push(current);
