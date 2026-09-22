@@ -16,12 +16,23 @@
   }
   function playerItem(player,duplicates){
     const group=player._grp?.length?player._grp:[player];
-    player=group.slice().sort((a,b)=>String(leagueOf(b)?.meta?.season||'').localeCompare(String(leagueOf(a)?.meta?.season||''))||Number(b.g||0)-Number(a.g||0))[0];
-    const L=leagueOf(player),ckey=effective26(player),club=ckey&&!isStatus(ckey)?clubByKey(ckey)?.name:player.teamName;
-    const chips=[...new Set(group.map(p=>leagueOf(p)?.meta?.name).filter(Boolean))];
-    return {type:'player',title:player.name,photo:photoOf(player),position:dbPositionGroup(player)||player.role,height:player.height,born:player.born,country:countryLabel(player.country)||player.country,club:club||'',chips,
-      stats:[{value:fmt(player.ppg),label:'PPG'},{value:fmt(player.pir),label:'PIR'}],season:season(L?.meta?.season),watching:isWatched(player),
-      onWatch:()=>toggleWatch(player.id),duplicate:duplicateFor(player,duplicates),onOpen:()=>openGlobal(L?.meta?.id,player.id)};
+    const latest=group.slice().sort((a,b)=>String(leagueOf(b)?.meta?.season||'').localeCompare(String(leagueOf(a)?.meta?.season||''))||Number(b.g||0)-Number(a.g||0))[0];
+    const assignment=effective26(latest),current=assignment&&!isStatus(assignment)?clubByKey(assignment):null;
+    const free=assignment===STATUS_FREE,retired=assignment===STATUS_RETIRED;
+    const currentRows=group.filter(p=>/^2026\s*[/-]\s*27$/.test(String(leagueOf(p)?.meta?.season||'')));
+    const statsRow=currentRows.sort((a,b)=>Number(b.g||0)-Number(a.g||0))[0];
+    const lastLeague=leagueOf(latest),lastSeason=season(lastLeague?.meta?.season);
+    const comps=current?[...domCompsOf(current),...nextCompsOf(current)].map(c=>c.name):[];
+    // NCAA membership is recorded on the current club rather than in the 2026/27 league-entry maps.
+    if(current&&!comps.length&&(current.teams||[]).some(t=>t.lg==='ncaa'))comps.push('NCAA D1');
+    const chips=[...new Set(comps.filter(Boolean))];
+    if(free&&lastLeague?.meta?.name)chips.push(lastLeague.meta.name);
+    const club=current?.name||(free?'Free Agent'+(latest.teamName?' · Last club: '+latest.teamName:''):retired?'Retired':'Current club unverified');
+    const statsPlayer=free?latest:statsRow;
+    const statsSeason=free?lastSeason:'2026/27';
+    return {type:'player',title:latest.name,photo:photoOf(latest),position:dbPositionGroup(latest)||latest.role,height:latest.height,born:latest.born,country:countryLabel(latest.country)||latest.country,club,chips,
+      stats:[{value:statsPlayer?fmt(statsPlayer.ppg):'—',label:'PPG'},{value:statsPlayer?fmt(statsPlayer.pir):'—',label:'PIR'}],season:statsSeason,watching:isWatched(latest),
+      onWatch:()=>toggleWatch(latest.id),duplicate:duplicateFor(latest,duplicates),onOpen:()=>openGlobal(lastLeague?.meta?.id,latest.id)};
   }
   function reportIndex(players){return players.flatMap(({p})=>notesFor(p));}
   function index(){if(cache)return cache;
