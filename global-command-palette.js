@@ -41,7 +41,8 @@
       actionItems.forEach(action=>{const index=entries.length;entries.push({kind:'action',action,group:'Quick Actions'});html+=option({html:'<div class="gcp-action"><span class="gcp-action-icon">'+escape(action.icon||'+')+'</span><b>'+escape(action.title)+'</b></div>'},index);});
       html+='</div></section>';
       let total=0;
-      if(query){
+      const minQueryLength=Math.max(1,Number(config.minQueryLength)||1);
+      if(query&&fold(query).length>=minQueryLength){
         let provided={};try{provided=config.search(query)||{};}catch(error){console.error('Global search failed',error);}
         ORDER.forEach(title=>{
           const section=provided[title];if(!section || !section.items?.length)return;
@@ -53,7 +54,8 @@
           html+='</div></section>';
         });
         if(!total)html+='<div class="gcp-empty"><b>No results found.</b><span>Create a new player? Create a new club?</span></div>';
-      } else html+='<p class="gcp-hint">Search across players, clubs, agencies, competitions, reports, notes and events.</p>';
+      } else if(query) html+='<p class="gcp-hint">Type at least '+minQueryLength+' characters to search.</p>';
+      else html+='<p class="gcp-hint">Search across players, clubs, agencies, competitions, reports, notes and events.</p>';
       if(query&&total&&selected===0)selected=actionItems.length;
       selected=Math.max(0,Math.min(selected,entries.length-1));
       resultHost.innerHTML=html;
@@ -83,7 +85,7 @@
       document.body.appendChild(overlay);
       overlay.addEventListener('mousedown',event=>{if(event.target===overlay)close();});
       input=overlay.querySelector('.gcp-input');resultHost=overlay.querySelector('.gcp-results');input.value=initial;
-      input.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>{selected=0;render();},65);});
+      input.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>{selected=0;render();},Math.max(65,Number(config.inputDelay)||65));});
       overlay.addEventListener('keydown',handleKey);
       requestAnimationFrame(()=>overlay?.classList.add('open'));
       config.afterOpen?.();render();input.focus();
