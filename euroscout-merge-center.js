@@ -143,7 +143,7 @@
       Number(positionA&&positionA===positionB)+Number(sameClubContext(a,b));
     // An equal known birth year plus an exact normalized name is a clear identity
     // unless one of the hard-conflict checks above rejected the pair.
-    if(strongName){if(bornA&&bornB)return true;if(bornA||bornB)return signals>=1;return signals>=2;}
+    if(strongName){if(bornA&&bornB)return true;if(bornA||bornB)return signals>=1;return sameClubContext(a,b)&&signals>=2;}
     // Initial / prefix first name (Facu vs Facundo): shared known birth year plus a hard bio signal (height or country), not position alone.
     return !!(bornA&&bornB)&&(!!(heightKnown&&Math.abs(heightA-heightB)<=3)||!!(countryKnown&&countryA===countryB));
   }
@@ -170,7 +170,7 @@
     });
     const eligible=all.filter(candidate=>!currentState.reviewed[candidate.id]&&
       !currentState.autoSkipped[candidate.id]&&!blocked.has(candidate.a.id)&&!blocked.has(candidate.b.id)&&
-      automaticPlayerMatch(candidate.a,candidate.b)&&!conflictingUserData(candidate.a,candidate.b));
+      automaticPlayerMatch(candidate.a,candidate.b));
     eligible.sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id));
     // Resolve full connected duplicate groups in one pass. The former one-pair-
     // per-player cap needed many page reloads and left obvious name variants queued.
@@ -309,7 +309,7 @@
   async function autoMergeBatch(plan) {
     if(!Store.canEdit())throw Error('Administrator access is required.');
     if(!plan.length)return 0;
-    const oldState=state(),beforeOverrides=localStorage.getItem('euroscout:overrides');
+    const oldState=structuredClone(state()),beforeOverrides=localStorage.getItem('euroscout:overrides');
     const batchId=crypto.randomUUID(),at=new Date().toISOString();
     const override=ovrLocal();
     const next=state();
@@ -325,17 +325,23 @@
     }
     const batchMerges=next.merges.filter(item=>item.batchId===batchId);
     if(!batchMerges.length)return 0;
+    const recordsBefore={},recordsAfter={};
+    for(const item of batchMerges){
+      if(!recordsBefore[item.survivor])recordsBefore[item.survivor]=structuredClone(Store.get(item.survivor)||{report:'{}'});
+      const current=recordsAfter[item.survivor]||recordsBefore[item.survivor];
+      recordsAfter[item.survivor]=combinedPlayerRecord(current,Store.get(item.source)||{report:'{}'},AUTO_OPTIONS);
+    }
     try{
       localStorage.setItem('euroscout:overrides',JSON.stringify(override));
       next.batches.push({id:batchId,at,admin:Store.user?.email||window.ESAccess?.user?.email||'Administrator',
-        count:batchMerges.length,pairs:batchMerges.map(item=>pairKey('player',item.survivor,item.source)),lightweight:true});
-      const [linksSaved,stateSaved]=await Promise.all([Store.pushAppKey('euroscout:overrides'),saveState(next)]);
-      if(linksSaved===false||stateSaved===false)throw Error('Identity links could not be saved.');
+        count:batchMerges.length,pairs:batchMerges.map(item=>pairKey('player',item.survivor,item.source)),lightweight:true,recordsBefore,recordsAfter});
+      const saved=await Promise.all([Store.pushAppKey('euroscout:overrides'),saveState(next),...Object.entries(recordsAfter).map(([id,record])=>Store.save(id,record))]);
+      if(saved.some(result=>result===false))throw Error('Identity links or player notes could not be saved.');
       OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};
       return batchMerges.length;
     }catch(error){
       beforeOverrides==null?localStorage.removeItem('euroscout:overrides'):localStorage.setItem('euroscout:overrides',beforeOverrides);
-      await Promise.allSettled([Store.pushAppKey('euroscout:overrides'),saveState(oldState)]);
+      await Promise.allSettled([Store.pushAppKey('euroscout:overrides'),saveState(oldState),...Object.entries(recordsBefore).map(([id,record])=>Store.save(id,record))]);
       OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};
       throw error;
     }
@@ -348,11 +354,12 @@
       const mergePairs=old.merges.filter(item=>item.batchId===id&&!item.undoneAt),override=ovrLocal();
       const keys=new Set(mergePairs.map(item=>[item.survivor,item.source].sort().join('|')));
       override.links=(override.links||[]).filter(link=>!keys.has([link[0],link[1]].sort().join('|')));
+      for(const [playerId,post] of Object.entries(batch.recordsAfter||{}))if(JSON.stringify(Store.get(playerId))!==JSON.stringify(post))throw Error('A player was edited since this batch. Review those edits before undoing.');
       const undoneAt=new Date().toISOString();batch.undoneAt=undoneAt;mergePairs.forEach(item=>item.undoneAt=undoneAt);
       batch.pairs.forEach(pair=>{if(old.reviewed[pair]==='merged')delete old.reviewed[pair];old.autoSkipped[pair]=true;});
       localStorage.setItem('euroscout:overrides',JSON.stringify(override));
-      const [linksSaved,stateSaved]=await Promise.all([Store.pushAppKey('euroscout:overrides'),saveState(old)]);
-      if(linksSaved===false||stateSaved===false)throw Error('Undo could not be saved.');
+      const saved=await Promise.all([Store.pushAppKey('euroscout:overrides'),saveState(old),...Object.entries(batch.recordsBefore||{}).map(([playerId,record])=>Store.save(playerId,record))]);
+      if(saved.some(result=>result===false))throw Error('Undo could not be saved.');
       OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};if(STATE.view==='mergecenter')renderMergeCenter();toast('Automatic merge batch undone.');return;
     }
     if(!batch.before)throw Error('Undo is no longer available.');

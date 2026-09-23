@@ -21,9 +21,17 @@
     const found=new Map(otherLeagues().filter(L=>ORDER.includes(L.meta.id)).map(L=>[L.meta.id,L]));
     return ORDER.map(id=>found.get(id)).filter(Boolean);
   }
-  function logo(id,cls='ol-logo'){return `<span class="${cls}"><img src="${attr(LOGOS[id]||'')}" alt="" loading="lazy" onerror="this.parentNode.textContent='${html((LABELS[id]?.[0]||id).slice(0,2).toUpperCase())}'"></span>`;}
-  function qualifiedCount(L){return Number(L.meta.qualifiedCount)||L.players.filter(p=>p.qualified).length;}
-  function teamCount(L){return new Set(L.players.map(p=>p.teamName||p.team).filter(Boolean)).size;}
+  function logo(id,cls='ol-logo'){return `<span class="${cls} ol-logo-${id}"><img src="${attr(LOGOS[id]||'')}" alt="" loading="lazy" onerror="this.parentNode.textContent='${html((LABELS[id]?.[0]||id).slice(0,2).toUpperCase())}'"></span>`;}
+  function rosterInfo(p,L){return L.meta.id==='ncaam'?window.EuroScoutNCAA?.info(p,'2026-27'):null;}
+  function visiblePlayers(L){
+    if(L.meta.id==='nba'&&L.meta.rosterSeason==='2026-27')return L.players.filter(p=>p._nbaCurrent);
+    if(L.meta.id==='ncaam'){const seen=new Set(),players=[];for(const p of L.players){if(!rosterInfo(p,L))continue;const key=p._ncaa?.espnId||p.id;if(seen.has(key))continue;seen.add(key);players.push(p);}return players;}
+    if(L.meta.rosterStatus==='pending')return [];
+    return L.players;
+  }
+  function playerTeam(p,L){return rosterInfo(p,L)?.team||p.teamName||p.team||'';}
+  function qualifiedCount(L,players=visiblePlayers(L)){return players.filter(p=>p.qualified).length;}
+  function teamCount(L,players=visiblePlayers(L)){return new Set(players.map(p=>playerTeam(p,L)).filter(Boolean)).size;}
   function normalize(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
   function allTeamMap(){
     if(teamCache)return teamCache;
@@ -49,8 +57,9 @@
     if(mode==='advanced')return [['g','GP',0],['ts','TS%',1],['efg','eFG%',1],['usg','USG%',1],['pts40','PTS/40',1],['reb40','REB/40',1],['ast40','AST/40',1],['ftr','FTr',2],['netrtg','NET',1]];
     return [['g','GP',0],['ppg','PPG',1],['rpg','RPG',1],['apg','APG',1],['spg','SPG',1],['bpg','BPG',1],['fgp','FG%',1],['f3p','3PT%',1],['ftp','FT%',1]];
   }
-  function currentSeason(L){return String(L.meta.season||'2026/27').replace('-','/');}
-  function lastUpdate(){try{const raw=typeof dataBuildDate==='function'?dataBuildDate():'';if(!raw)return 'Current import';const date=new Date(raw);if(Number.isNaN(date.getTime()))return raw;return new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Ljubljana'}).format(date).replace(',', ' ·');}catch{return 'Current import';}}
+  function currentSeason(L){return String(L.meta.rosterSeason||L.meta.season||'2026/27').replace('-','/');}
+  function statsSeason(L){return String(L.meta.statsSeason||L.meta.season||'').replace('-','/');}
+  function lastUpdate(L){try{const raw=L?.meta?.rosterUpdatedAt||(typeof dataBuildDate==='function'?dataBuildDate():'');if(!raw)return 'Current import';const date=new Date(raw);if(Number.isNaN(date.getTime()))return raw;const day=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Ljubljana'}).format(date);const time=new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Europe/Ljubljana'}).format(date);return `${day} · ${time}`;}catch{return 'Current import';}}
 
   function render(){
     if(!STATE._extraDone){
@@ -61,41 +70,42 @@
     const list=leagues(),st=state();if(!list.length){$('#app').innerHTML='<div class="view"><h1>Other Leagues</h1><div class="empty">League data is unavailable.</div></div>';return;}
     if(!list.some(L=>L.meta.id===st.league))st.league=list[0].meta.id;
     const L=list.find(x=>x.meta.id===st.league),id=L.meta.id;
-    let pool=L.players.slice();
+    const roster=visiblePlayers(L);
+    let pool=roster.slice();
     if(st.q){const q=normalize(st.q);pool=pool.filter(p=>normalize([p.name,p.teamName,p.country].join(' ')).includes(q));}
     if(st.position)pool=pool.filter(p=>posLabel(p)===st.position);
-    if(st.team)pool=pool.filter(p=>(p.teamName||p.team)===st.team);
+    if(st.team)pool=pool.filter(p=>playerTeam(p,L)===st.team);
     if(st.country)pool=pool.filter(p=>(p.country||'')===st.country);
     if(st.draft)pool=pool.filter(p=>String(p._draftYr||'')===st.draft);
     const cols=columns(st.mode),value=(p,key)=>Number(stat(p,key,st.mode));
     pool.sort((a,b)=>{if(st.sort==='name')return a.name.localeCompare(b.name)*st.dir;const av=value(a,st.sort),bv=value(b,st.sort);return ((Number.isFinite(bv)?bv:-Infinity)-(Number.isFinite(av)?av:-Infinity))*-st.dir;});
     const pages=Math.max(1,Math.ceil(pool.length/st.pageSize));st.page=Math.min(st.page,pages);const start=(st.page-1)*st.pageSize,shown=pool.slice(start,start+st.pageSize);
-    const teams=[...new Set(L.players.map(p=>p.teamName||p.team).filter(Boolean))].sort();
-    const countries=[...new Set(L.players.map(p=>p.country).filter(Boolean))].sort((a,b)=>(countryLabel(a)||a).localeCompare(countryLabel(b)||b));
-    const drafts=[...new Set(L.players.map(p=>p._draftYr).filter(Boolean))].sort((a,b)=>b-a);
-    const tabs=list.map(item=>`<button class="ol-league-card${item.meta.id===id?' active':''}" data-league="${item.meta.id}">${logo(item.meta.id)}<span><b>${html(LABELS[item.meta.id]?.[0]||item.meta.name)}</b><small>${item.players.length.toLocaleString()} players</small></span></button>`).join('');
-    const rows=shown.map((p,index)=>{const photo=playerPhoto(p),teamLogoSrc=teamLogo(p,L);return `<tr data-player="${attr(p.id)}">
+    const teams=[...new Set(roster.map(p=>playerTeam(p,L)).filter(Boolean))].sort();
+    const countries=[...new Set(roster.map(p=>p.country).filter(Boolean))].sort((a,b)=>(countryLabel(a)||a).localeCompare(countryLabel(b)||b));
+    const drafts=[...new Set(roster.map(p=>p._draftYr).filter(Boolean))].sort((a,b)=>b-a);
+    const tabs=list.map(item=>{const count=visiblePlayers(item).length;const note=item.meta.rosterStatus==='pending'?'2026/27 roster pending':`${count.toLocaleString()} players`;return `<button class="ol-league-card${item.meta.id===id?' active':''}" data-league="${item.meta.id}">${logo(item.meta.id)}<span><b>${html(LABELS[item.meta.id]?.[0]||item.meta.name)}</b><small>${html(note)}</small></span></button>`;}).join('');
+    const rows=shown.map((p,index)=>{const photo=playerPhoto(p),teamName=playerTeam(p,L),teamLogoSrc=teamLogo({...p,teamName},L);return `<tr data-player="${attr(p.id)}">
       <td class="ol-rank">${start+index+1}</td><td class="ol-player"><span class="ol-avatar">${photo?`<img src="${attr(photo)}" alt="" loading="lazy" onerror="this.remove()">`:html(initials(p.name))}</span><strong>${html(p.name)}</strong></td>
       <td>${html(posLabel(p)||'—')}</td><td>${p.height?html(p.height)+' cm':'—'}</td><td>${p.weight?html(p.weight)+' kg':'—'}</td><td>${p.age??'—'}</td>
-      <td>${html(countryLabel(p.country)||p.country||'—')}</td><td class="ol-team">${teamLogoSrc?`<img src="${attr(teamLogoSrc)}" alt="" loading="lazy" onerror="this.remove()">`:''}<span>${html(p.teamName||'—')}</span></td>
+      <td>${html(countryLabel(p.country)||p.country||'—')}</td><td class="ol-team">${teamLogoSrc?`<img src="${attr(teamLogoSrc)}" alt="" loading="lazy" onerror="this.remove()">`:''}<span>${html(teamName||'—')}</span></td>
       ${cols.map(([key,,digits])=>`<td class="num">${fmt(stat(p,key,st.mode),digits)}</td>`).join('')}
       <td class="ol-profile-cell"><button class="ol-profile" data-open="${attr(p.id)}">Profile →</button></td></tr>`;}).join('');
     const pagesHtml=pageButtons(st.page,pages);
     $('#app').innerHTML=`<div class="view ol-page">
       <div class="ol-breadcrumb">⌂ &nbsp; Other Leagues &nbsp;›&nbsp; <b>${html(LABELS[id]?.[0]||L.meta.name)}</b></div>
-      <div class="ol-title-row"><div><h1>Other Leagues</h1><p>Leagues kept in the scouting database but <b>excluded from European percentile math</b> — useful for tracking players before a move to Europe. Stats are ranked within each league.</p></div><button class="ol-about" id="olAbout">ⓘ About this section</button></div>
       <div class="ol-leagues">${tabs}</div>
       <section class="ol-summary">${logo(id,'ol-summary-logo')}<div class="ol-summary-name"><h2>${html(LABELS[id]?.[0]||L.meta.name)}</h2><p>${html(LABELS[id]?.[1]||L.meta.tier||'')}</p></div>
-        <dl><div><dt>Season</dt><dd>${html(currentSeason(L))}</dd></div><div><dt>Players</dt><dd>${L.players.length.toLocaleString()}</dd></div><div><dt>Teams</dt><dd>${teamCount(L)}</dd></div><div><dt>Qualified</dt><dd>${qualifiedCount(L).toLocaleString()}</dd></div><div><dt>Last update</dt><dd>${html(lastUpdate())}</dd></div></dl>
-        <span class="ol-imported">● Rosters imported</span><button class="ol-view-teams" id="olViewTeams">View teams →</button></section>
+        <dl><div><dt>Roster season</dt><dd>${html(currentSeason(L))}</dd></div><div><dt>Players</dt><dd>${roster.length.toLocaleString()}</dd></div><div><dt>Teams</dt><dd>${teamCount(L,roster)}</dd></div><div><dt>Stats season</dt><dd>${html(statsSeason(L)||'—')}</dd></div><div><dt>Last update</dt><dd>${html(lastUpdate(L))}</dd></div></dl>
+        <span class="ol-imported${L.meta.rosterStatus==='pending'?' pending':''}">● ${L.meta.rosterStatus==='pending'?'Roster pending':'Roster imported'}</span></section>
       <section class="ol-database"><div class="ol-filters"><label class="ol-search">⌕<input id="olSearch" placeholder="Search players…" value="${attr(st.q)}"></label>
         ${select('olPosition','All positions',['Guard','Forward','Big'],st.position)}${select('olTeam','All teams',teams,st.team)}${select('olCountry','All countries',countries,st.country,c=>countryLabel(c)||c)}${select('olDraft','All draft years',drafts.map(String),st.draft)}
         <div class="ol-mode">${[['pg','Per game'],['totals','Totals'],['advanced','Advanced']].map(([key,label])=>`<button data-mode="${key}" class="${st.mode===key?'active':''}">${label}</button>`).join('')}</div><button class="ol-more" id="olMore">☷ More filters</button></div>
         ${st.more?'<div class="ol-more-panel">Only the four supported league databases are included. Draft year is shown when supplied by the official feed.</div>':''}
-        <div class="ol-table-wrap"><table class="ol-table"><thead><tr><th>#</th><th data-sort="name">Player</th><th>Pos</th><th>Ht</th><th>Wt</th><th>Age</th><th>Nationality</th><th>Current team</th>${cols.map(([key,label])=>`<th class="num" data-sort="${key}">${label}${st.sort===key?(st.dir<0?' ↓':' ↑'):''}</th>`).join('')}<th>Profile</th></tr></thead><tbody>${rows||`<tr><td colspan="21" class="empty">No players match these filters.</td></tr>`}</tbody></table></div>
+        <div class="ol-season-context">${html(currentSeason(L))} roster · ${L.meta.rosterStatus==='pending'?'The official roster has not been published yet.':`${html(statsSeason(L))} statistics`}</div>
+        <div class="ol-table-wrap"><table class="ol-table"><thead><tr><th>#</th><th data-sort="name">Player</th><th>Pos</th><th>Ht</th><th>Wt</th><th>Age</th><th>Nationality</th><th>Current team</th>${cols.map(([key,label])=>`<th class="num" data-sort="${key}">${label}${st.sort===key?(st.dir<0?' ↓':' ↑'):''}</th>`).join('')}<th>Profile</th></tr></thead><tbody>${rows||`<tr><td colspan="21" class="empty">${html(L.meta.rosterStatus==='pending'?'The official 2026/27 roster has not been published yet.':'No players match these filters.')}</td></tr>`}</tbody></table></div>
         <div class="ol-pagination"><span>Showing ${pool.length?start+1:0}–${Math.min(start+st.pageSize,pool.length)} of ${pool.length.toLocaleString()} players</span><div>${pagesHtml}</div><label>Show ${select('olPageSize','', ['10','25','50','100'],String(st.pageSize))} per page</label></div>
       </section>
-      <footer class="ol-source"><span>● Data source: <a href="${attr(SOURCE[id][1])}" target="_blank" rel="noopener">${html(SOURCE[id][0])}</a> · Last updated: ${html(lastUpdate())}</span><span>Rosters and statistics are imported from official league and school sources.</span></footer>
+      <footer class="ol-source"><span>● Data source: <a href="${attr(SOURCE[id][1])}" target="_blank" rel="noopener">${html(SOURCE[id][0])}</a> · Last updated: ${html(lastUpdate(L))}</span><span>Rosters and statistics are imported from official league and school sources.</span></footer>
     </div>`;
     wire(L,pages);
   }
@@ -112,8 +122,6 @@
     $$('[data-page]').forEach(b=>b.onclick=()=>{st.page=Number(b.dataset.page);render();$('#app').scrollIntoView({behavior:'smooth'});});
     $('#olPageSize').onchange=e=>{st.pageSize=Number(e.target.value);st.page=1;render();};
     $('#olMore').onclick=()=>{st.more=!st.more;render();};
-    $('#olAbout').onclick=()=>showModal('<h2>Other Leagues</h2><p>These four databases help track NBA, G League, Summer League and NCAA Division I players before a move to Europe. Their statistics are ranked inside their own competition and never change European percentile rankings.</p>');
-    $('#olViewTeams').onclick=()=>{st.q='';st.more=true;render();$('#olTeam').focus();};
     $$('[data-open]').forEach(b=>b.onclick=e=>{e.stopPropagation();openProfile(b.dataset.open);});
     $$('.ol-table tbody tr[data-player]').forEach(row=>row.onclick=()=>openProfile(row.dataset.player));
   }
