@@ -1,20 +1,21 @@
-/* Agencies v2: a lightweight scouting directory, independent of the old roster UI. */
+/* Agencies: card directory and season-aware player exploration. */
 (function(){
   'use strict';
-  const LOGOS='euroscout:agencyLogos:v1', NOTES='euroscout:agencyNotes:v1', VIEW='euroscout:agenciesView:v2';
+  const LOGOS='euroscout:agencyLogos:v1';
   const byId=id=>document.getElementById(id);
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fold=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
   const read=key=>{try{return JSON.parse(localStorage.getItem(key)||'{}')||{};}catch{return {};}};
-  const ui={mode:'agency',view:localStorage.getItem(VIEW)==='list'?'list':'cards',sort:'players',query:'',tab:'Overview'};
+  const ui={mode:'agency',sort:'players',query:'',tab:'Players'};
   let directory=null,transferIndex=null;
-  const notes=()=>read(NOTES),logos=()=>read(LOGOS);
+  const logos=()=>read(LOGOS);
   const dateLabel=iso=>iso&&/^\d{4}-\d{2}-\d{2}/.test(iso)?new Date(iso.slice(0,10)+'T12:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—';
   const initials=name=>String(name||'').split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase();
+  const enc=name=>encodeURIComponent(name).replace(/'/g,'%27');
   function agencyKey(name){return fold(normAgency(name));}
-  function logoFor(name){const entry=logos()[agencyKey(name)];return entry?.data||'';}
-  function logoHTML(name,small=false){const src=logoFor(name),size=small?' small':'';
-    return '<span class="av2-logo'+size+'">'+(src?'<img src="'+escape(src)+'" alt="" loading="lazy">':'<span>'+escape(initials(name))+'</span>')+'</span>';}
+  function logoFor(name){return logos()[agencyKey(name)]?.data||'';}
+  function logoHTML(name){const src=logoFor(name);return '<span class="av2-logo">'+(src?'<img src="'+escape(src)+'" alt="" loading="lazy">':'<span>'+escape(initials(name))+'</span>')+'</span>';}
+  function verifiedLocation(name){const key=agencyKey(name),source=window.EUROSCOUT_AGENCY_LOCATIONS?.[key]||logos()[key]?.location;if(typeof source==='string')return '';return source?.verified===true&&source.label?source.label:'';}
   function transferFor(player){
     const current=typeof nextOf==='function'?nextOf(player):null;
     if(!current||!['signed','extended'].includes(current.kind)||!current.club||!current.from)return null;
@@ -23,132 +24,49 @@
     if(!record||fold(record.from)===fold(record.to))return null;
     return {player:player.name,from:record.from,to:record.to,date:record.date,id:player.id};
   }
-  function mappedAgency(name){const canonical=window.EuroScoutMergeCenter?.canonicalAgent(name)||name;
-    return normAgency(agentMap()[canonical]||agencyForAgent(canonical)||'');}
+  function mappedAgency(name){const canonical=window.EuroScoutMergeCenter?.canonicalAgent(name)||name;return normAgency(agentMap()[canonical]||agencyForAgent(canonical)||'');}
+  function bestStatRecord(player){return (player._grp?.length?player._grp:[player]).slice().sort((a,b)=>(Number(b.g)||0)-(Number(a.g)||0)||(Number(b.pir)||0)-(Number(a.pir)||0))[0]||player;}
   function buildDirectory(){
     const players=assignPool(),agencies=new Map(),agents=new Map();
-    function agency(name){const key=agencyKey(name);if(!key)return null;
-      if(!agencies.has(key))agencies.set(key,{kind:'agency',name:normAgency(name),players:new Map(),agents:new Set(),transfers:[]});
-      return agencies.get(key);}
-    function agent(name){const key=fold(name);if(!key)return null;
-      if(!agents.has(key))agents.set(key,{kind:'agent',name,players:new Map(),agencies:new Set(),transfers:[]});
-      return agents.get(key);}
+    function agency(name){const key=agencyKey(name);if(!key)return null;if(!agencies.has(key))agencies.set(key,{kind:'agency',name:normAgency(name),players:new Map(),agents:new Set(),transfers:[]});return agencies.get(key);}
+    function agent(name){const key=fold(name);if(!key)return null;if(!agents.has(key))agents.set(key,{kind:'agent',name,players:new Map(),agencies:new Set(),transfers:[]});return agents.get(key);}
     agencyList().forEach(name=>agency(name));
-    agentList().forEach(name=>{const a=agent(name),group=mappedAgency(name);if(group){a.agencies.add(group);agency(group)?.agents.add(name);}});
+    agentList().forEach(name=>{const person=agent(name),group=mappedAgency(name);if(group){person.agencies.add(group);agency(group)?.agents.add(name);}});
     for(const player of players){
-      const names=[...new Set((EuroScoutAgencyResearch.agentsOf(player)||[]).filter(Boolean))];
+      const id=gid(player),record=bestStatRecord(player),names=[...new Set((EuroScoutAgencyResearch.agentsOf(player)||[]).filter(Boolean))];
+      record._agencyAgents=names;
       const group=player.agency&&agency(player.agency),transfer=transferFor(player);
-      if(group){group.players.set(gid(player),player);if(transfer)group.transfers.push(transfer);}
-      for(const name of names){const a=agent(name);a.players.set(gid(player),player);if(transfer)a.transfers.push(transfer);
-        const ag=group||agency(mappedAgency(name));if(ag){
-          ag.agents.add(a.name);a.agencies.add(ag.name);
-          if(!ag.players.has(gid(player))){ag.players.set(gid(player),player);if(transfer)ag.transfers.push(transfer);}
-        }}
+      if(group){group.players.set(id,record);if(transfer)group.transfers.push(transfer);}
+      for(const name of names){const person=agent(name);person.players.set(id,record);if(transfer)person.transfers.push(transfer);const ag=group||agency(mappedAgency(name));if(ag){ag.agents.add(person.name);person.agencies.add(ag.name);if(!ag.players.has(id)){ag.players.set(id,record);if(transfer)ag.transfers.push(transfer);}}}
     }
-    const finish=map=>[...map.values()].map(item=>{
-      item.players=[...item.players.values()];
-      item.transfers.sort((a,b)=>b.date.localeCompare(a.date));
-      item.last=item.transfers[0]||null;
-      const stamp=notes()[agencyKey(item.name)]?.updatedAt||logos()[agencyKey(item.name)]?.updatedAt||'';
-      item.updatedAt=[stamp.slice(0,10),item.last?.date||''].sort().at(-1)||'';
-      return item;
-    });
+    const finish=map=>[...map.values()].map(item=>{item.players=[...item.players.values()];item.transfers=[...new Map(item.transfers.map(t=>[t.id+'|'+t.date,t])).values()].sort((a,b)=>b.date.localeCompare(a.date));item.last=item.transfers[0]||null;item.updatedAt=item.last?.date||'';item.location=verifiedLocation(item.name);return item;});
     return {agencies:finish(agencies),agents:finish(agents)};
   }
   function ensureDirectory(force=false){if(force||!directory||transferIndex!==TRANSFERS){directory=buildDirectory();transferIndex=TRANSFERS;}return directory;}
   function rows(){ensureDirectory();return ui.mode==='agency'?directory.agencies:directory.agents;}
-  function sorted(items){return items.slice().sort((a,b)=>{
-    const agents=x=>ui.mode==='agency'?x.agents.size:x.agencies.size;
-    if(ui.sort==='players')return b.players.length-a.players.length||a.name.localeCompare(b.name);
-    if(ui.sort==='agents')return agents(b)-agents(a)||a.name.localeCompare(b.name);
-    if(ui.sort==='recent')return (b.updatedAt||'').localeCompare(a.updatedAt||'')||a.name.localeCompare(b.name);
-    return a.name.localeCompare(b.name);
-  });}
-  function currentItems(){return sorted(rows().filter(x=>fold(x.name).includes(fold(ui.query))));}
-  const enc=name=>encodeURIComponent(name).replace(/'/g,'%27');
-  function transferHTML(t,card){return t?'<strong>'+escape(t.player)+'</strong><span>'+escape(t.from)+' → '+escape(t.to)+'</span>'+
-    (card?'<time datetime="'+escape(t.date)+'">'+dateLabel(t.date)+'</time>':''):'<span class="av2-muted">No recorded transfer</span>';}
-  function renderCard(item){const count=ui.mode==='agency'?item.agents.size:item.agencies.size;
-    return '<article class="av2-card"><div class="av2-card-top">'+logoHTML(item.name)+'<div class="av2-card-id"><h2 title="'+escape(item.name)+'">'+escape(item.name)+'</h2>'+
-      '<div class="av2-counts"><span><strong>'+item.players.length+'</strong>Players</span><span><strong>'+count+'</strong>'+(ui.mode==='agency'?'Agents':'Agencies')+'</span></div></div></div>'+
-      '<div class="av2-transfer"><small>Last transfer</small>'+transferHTML(item.last,true)+'</div>'+
-      '<button type="button" class="btn ghost av2-view" data-av2-open="'+enc(item.name)+'">View</button></article>';
-  }
-  function renderList(items){return '<div class="av2-table-wrap"><table class="av2-table"><thead><tr><th>Agency Logo</th><th>'+(ui.mode==='agency'?'Agency':'Agent')+'</th><th>Players</th><th>'+(ui.mode==='agency'?'Agents':'Agencies')+'</th><th>Last Transfer</th><th>Last Updated</th><th>Actions</th></tr></thead><tbody>'+
-    items.map(item=>'<tr><td>'+logoHTML(item.name,true)+'</td><td><strong>'+escape(item.name)+'</strong></td><td>'+item.players.length+'</td><td>'+(ui.mode==='agency'?item.agents.size:item.agencies.size)+'</td>'+
-      '<td><div class="av2-table-transfer">'+transferHTML(item.last,false)+'</div></td><td>'+dateLabel(item.updatedAt)+'</td><td><button type="button" class="btn ghost av2-eye" data-av2-open="'+enc(item.name)+'" aria-label="View '+escape(item.name)+'">◉ <span>View</span></button></td></tr>').join('')+
-    '</tbody></table></div>';}
-  function header(){const total=directory.agencies.length,agentTotal=directory.agents.length;
-    return '<div class="av2-breadcrumb">Resources › <strong>Agencies</strong></div><div class="av2-heading"><div><h1>Agencies</h1><p>Explore basketball agencies and the players they represent.</p></div><span>'+total+' agencies · '+agentTotal+' agents in your database</span></div>'+
-      '<div class="av2-toolbar"><div class="seg av2-mode" role="group" aria-label="Directory type"><button type="button" data-av2-mode="agency" class="'+(ui.mode==='agency'?'active':'')+'">Agencies</button><button type="button" data-av2-mode="agent" class="'+(ui.mode==='agent'?'active':'')+'">Agents</button></div>'+
-      '<input id="av2Search" type="search" placeholder="Search '+(ui.mode==='agency'?'agencies':'agents')+'..." aria-label="Search '+(ui.mode==='agency'?'agencies':'agents')+'" value="'+escape(ui.query)+'">'+
-      '<div class="av2-spacer"></div><div class="seg av2-views" role="group" aria-label="Display"><button type="button" data-av2-view="cards" class="'+(ui.view==='cards'?'active':'')+'">▦ Card view</button><button type="button" data-av2-view="list" class="'+(ui.view==='list'?'active':'')+'">☷ List view</button></div>'+
-      '<select id="av2Sort" aria-label="Sort agencies"><option value="alpha">Sort: A → Z</option><option value="players">Most Players</option><option value="agents">Most Agents</option><option value="recent">Recently Updated</option></select></div>';
-  }
-  function wireDirectory(){
-    document.querySelectorAll('[data-av2-mode]').forEach(b=>b.onclick=()=>{ui.mode=b.dataset.av2Mode;ui.query='';renderDirectory();});
-    document.querySelectorAll('[data-av2-view]').forEach(b=>b.onclick=()=>{ui.view=b.dataset.av2View;localStorage.setItem(VIEW,ui.view);renderDirectory();});
-    document.querySelectorAll('[data-av2-open]').forEach(b=>b.onclick=()=>openAgencyPage(ui.mode,decodeURIComponent(b.dataset.av2Open)));
-    const search=byId('av2Search');search.oninput=()=>{ui.query=search.value;paintResults();};
-    const sort=byId('av2Sort');sort.value=ui.sort;sort.onchange=()=>{ui.sort=sort.value;paintResults();};
-  }
-  function paintResults(){const items=currentItems(),host=byId('av2Results');if(!host)return;
-    host.innerHTML=items.length?(ui.view==='cards'?'<div class="av2-grid">'+items.map(renderCard).join('')+'</div>':renderList(items)):'<div class="empty">No '+(ui.mode==='agency'?'agencies':'agents')+' match your search.</div>';
-    host.querySelectorAll('[data-av2-open]').forEach(b=>b.onclick=()=>openAgencyPage(ui.mode,decodeURIComponent(b.dataset.av2Open)));
-  }
-  function renderDirectory(force=false){ensureDirectory(force);const app=byId('app');
-    app.innerHTML='<div class="av2-page">'+header()+'<div id="av2Results"></div></div>';
-    wireDirectory();paintResults();
-  }
-  function currentProfile(){const view=STATE.agencyView;if(!view)return null;
-    ensureDirectory();const data=view.kind==='agent'?directory.agents:directory.agencies;
-    return data.find(x=>fold(x.name)===fold(view.name))||null;}
-  function profileOverview(item){return '<div class="av2-profile-intro">'+logoHTML(item.name)+'<div><h2>'+escape(item.name)+'</h2><p>'+item.players.length+' players · '+(item.kind==='agency'?item.agents.size+' agents':item.agencies.size+' agencies')+'</p></div></div>'+
-    '<div class="av2-profile-summary"><div><span>Players represented</span><strong>'+item.players.length+'</strong></div><div><span>'+(item.kind==='agency'?'Agents':'Agencies')+'</span><strong>'+(item.kind==='agency'?item.agents.size:item.agencies.size)+'</strong></div><div><span>Last transfer</span><strong>'+dateLabel(item.last?.date)+'</strong></div></div>'+
-    '<h3>Latest move</h3><div class="av2-profile-move">'+transferHTML(item.last,true)+'</div>';
-  }
-  function profileAgents(item){const names=item.kind==='agency'?[...item.agents]:[item.name];return '<h3>Agents</h3><div class="av2-plain-list">'+
-    (names.length?names.sort((a,b)=>a.localeCompare(b)).map(name=>'<div><strong>'+escape(name)+'</strong><span>'+item.players.filter(p=>EuroScoutAgencyResearch.agentsOf(p).some(a=>fold(a)===fold(name))).length+' players</span></div>').join(''):'<p>No agents recorded yet.</p>')+'</div>';}
-  function profilePlayers(item){return '<h3>Players</h3><div class="av2-table-wrap"><table class="av2-table"><thead><tr><th>Player</th><th>Position</th><th>Club</th><th>Agent</th><th>Actions</th></tr></thead><tbody>'+
-    item.players.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(p=>'<tr><td><strong>'+escape(p.name)+'</strong></td><td>'+escape(p.role||p.pos||'—')+'</td><td>'+escape(p.teamName||'—')+'</td><td>'+escape(EuroScoutAgencyResearch.agentsOf(p).join(', ')||'—')+'</td><td><button type="button" class="btn ghost av2-eye" data-av2-player="'+escape(p.id)+'">◉ <span>View</span></button></td></tr>').join('')+'</tbody></table></div>';}
-  function profileTransfers(item){return '<h3>Transfers</h3>'+(item.transfers.length?'<div class="av2-table-wrap"><table class="av2-table"><thead><tr><th>Date</th><th>Player</th><th>Move</th></tr></thead><tbody>'+item.transfers.map(t=>'<tr><td>'+dateLabel(t.date)+'</td><td><strong>'+escape(t.player)+'</strong></td><td>'+escape(t.from)+' → '+escape(t.to)+'</td></tr>').join('')+'</tbody></table></div>':'<p>No confirmed transfers are recorded for these players.</p>');}
-  function profileNotes(item){const value=notes()[agencyKey(item.name)]?.text||'';
-    return '<h3>Internal Notes</h3><p>Scouting context for this '+(item.kind==='agency'?'agency':'agent')+'.</p>'+
-      (Store.canEdit()?'<textarea id="av2Notes" rows="8" placeholder="Add internal scouting notes...">'+escape(value)+'</textarea><button type="button" class="btn ghost" id="av2SaveNotes">Save notes</button>':'<div class="av2-notes-read">'+escape(value||'No internal notes yet.')+'</div>');}
-  function renderProfile(){const item=currentProfile();if(!item){STATE.agencyView=null;renderDirectory();return;}
-    const app=byId('app'),tabs=['Overview','Agents','Players','Transfers','Internal Notes'];
-    app.innerHTML='<div class="av2-page av2-profile"><div class="av2-breadcrumb"><button type="button" id="av2Back">← Agencies</button> › <strong>'+escape(item.name)+'</strong></div><div class="av2-profile-head">'+logoHTML(item.name)+'<div><h1>'+escape(item.name)+'</h1><p>'+item.players.length+' represented players</p></div>'+
-      (Store.canEdit()?'<button type="button" class="btn ghost" id="av2ReplaceLogo">Replace logo</button><input type="file" id="av2LogoFile" accept="image/png,image/jpeg,image/webp" hidden>':'')+'</div>'+
-      '<nav class="av2-tabs" aria-label="Agency profile">'+tabs.map(tab=>'<button type="button" data-av2-tab="'+escape(tab)+'" class="'+(ui.tab===tab?'active':'')+'">'+tab+'</button>').join('')+'</nav><section id="av2ProfileBody" class="panel av2-profile-body"></section></div>';
-    byId('av2Back').onclick=()=>{STATE.agencyView=null;ui.tab='Overview';renderDirectory();};
-    document.querySelectorAll('[data-av2-tab]').forEach(b=>b.onclick=()=>{ui.tab=b.dataset.av2Tab;renderProfile();});
-    const body=byId('av2ProfileBody');body.innerHTML=ui.tab==='Overview'?profileOverview(item):ui.tab==='Agents'?profileAgents(item):ui.tab==='Players'?profilePlayers(item):ui.tab==='Transfers'?profileTransfers(item):profileNotes(item);
-    body.querySelectorAll('[data-av2-player]').forEach(b=>b.onclick=()=>openProfile(b.dataset.av2Player));
-    if(ui.tab==='Internal Notes'&&Store.canEdit())byId('av2SaveNotes').onclick=async()=>{
-      const data=notes();data[agencyKey(item.name)]={text:byId('av2Notes').value,updatedAt:new Date().toISOString()};
-      localStorage.setItem(NOTES,JSON.stringify(data));const ok=await Store.pushAppKey(NOTES);
-      if(ok===false)toast('Notes saved here, but cloud save failed.');else toast('Notes saved.');directory=null;
-    };
-    if(Store.canEdit()){byId('av2ReplaceLogo').onclick=()=>byId('av2LogoFile').click();byId('av2LogoFile').onchange=e=>saveLogo(item.name,e.target.files?.[0]);}
-  }
-  async function saveLogo(name,file){if(!Store.canEdit()||!file)return;
-    if(!['image/png','image/jpeg','image/webp'].includes(file.type)){toast('Choose a PNG, JPEG or WebP logo.');return;}
-    if(file.size>5*1024*1024){toast('Logo must be under 5 MB.');return;}
-    try{const img=await createImageBitmap(file),canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;
-      const ctx=canvas.getContext('2d');const scale=Math.min(128/img.width,128/img.height),w=img.width*scale,h=img.height*scale;
-      ctx.clearRect(0,0,128,128);ctx.drawImage(img,(128-w)/2,(128-h)/2,w,h);img.close();
-      const dataUrl=canvas.toDataURL('image/webp',.88);if(dataUrl.length>100000)throw Error('Compressed logo is too large.');
-      const data=logos();data[agencyKey(name)]={data:dataUrl,updatedAt:new Date().toISOString()};
-      localStorage.setItem(LOGOS,JSON.stringify(data));const ok=await Store.pushAppKey(LOGOS);
-      if(ok===false)toast('Logo saved here, but cloud save failed.');else toast('Logo saved.');directory=null;renderProfile();
-    }catch(error){toast('Could not save logo: '+error.message);}
-  }
+  function sorted(items){return items.slice().sort((a,b)=>{const connections=x=>ui.mode==='agency'?x.agents.size:x.agencies.size;if(ui.sort==='players')return b.players.length-a.players.length||a.name.localeCompare(b.name);if(ui.sort==='agents')return connections(b)-connections(a)||a.name.localeCompare(b.name);if(ui.sort==='recent')return (b.updatedAt||'').localeCompare(a.updatedAt||'')||a.name.localeCompare(b.name);return a.name.localeCompare(b.name);});}
+  function currentItems(){return sorted(rows().filter(x=>fold(x.name+' '+(x.location||'')).includes(fold(ui.query))));}
+  function transferHTML(t){return t?'<strong>'+escape(t.player)+'</strong><span>'+escape(t.from)+' → '+escape(t.to)+'</span><time datetime="'+escape(t.date)+'">'+dateLabel(t.date)+'</time>':'<span class="av2-muted">No recorded transfer</span>';}
+  function renderCard(item){const connections=ui.mode==='agency'?item.agents.size:item.agencies.size,label=ui.mode==='agency'?'Agents':'Agencies';return '<article class="av2-card"><div class="av2-card-top">'+logoHTML(item.name)+'<div class="av2-card-id"><h2 title="'+escape(item.name)+'">'+escape(item.name)+'</h2>'+(item.location?'<p class="av2-location">'+escape(item.location)+'</p>':'')+'<div class="av2-counts"><span><strong>'+item.players.length+'</strong>Players</span><span><strong>'+connections+'</strong>'+label+'</span></div></div></div><div class="av2-transfer"><small>Latest transfer</small>'+transferHTML(item.last)+'</div><button type="button" class="btn ghost av2-view" data-av2-open="'+enc(item.name)+'">View '+(ui.mode==='agency'?'Agency':'Agent')+' →</button></article>';}
+  function header(){return '<div class="av2-breadcrumb">Resources › <strong>Agencies</strong></div><div class="av2-heading"><div><h1>Agencies</h1><p>Explore basketball agencies and the players they represent.</p></div><span>'+directory.agencies.length+' agencies · '+directory.agents.length+' agents in your database</span></div><div class="av2-toolbar"><div class="seg av2-mode" role="group" aria-label="Directory type"><button type="button" data-av2-mode="agency" class="'+(ui.mode==='agency'?'active':'')+'">Agencies</button><button type="button" data-av2-mode="agent" class="'+(ui.mode==='agent'?'active':'')+'">Agents</button></div><input id="av2Search" type="search" placeholder="Search '+(ui.mode==='agency'?'agencies':'agents')+'..." aria-label="Search '+(ui.mode==='agency'?'agencies':'agents')+'" value="'+escape(ui.query)+'"><div class="av2-spacer"></div><select id="av2Sort" aria-label="Sort directory"><option value="alpha">Sort: A → Z</option><option value="players">Most Players</option><option value="agents">Most '+(ui.mode==='agency'?'Agents':'Agencies')+'</option><option value="recent">Recently Updated</option></select></div>';}
+  function paintResults(){const items=currentItems(),host=byId('av2Results');if(!host)return;host.innerHTML=items.length?'<div class="av2-grid">'+items.map(renderCard).join('')+'</div>':'<div class="empty">No '+(ui.mode==='agency'?'agencies':'agents')+' match your search.</div>';host.querySelectorAll('[data-av2-open]').forEach(button=>button.onclick=()=>openAgencyPage(ui.mode,decodeURIComponent(button.dataset.av2Open)));}
+  function renderDirectory(force=false){ensureDirectory(force);byId('app').innerHTML='<div class="av2-page">'+header()+'<div id="av2Results"></div></div>';document.querySelectorAll('[data-av2-mode]').forEach(button=>button.onclick=()=>{ui.mode=button.dataset.av2Mode;ui.query='';renderDirectory();});const search=byId('av2Search');search.oninput=()=>{ui.query=search.value;paintResults();};const sort=byId('av2Sort');sort.value=ui.sort;sort.onchange=()=>{ui.sort=sort.value;paintResults();};paintResults();}
+  function currentProfile(){const view=STATE.agencyView;if(!view)return null;ensureDirectory();const data=view.kind==='agent'?directory.agents:directory.agencies;return data.find(x=>fold(x.name)===fold(view.name))||null;}
+  function currentClub(player){const key=effective26(player);if(!key||key===STATUS_FREE)return null;if(key===STATUS_RETIRED)return {retired:true,name:'Retired'};const club=clubByKey(key)||clubForTeamKey(key)||dbTeamByKey(key);return club?{key,name:club.name,club}:null;}
+  function standardPosition(player){for(const record of [player,...(player._grp||[])]){const mapped=typeof dbPositionGroup==='function'?dbPositionGroup(record):'';if(mapped)return mapped;const value=fold(record.role||record.pos);if(/center|centre|big|\bc\b/.test(value))return 'Big';if(/forward|wing|\bsf\b|\bpf\b/.test(value))return 'Forward';if(/guard|point|shooting|\bpg\b|\bsg\b/.test(value))return 'Guard';}return Number(player.height)>=205?'Big':Number(player.height)>=196?'Forward':'Guard';}
+  function ageOf(player){const born=Number(player.born);return born?Math.max(0,2026-born):(player.age??'—');}
+  function stat(value){return value==null||value===''?'—':Number(value).toFixed(1);}
+  function nationality(player){if(!player.country)return '—';const flag=flagEmoji(player.country)||'',label=countryLabel(player.country)||player.country;return '<span class="av2-nationality">'+escape(label.includes(flag)?label:[flag,label].filter(Boolean).join(' '))+'</span>';}
+  function playerTable(players,empty){if(!players.length)return '<p class="av2-empty">'+escape(empty)+'</p>';return '<div class="tablewrap stickytbl av2-player-table"><table><thead><tr><th class="l">PLAYER</th><th class="l">CLUB (26/27)</th><th>POSITION</th><th>AGE</th><th>HT</th><th class="l">NATIONALITY</th><th>PPG</th><th>RPG</th><th>APG</th><th>PIR</th></tr></thead><tbody>'+players.map(player=>{const club=currentClub(player);return '<tr data-av2-player="'+escape(player.id)+'" tabindex="0"><td class="l"><span class="player-cell"><span class="tavatar-wrap'+(player.img?' hasimg':' noimg')+'">'+(player.img?'<img class="tavatar" src="'+escape(player.img)+'" loading="lazy" onerror="this.remove();this.parentNode.classList.remove(\'hasimg\');this.parentNode.classList.add(\'noimg\')">':'')+'<span class="tavatar-fallback">'+escape(initials(player.name))+'</span></span><span class="player-copy"><span class="pname">'+escape(player.name)+'</span></span></span></td><td class="l">'+(club&&!club.retired?'<strong>'+escape(club.name)+'</strong>':'<span class="av2-free">● Free Agent</span>')+'</td><td>'+escape(standardPosition(player))+'</td><td>'+ageOf(player)+'</td><td>'+(player.height?escape(player.height)+' cm':'—')+'</td><td class="l">'+nationality(player)+'</td><td>'+stat(player.ppg)+'</td><td>'+stat(player.rpg)+'</td><td>'+stat(player.apg)+'</td><td>'+stat(player.pir)+'</td></tr>';}).join('')+'</tbody></table></div>';}
+  function profilePlayers(item){const active=[],free=[];item.players.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(player=>{const club=currentClub(player);if(club?.retired)return;(club?active:free).push(player);});return '<div class="av2-roster-head"><div><h3>Current Players</h3><p>2026/27 club assignments · latest recorded scouting statistics</p></div><strong>'+active.length+'</strong></div>'+playerTable(active,'No current 2026/27 club assignments.')+'<div class="av2-roster-head av2-free-head"><div><h3>Free Agents</h3><p>Represented players without a 2026/27 club assignment</p></div><strong>'+free.length+'</strong></div>'+playerTable(free,'No free agents recorded.');}
+  function profileOverview(item){return '<div class="av2-profile-intro">'+logoHTML(item.name)+'<div><h2>'+escape(item.name)+'</h2>'+(item.location?'<p>'+escape(item.location)+'</p>':'')+'<p>'+item.players.length+' players · '+(item.kind==='agency'?item.agents.size+' agents':item.agencies.size+' agencies')+'</p></div></div><div class="av2-profile-summary"><div><span>Players represented</span><strong>'+item.players.length+'</strong></div><div><span>'+(item.kind==='agency'?'Agents':'Agencies')+'</span><strong>'+(item.kind==='agency'?item.agents.size:item.agencies.size)+'</strong></div><div><span>Latest transfer</span><strong>'+dateLabel(item.last?.date)+'</strong></div></div><h3>Latest transfer</h3><div class="av2-profile-move">'+transferHTML(item.last)+'</div>';}
+  function profileAgents(item){const names=item.kind==='agency'?[...item.agents]:[item.name];return '<h3>Agents</h3><div class="av2-plain-list">'+(names.length?names.sort((a,b)=>a.localeCompare(b)).map(name=>'<div><strong>'+escape(name)+'</strong><span>'+item.players.filter(player=>(player._agencyAgents||EuroScoutAgencyResearch.agentsOf(player)||[]).some(agent=>fold(agent)===fold(name))).length+' players</span></div>').join(''):'<p class="av2-empty">No agents recorded.</p>')+'</div>';}
+  function profileTransfers(item){return '<h3>Transfers</h3>'+(item.transfers.length?'<div class="tablewrap av2-transfer-table"><table><thead><tr><th class="l">DATE</th><th class="l">PLAYER</th><th class="l">MOVE</th></tr></thead><tbody>'+item.transfers.map(t=>'<tr><td class="l">'+dateLabel(t.date)+'</td><td class="l"><strong>'+escape(t.player)+'</strong></td><td class="l">'+escape(t.from)+' → '+escape(t.to)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="av2-empty">No confirmed transfers are recorded for these players.</p>');}
+  function renderProfile(){const item=currentProfile();if(!item){STATE.agencyView=null;renderDirectory();return;}const tabs=['Overview','Players','Agents','Transfers'];byId('app').innerHTML='<div class="av2-page av2-profile"><div class="av2-breadcrumb"><button type="button" id="av2Back">← Agencies</button> › <strong>'+escape(item.name)+'</strong></div><div class="av2-profile-head">'+logoHTML(item.name)+'<div><h1>'+escape(item.name)+'</h1>'+(item.location?'<p>'+escape(item.location)+'</p>':'')+'<p>'+item.players.length+' represented players</p></div>'+(Store.canEdit()?'<button type="button" class="btn ghost" id="av2ReplaceLogo">Replace logo</button><input type="file" id="av2LogoFile" accept="image/png,image/jpeg,image/webp" hidden>':'')+'</div><nav class="av2-tabs" aria-label="Agency profile">'+tabs.map(tab=>'<button type="button" data-av2-tab="'+tab+'" class="'+(ui.tab===tab?'active':'')+'">'+tab+'</button>').join('')+'</nav><section id="av2ProfileBody" class="panel av2-profile-body"></section></div>';byId('av2Back').onclick=()=>{STATE.agencyView=null;ui.tab='Players';renderDirectory();};document.querySelectorAll('[data-av2-tab]').forEach(button=>button.onclick=()=>{ui.tab=button.dataset.av2Tab;renderProfile();});const body=byId('av2ProfileBody');body.innerHTML=ui.tab==='Overview'?profileOverview(item):ui.tab==='Players'?profilePlayers(item):ui.tab==='Agents'?profileAgents(item):profileTransfers(item);body.querySelectorAll('[data-av2-player]').forEach(row=>{row.onclick=()=>openProfile(row.dataset.av2Player);row.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openProfile(row.dataset.av2Player);}};});if(Store.canEdit()){byId('av2ReplaceLogo').onclick=()=>byId('av2LogoFile').click();byId('av2LogoFile').onchange=event=>saveLogo(item.name,event.target.files?.[0]);}}
+  async function saveLogo(name,file){if(!Store.canEdit()||!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)){toast('Choose a PNG, JPEG or WebP logo.');return;}if(file.size>5*1024*1024){toast('Logo must be under 5 MB.');return;}try{const img=await createImageBitmap(file),canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;const ctx=canvas.getContext('2d'),scale=Math.min(128/img.width,128/img.height),w=img.width*scale,h=img.height*scale;ctx.clearRect(0,0,128,128);ctx.drawImage(img,(128-w)/2,(128-h)/2,w,h);img.close();const dataUrl=canvas.toDataURL('image/webp',.88);if(dataUrl.length>100000)throw Error('Compressed logo is too large.');const data=logos();data[agencyKey(name)]={...(data[agencyKey(name)]||{}),data:dataUrl,updatedAt:new Date().toISOString()};localStorage.setItem(LOGOS,JSON.stringify(data));const ok=await Store.pushAppKey(LOGOS);toast(ok===false?'Logo saved here, but cloud save failed.':'Logo saved.');directory=null;renderProfile();}catch(error){toast('Could not save logo: '+error.message);}}
   function renderAgenciesV2(){if(!STATE.data?.leagues)return;if(STATE.agencyView)renderProfile();else renderDirectory(true);}
-  window.renderAgencies=renderAgenciesV2;
-  window.renderAgencyRoster=renderProfile;
-  window.openAgencyRoster=function(encoded){openAgencyPage('agency',decodeURIComponent(encoded));};
-  window.openAgentRoster=function(encoded){openAgencyPage('agent',decodeURIComponent(encoded));};
-  window.backToAgencies=function(){STATE.agencyView=null;ui.tab='Overview';renderDirectory(true);};
+  window.renderAgencies=renderAgenciesV2;window.renderAgencyRoster=renderProfile;
+  window.openAgencyRoster=encoded=>openAgencyPage('agency',decodeURIComponent(encoded));window.openAgentRoster=encoded=>openAgencyPage('agent',decodeURIComponent(encoded));
+  window.backToAgencies=()=>{STATE.agencyView=null;ui.tab='Players';renderDirectory(true);};
   window.EuroScoutAgenciesV2={buildDirectory,render:renderAgenciesV2,clearCache:()=>{directory=null;}};
 })();
-
