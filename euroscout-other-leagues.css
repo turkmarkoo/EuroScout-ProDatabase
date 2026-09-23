@@ -3,3 +3,17 @@
 @media(max-width:1100px){.ol-leagues{grid-template-columns:repeat(2,1fr)}.ol-summary{flex-wrap:wrap}.ol-summary dl{order:3;width:100%;flex-basis:100%}.ol-filters{flex-wrap:wrap}.ol-mode{margin-left:0}.ol-source{flex-direction:column;gap:6px}}
 @media(max-width:680px){.ol-title-row{display:block}.ol-about{margin-top:12px}.ol-leagues{grid-template-columns:1fr 1fr}.ol-league-card{padding:10px}.ol-summary-name{min-width:0}.ol-summary dl{overflow:auto}.ol-summary dl div{padding:0 12px}.ol-view-teams{display:none}.ol-filters>*{flex:1 1 45%;min-width:0!important}.ol-mode{order:10;flex-basis:100%}.ol-mode button{flex:1}.ol-pagination{flex-wrap:wrap;gap:10px}.ol-source{display:none}}
 .ol-logo,.ol-summary-logo{background:#fff;padding:3px;box-sizing:border-box}
+
+/* Keep database content consistent with the rest of EuroScout. The global
+   statistics table uses a mono font, so this native view opts back into the
+   product typography and reserves tabular alignment for numbers only. */
+.ol-table{font-family:var(--body);font-size:12.5px}
+.ol-table th{font-family:var(--disp);font-size:11px;font-weight:700;letter-spacing:.045em}
+.ol-table td{font-family:var(--body);font-size:12.5px;text-align:left;padding:11px 10px}
+.ol-table th.num,.ol-table td.num{text-align:right;font-family:var(--body);font-variant-numeric:tabular-nums}
+.ol-table .ol-rank{text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
+.ol-player{min-width:210px}.ol-player strong{font-family:var(--disp);font-size:14px;font-weight:700;letter-spacing:.01em}
+.ol-team{max-width:220px;min-width:155px}.ol-team span{font-weight:600}
+.ol-profile-cell{text-align:center!important}.ol-profile{font-family:var(--body);font-size:11.5px;font-weight:700}
+.ol-summary dl div:nth-child(5){min-width:170px}.ol-summary dl div:nth-child(5) dd{white-space:nowrap;font-size:13px}
+.ol-source{font-family:var(--body);font-size:11.5px}

@@ -15,7 +15,7 @@
   const attr=html;
   const fmt=(value,digits=1)=>value==null||value===''?'—':Number.isFinite(Number(value))?Number(value).toFixed(digits):html(value);
   const state=()=>STATE.otherV2||(STATE.otherV2={league:'nba',q:'',position:'',team:'',country:'',draft:'',mode:'pg',page:1,pageSize:25,sort:'ppg',dir:-1,more:false});
-  let loading=false, identityNames=null,teamCache=null;
+  let loading=false,teamCache=null;
 
   function leagues(){
     const found=new Map(otherLeagues().filter(L=>ORDER.includes(L.meta.id)).map(L=>[L.meta.id,L]));
@@ -25,21 +25,6 @@
   function qualifiedCount(L){return Number(L.meta.qualifiedCount)||L.players.filter(p=>p.qualified).length;}
   function teamCount(L){return new Set(L.players.map(p=>p.teamName||p.team).filter(Boolean)).size;}
   function normalize(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
-  function identityIndex(){
-    if(identityNames)return identityNames;
-    identityNames=new Map();
-    allPlayersEvery().forEach(p=>{const key=normalize(p.name);if(!key)return;if(!identityNames.has(key))identityNames.set(key,[]);identityNames.get(key).push(p);});
-    return identityNames;
-  }
-  function identityStatus(p){
-    const group=p._grp||[p];
-    const europe=group.some(item=>{const league=leagueOf(item);return league&&!isOtherLeague(league.meta);});
-    if(europe)return ['in','Already in EuroScout'];
-    if(group.length>1||gid(p)!==p.id)return ['linked','Linked identity'];
-    const candidates=(identityIndex().get(normalize(p.name))||[]).filter(x=>gid(x)!==gid(p));
-    if(candidates.length)return ['duplicate','Duplicate detected'];
-    return ['prospect','Prospect only'];
-  }
   function allTeamMap(){
     if(teamCache)return teamCache;
     teamCache=new Map();
@@ -56,7 +41,6 @@
     return '';
   }
   function playerPhoto(p){return photoOf(p)||'';}
-  function playerFlag(p){const flag=typeof flagEmoji==='function'?flagEmoji(p.country):'';return flag?`<span class="ol-flag">${flag}</span>`:'';}
   function stat(p,key,mode){
     if(mode==='totals'&&['ppg','rpg','apg','spg','bpg'].includes(key))return Number(p[key]||0)*Number(p.g||0);
     return p[key];
@@ -66,12 +50,12 @@
     return [['g','GP',0],['ppg','PPG',1],['rpg','RPG',1],['apg','APG',1],['spg','SPG',1],['bpg','BPG',1],['fgp','FG%',1],['f3p','3PT%',1],['ftp','FT%',1]];
   }
   function currentSeason(L){return String(L.meta.season||'2026/27').replace('-','/');}
-  function lastUpdate(){try{return typeof dataBuildDate==='function'?(dataBuildDate()||'Current import'):'Current import';}catch{return 'Current import';}}
+  function lastUpdate(){try{const raw=typeof dataBuildDate==='function'?dataBuildDate():'';if(!raw)return 'Current import';const date=new Date(raw);if(Number.isNaN(date.getTime()))return raw;return new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Ljubljana'}).format(date).replace(',', ' ·');}catch{return 'Current import';}}
 
   function render(){
     if(!STATE._extraDone){
       $('#app').innerHTML='<div class="view ol-page"><h1>Other Leagues</h1><p>Loading NBA, G League, Summer League and NCAA Division I…</p><div class="ol-loading">Preparing player database</div></div>';
-      if(!loading){loading=true;loadExtraLeagues().then(()=>{loading=false;identityNames=null;teamCache=null;if(STATE.view==='exhib')render();}).catch(error=>{loading=false;toast(error.message);render();});}
+      if(!loading){loading=true;loadExtraLeagues().then(()=>{loading=false;teamCache=null;if(STATE.view==='exhib')render();}).catch(error=>{loading=false;toast(error.message);render();});}
       return;
     }
     const list=leagues(),st=state();if(!list.length){$('#app').innerHTML='<div class="view"><h1>Other Leagues</h1><div class="empty">League data is unavailable.</div></div>';return;}
@@ -90,12 +74,12 @@
     const countries=[...new Set(L.players.map(p=>p.country).filter(Boolean))].sort((a,b)=>(countryLabel(a)||a).localeCompare(countryLabel(b)||b));
     const drafts=[...new Set(L.players.map(p=>p._draftYr).filter(Boolean))].sort((a,b)=>b-a);
     const tabs=list.map(item=>`<button class="ol-league-card${item.meta.id===id?' active':''}" data-league="${item.meta.id}">${logo(item.meta.id)}<span><b>${html(LABELS[item.meta.id]?.[0]||item.meta.name)}</b><small>${item.players.length.toLocaleString()} players</small></span></button>`).join('');
-    const rows=shown.map((p,index)=>{const photo=playerPhoto(p),teamLogoSrc=teamLogo(p,L),status=identityStatus(p);return `<tr data-player="${attr(p.id)}">
+    const rows=shown.map((p,index)=>{const photo=playerPhoto(p),teamLogoSrc=teamLogo(p,L);return `<tr data-player="${attr(p.id)}">
       <td class="ol-rank">${start+index+1}</td><td class="ol-player"><span class="ol-avatar">${photo?`<img src="${attr(photo)}" alt="" loading="lazy" onerror="this.remove()">`:html(initials(p.name))}</span><strong>${html(p.name)}</strong></td>
       <td>${html(posLabel(p)||'—')}</td><td>${p.height?html(p.height)+' cm':'—'}</td><td>${p.weight?html(p.weight)+' kg':'—'}</td><td>${p.age??'—'}</td>
-      <td>${playerFlag(p)}${html(countryLabel(p.country)||p.country||'—')}</td><td class="ol-team">${teamLogoSrc?`<img src="${attr(teamLogoSrc)}" alt="" loading="lazy" onerror="this.remove()">`:''}<span>${html(p.teamName||'—')}</span></td>
+      <td>${html(countryLabel(p.country)||p.country||'—')}</td><td class="ol-team">${teamLogoSrc?`<img src="${attr(teamLogoSrc)}" alt="" loading="lazy" onerror="this.remove()">`:''}<span>${html(p.teamName||'—')}</span></td>
       ${cols.map(([key,,digits])=>`<td class="num">${fmt(stat(p,key,st.mode),digits)}</td>`).join('')}
-      <td><span class="ol-status ${status[0]}">${html(status[1])}</span></td><td><button class="ol-profile" data-open="${attr(p.id)}">Profile →</button></td></tr>`;}).join('');
+      <td class="ol-profile-cell"><button class="ol-profile" data-open="${attr(p.id)}">Profile →</button></td></tr>`;}).join('');
     const pagesHtml=pageButtons(st.page,pages);
     $('#app').innerHTML=`<div class="view ol-page">
       <div class="ol-breadcrumb">⌂ &nbsp; Other Leagues &nbsp;›&nbsp; <b>${html(LABELS[id]?.[0]||L.meta.name)}</b></div>
@@ -108,7 +92,7 @@
         ${select('olPosition','All positions',['Guard','Forward','Big'],st.position)}${select('olTeam','All teams',teams,st.team)}${select('olCountry','All countries',countries,st.country,c=>countryLabel(c)||c)}${select('olDraft','All draft years',drafts.map(String),st.draft)}
         <div class="ol-mode">${[['pg','Per game'],['totals','Totals'],['advanced','Advanced']].map(([key,label])=>`<button data-mode="${key}" class="${st.mode===key?'active':''}">${label}</button>`).join('')}</div><button class="ol-more" id="olMore">☷ More filters</button></div>
         ${st.more?'<div class="ol-more-panel">Only the four supported league databases are included. Draft year is shown when supplied by the official feed.</div>':''}
-        <div class="ol-table-wrap"><table class="ol-table"><thead><tr><th>#</th><th data-sort="name">Player</th><th>Pos</th><th>Ht</th><th>Wt</th><th>Age</th><th>Nationality</th><th>Current team</th>${cols.map(([key,label])=>`<th class="num" data-sort="${key}">${label}${st.sort===key?(st.dir<0?' ↓':' ↑'):''}</th>`).join('')}<th>EuroScout status</th><th>Profile</th></tr></thead><tbody>${rows||`<tr><td colspan="22" class="empty">No players match these filters.</td></tr>`}</tbody></table></div>
+        <div class="ol-table-wrap"><table class="ol-table"><thead><tr><th>#</th><th data-sort="name">Player</th><th>Pos</th><th>Ht</th><th>Wt</th><th>Age</th><th>Nationality</th><th>Current team</th>${cols.map(([key,label])=>`<th class="num" data-sort="${key}">${label}${st.sort===key?(st.dir<0?' ↓':' ↑'):''}</th>`).join('')}<th>Profile</th></tr></thead><tbody>${rows||`<tr><td colspan="21" class="empty">No players match these filters.</td></tr>`}</tbody></table></div>
         <div class="ol-pagination"><span>Showing ${pool.length?start+1:0}–${Math.min(start+st.pageSize,pool.length)} of ${pool.length.toLocaleString()} players</span><div>${pagesHtml}</div><label>Show ${select('olPageSize','', ['10','25','50','100'],String(st.pageSize))} per page</label></div>
       </section>
       <footer class="ol-source"><span>● Data source: <a href="${attr(SOURCE[id][1])}" target="_blank" rel="noopener">${html(SOURCE[id][0])}</a> · Last updated: ${html(lastUpdate())}</span><span>Rosters and statistics are imported from official league and school sources.</span></footer>
@@ -133,5 +117,5 @@
     $$('[data-open]').forEach(b=>b.onclick=e=>{e.stopPropagation();openProfile(b.dataset.open);});
     $$('.ol-table tbody tr[data-player]').forEach(row=>row.onclick=()=>openProfile(row.dataset.player));
   }
-  window.EuroScoutOtherLeagues={render,reset(){identityNames=null;teamCache=null;}};
+  window.EuroScoutOtherLeagues={render,reset(){teamCache=null;}};
 })();
