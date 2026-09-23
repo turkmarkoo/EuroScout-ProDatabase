@@ -97,13 +97,8 @@ renderScouting=function(partial=false){
  }else{
   app.innerHTML='<div class="view scoutingView liveScouting mx">'+contextHTML()+'<div class="liveLayout mx-layout">'+columnHTML(s.a,'a')+notebook+columnHTML(s.b,'b')+'</div></div>';
  }
- wireFrame();wireRows();if(p)wireNotebook(p,rep);tick();backgroundLeagues();
+ wireFrame();wireRows();if(p)wireNotebook(p,rep);tick();
 };
-/* College and NBA / G League players only exist once those files are loaded. They are
-   fetched quietly the first time the matchup opens, so new signings show on the
-   2026/27 rosters and carry their signals. Never while a note is being typed. */
-let extraAsked=false;
-function backgroundLeagues(){if(extraAsked||STATE._extraDone||typeof loadExtraLeagues!=='function')return;extraAsked=true;setTimeout(()=>{loadExtraLeagues().then(()=>{const typing=document.activeElement&&(document.activeElement.isContentEditable||/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName));if(STATE.view==='scouting'&&!typing&&!document.querySelector('#modal,#sxMask,#qsMask')){resetRosters();renderScouting(true);fullRedraw();}else resetRosters();}).catch(()=>{});},1500);}
 
 function fullRedraw(){document.querySelector('.liveScouting')?.remove();renderScouting(true);}
 function wireFrame(){const s=STATE.scouting;

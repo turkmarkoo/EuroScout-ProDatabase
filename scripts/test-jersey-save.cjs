@@ -38,12 +38,12 @@ vm.runInContext(requestSource,context);
   const storeStart=html.indexOf('const Store = (()=>{');
   const storeEnd=html.indexOf('/* every record write funnels through Store.save',storeStart);
   assert(storeStart>=0&&storeEnd>storeStart,'Store source not found');
-  let cloudWrites=0;
+  let cloudWrites=0,localWrites=0;
   const esAccess={internal:true,owner:true,user:{email:'admin@example.test'},state:{records:{},appData:{}},saveState:async snapshot=>{cloudWrites++;esAccess.state=snapshot;return true;}};
   esAccess.ready=Promise.resolve(esAccess);
   const storeContext={
     window:{ESAccess:esAccess,EUROSCOUT_CONFIG:{},addEventListener(){}},ESAccess:esAccess,
-    localStorage:{getItem:()=>null,setItem:()=>{const error=Error('quota');error.name='QuotaExceededError';throw error;},removeItem(){}},
+    localStorage:{getItem:()=>null,setItem:()=>{localWrites++;const error=Error('quota');error.name='QuotaExceededError';throw error;},removeItem(){}},
     document:{addEventListener(){},visibilityState:'visible',activeElement:null,querySelector:()=>null},
     console:{warn(){},error(){}},toast(){},setInterval:()=>0,clearInterval(){},setTimeout,clearTimeout,
     Event,JSON,Object,Promise,Date,Error
@@ -53,6 +53,7 @@ vm.runInContext(requestSource,context);
   await storeContext.__Store.initSB();
   assert.equal(await storeContext.__Store.save('player-1',{jerseyNumbers:{'2026/27|club-1':'1'}}),true);
   assert.equal(cloudWrites,1,'cloud save was blocked by localStorage quota');
+  assert.equal(localWrites,0,'protected saves must not serialize the full record cache locally');
   esAccess.saveState=async()=>{throw Error('Season record not found.');};
   assert.equal(await storeContext.__Store.save('player-1',{jerseyNumbers:{'2026/27|club-1':'2'}}),false);
   assert.equal(storeContext.__Store.lastError,'Season record not found.');
