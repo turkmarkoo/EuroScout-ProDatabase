@@ -9,6 +9,9 @@ window.EUROSCOUT_COMPETITION_ASSETS={
   bbl:"assets/competitions/germany-bbl.png",
   ncaam:"assets/competitions/ncaa.png",
   ncaa:"assets/competitions/ncaa.png",
+  nba:"assets/competitions/nba.svg",
+  gleague:"assets/competitions/nba-g-league.png",
+  sl:"assets/competitions/nba-summer-league.png",
   nextgen:"assets/competitions/nextgen.png",
   angt:"assets/competitions/nextgen.png"
 };

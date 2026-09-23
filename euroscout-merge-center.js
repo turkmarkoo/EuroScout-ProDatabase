@@ -57,8 +57,8 @@
   const hasManualGroup = group => { const ids=new Set(group.map(p=>p.id)); return active('player').some(m=>ids.has(m.survivor)&&ids.has(m.source)); };
   const pairKey = (type, a, b) => type + ':' + [a,b].sort().join('|');
   const app = document.getElementById('app');
-  const view = { type:'player', query:'', confidence:'all', status:'pending', reviewed:'all', pair:null, manualCandidate:null, manualA:null, manualB:null, quality:null, options:null, survivor:null, candidates:[], extraAttempted:false, extraLoading:false };
-  let detectionCache = null, detectionSignature = '', entityCache = {}, importQueue = [];
+  const view = { type:'player', query:'', confidence:'all', status:'pending', reviewed:'all', pair:null, manualCandidate:null, manualA:null, manualB:null, quality:null, options:null, survivor:null, candidates:[], detectionReady:{} };
+  let detectionCache = {}, detectionSignature = '', entityCache = {}, importQueue = [];
   let automaticRunning=false, automaticAttempted='',automaticMerged=0,automaticFailure='';
   const AUTO_OPTIONS={reports:true,notes:true,statistics:true,timeline:true,watchlist:true,review:true,external:true,images:true};
 
@@ -138,11 +138,12 @@
     // An equal known birth year plus an exact normalized name is a clear identity
     // unless one of the hard-conflict checks above rejected the pair.
     if(bornA&&bornB)return true;
-    // If only one feed has a birth year, require two matching bio/context signals.
-    if(bornA||bornB)return signals>=2;
-    // With no birth year in either feed, require three independent agreements.
-    // This safely resolves the common 77% duplicate class (name + height + country + role).
-    return signals>=3;
+    // Exact full names plus one matching bio field are enough when only one feed
+    // supplies a birth year. Hard conflicts above still keep the pair for review.
+    if(bornA||bornB)return signals>=1;
+    // With no birth year, require two independent agreements. This resolves the
+    // common 77% duplicate class while keeping bare name-only matches manual.
+    return signals>=2;
   }
   function userRecordPayload(entity){
     const record=entity?.report||{};let report={};try{report=JSON.parse(record.report||'{}')||{};}catch{report={overall:record.report||''};}
@@ -157,8 +158,8 @@
     const quality=x=>{const p=x.player||{};return (birthYear(x.born)?40:0)+(Number(p.g)>0?25:0)+(Number(p.ppg)>0?8:0)+(x.photo?3:0)+(p.profile_provider==='RealGM'?0:4);};
     return quality(a)>quality(b)?a.id:quality(b)>quality(a)?b.id:[a.id,b.id].sort()[0];
   }
-  function automaticPlan(all=detect().player){
-    const currentState=state(),used=new Set(),plan=[];
+  function automaticPlan(all=detect(false,'player').player){
+    const currentState=state(),plan=[];
     const blocked=new Set();
     Object.entries({...currentState.reviewed,...currentState.autoSkipped}).forEach(([id,status])=>{
       if(status!=='dismissed'&&status!==true)return;
@@ -169,12 +170,15 @@
       !currentState.autoSkipped[candidate.id]&&!blocked.has(candidate.a.id)&&!blocked.has(candidate.b.id)&&
       automaticPlayerMatch(candidate.a,candidate.b)&&!conflictingUserData(candidate.a,candidate.b));
     eligible.sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id));
-    for(const candidate of eligible){
-      if(used.has(candidate.a.id)||used.has(candidate.b.id))continue;
-      used.add(candidate.a.id);used.add(candidate.b.id);
-      const survivor=chooseAutomaticSurvivor(candidate.a,candidate.b);
-      plan.push({candidate,survivor,source:survivor===candidate.a.id?candidate.b.id:candidate.a.id});
-      if(plan.length===250)break;
+    // Resolve full connected duplicate groups in one pass. The former one-pair-
+    // per-player cap needed many page reloads and left obvious name variants queued.
+    const parent=new Map(),items=new Map(),find=id=>{let root=id;while(parent.has(root)&&parent.get(root)!==root)root=parent.get(root);let node=id;while(parent.has(node)&&parent.get(node)!==root){const next=parent.get(node);parent.set(node,root);node=next;}return root;};
+    const join=(a,b)=>{if(!parent.has(a))parent.set(a,a);if(!parent.has(b))parent.set(b,b);const ra=find(a),rb=find(b);if(ra!==rb)parent.set(rb,ra);};
+    eligible.forEach(candidate=>{items.set(candidate.a.id,candidate.a);items.set(candidate.b.id,candidate.b);join(candidate.a.id,candidate.b.id);});
+    const groups=new Map();items.forEach((item,id)=>{const root=find(id);if(!groups.has(root))groups.set(root,[]);groups.get(root).push(item);});
+    for(const group of groups.values()){
+      let survivor=group[0];for(const item of group.slice(1)){const chosen=chooseAutomaticSurvivor(survivor,item);survivor=chosen===item.id?item:survivor;}
+      for(const source of group){if(source.id===survivor.id)continue;const id=pairKey('player',survivor.id,source.id);plan.push({candidate:{id,type:'player',a:survivor,b:source,score:playerConfidence(survivor,source),reason:'Clear identity group'},survivor:survivor.id,source:source.id});if(plan.length===1500)return plan;}
     }
     return plan;
   }
@@ -202,12 +206,12 @@
     importQueue=[...new Map([...importQueue,...flagged].map(item=>[item.id,item])).values()];
     return flagged;
   }
-  function detect(force=false) {
+  function detect(force=false, requestedType='all') {
     const signature=state().merges.map(m=>m.id+':'+(m.undoneAt||'')).join('|');
-    if (!force && detectionCache && signature===detectionSignature) return detectionCache;
-    if(force||signature!==detectionSignature)entityCache={};
-    const result = { player:[], club:[], agent:[] };
-    for (const type of Object.keys(result)) {
+    if(force||signature!==detectionSignature){entityCache={};detectionCache={};detectionSignature=signature;}
+    const types=requestedType==='all'?['player','club','agent']:[requestedType];
+    for (const type of types) {
+      if(!force&&detectionCache[type])continue;
       const items=entities(type), out={type,map:new Map()};
       if (type === 'player') {
         indexPairs(items,x => externalId(x.external,'eurobasket'),playerConfidence,'Same Eurobasket profile',out);
@@ -224,10 +228,9 @@
         indexPairs(items,x => x.agency ? fold(x.name).split(' ').at(-1)+'|'+fold(x.agency) : '',72,'Same surname and agency',out);
       }
       const existing = new Set(active(type).map(m => pairKey(type,m.survivor,m.source)));
-      result[type]=[...out.map.values()].filter(c => !existing.has(c.id)).sort((a,b)=>b.score-a.score || a.a.name.localeCompare(b.a.name));
+      detectionCache[type]=[...out.map.values()].filter(c => !existing.has(c.id)).sort((a,b)=>b.score-a.score || a.a.name.localeCompare(b.a.name));
     }
-    detectionCache=result; detectionSignature=signature;
-    return result;
+    return {player:detectionCache.player||[],club:detectionCache.club||[],agent:detectionCache.agent||[]};
   }
   const val = x => x == null || x === '' ? '—' : String(x);
   const reportParts = rec => { try { return JSON.parse(rec.report||'{}')||{}; } catch { return {overall:rec.report||''}; } };
@@ -308,13 +311,15 @@
     const batchId=crypto.randomUUID(),at=new Date().toISOString();
     const override=ovrLocal();
     const next=state();
+    const existingPairs=new Set(active('player').map(m=>pairKey('player',m.survivor,m.source)));
     for(const item of plan){
       const {candidate,survivor,source}=item;
-      if(next.reviewed[candidate.id]||active('player').some(m=>pairKey('player',m.survivor,m.source)===candidate.id))continue;
+      if(next.reviewed[candidate.id]||existingPairs.has(candidate.id))continue;
       if(!override.links.some(link=>link.includes(survivor)&&link.includes(source)))override.links.push([survivor,source]);
       next.merges.push({id:crypto.randomUUID(),type:'player',survivor,source,at,
         admin:Store.user?.email||window.ESAccess?.user?.email||'Administrator',options:AUTO_OPTIONS,auto:true,batchId});
       next.reviewed[candidate.id]='merged';
+      existingPairs.add(candidate.id);
     }
     const batchMerges=next.merges.filter(item=>item.batchId===batchId);
     if(!batchMerges.length)return 0;
@@ -324,12 +329,12 @@
         count:batchMerges.length,pairs:batchMerges.map(item=>pairKey('player',item.survivor,item.source)),lightweight:true});
       const [linksSaved,stateSaved]=await Promise.all([Store.pushAppKey('euroscout:overrides'),saveState(next)]);
       if(linksSaved===false||stateSaved===false)throw Error('Identity links could not be saved.');
-      OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache=null;entityCache={};
+      OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};
       return batchMerges.length;
     }catch(error){
       beforeOverrides==null?localStorage.removeItem('euroscout:overrides'):localStorage.setItem('euroscout:overrides',beforeOverrides);
       await Promise.allSettled([Store.pushAppKey('euroscout:overrides'),saveState(oldState)]);
-      OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache=null;entityCache={};
+      OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};
       throw error;
     }
   }
@@ -346,7 +351,7 @@
       localStorage.setItem('euroscout:overrides',JSON.stringify(override));
       const [linksSaved,stateSaved]=await Promise.all([Store.pushAppKey('euroscout:overrides'),saveState(old)]);
       if(linksSaved===false||stateSaved===false)throw Error('Undo could not be saved.');
-      OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache=null;entityCache={};if(STATE.view==='mergecenter')renderMergeCenter();toast('Automatic merge batch undone.');return;
+      OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};if(STATE.view==='mergecenter')renderMergeCenter();toast('Automatic merge batch undone.');return;
     }
     if(!batch.before)throw Error('Undo is no longer available.');
     for(const [key,post] of Object.entries(batch.after.keys))if(localStorage.getItem(key)!==post)throw Error('Related data changed since this batch. Review those edits before undoing.');
@@ -360,7 +365,7 @@
       old.merges.filter(m=>m.batchId===id).forEach(m=>m.undoneAt=batch.undoneAt);
       batch.pairs.forEach(pair=>{if(old.reviewed[pair]==='merged')delete old.reviewed[pair];old.autoSkipped[pair]=true;});
       pending.push(saveState(old));if((await Promise.all(pending)).some(result=>result===false))throw Error('Cloud save did not complete.');
-      OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache=null;entityCache={};if(STATE.view==='mergecenter')renderMergeCenter();toast('Automatic merge batch undone.');
+      OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};if(STATE.view==='mergecenter')renderMergeCenter();toast('Automatic merge batch undone.');
     }catch(error){
       const pending=[];
       for(const [key,raw] of Object.entries(batch.after.keys)){raw==null?localStorage.removeItem(key):localStorage.setItem(key,raw);pending.push(Store.pushAppKey(key));}
@@ -413,7 +418,7 @@
       if (type==='player') { OVR=ovrMerged(); rebuildLinks(); applyOverrides(); }
       if (type==='club') { buildClubs(); NEXTCOMP=null; DOM27=null; }
       if (type==='agent') applyOverrides();
-      detectionCache=null; entityCache={}; view.pair=null; view.manualCandidate=null; renderMergeCenter(); toast('Merge saved. Undo is available for 30 days.');
+      detectionCache={}; entityCache={}; view.pair=null; view.manualCandidate=null; renderMergeCenter(); toast('Merge saved. Undo is available for 30 days.');
       return true;
     } catch (error) {
       for (const [key,raw] of Object.entries(before)) if (key!=='record') raw==null?localStorage.removeItem(key):localStorage.setItem(key,raw);
@@ -451,7 +456,7 @@
     }
     if (entry.type==='club') { buildClubs(); NEXTCOMP=null; DOM27=null; }
     if (entry.type==='agent') applyOverrides();
-    detectionCache=null; entityCache={}; renderMergeCenter(); toast('Merge undone.');
+    detectionCache={}; entityCache={}; renderMergeCenter(); toast('Merge undone.');
     } catch(error) {
       const rollback=[];
       if(entry.type==='player') {
@@ -464,11 +469,11 @@
       throw error;
     }
   }
-  function summary() {
-    const list=detect(), players=entities('player'),reviewed=state().reviewed;
+  function summary(activeType='player') {
+    const list=detect(false,activeType), players=entities('player'),reviewed=state().reviewed;
     const pending=type=>list[type].filter(candidate=>!reviewed[candidate.id]).length;
     return [
-      ['Players',pending('player'),'player'],['Clubs',pending('club'),'club'],['Agents',pending('agent'),'agent'],
+      ['Players',detectionCache.player?pending('player'):'…','player'],['Clubs',detectionCache.club?pending('club'):'…','club'],['Agents',detectionCache.agent?pending('agent'):'…','agent'],
       ['Missing photos',players.filter(p=>!p.photo).length,'photo'],
       ['Missing Eurobasket links',players.filter(p=>!/eurobasket\.com/i.test(p.external)).length,'eurobasket'],
       ['Missing birth years',players.filter(p=>!p.born).length,'birth'],
@@ -506,17 +511,16 @@
   }
   function renderMergeCenter() {
     if (!Store.canEdit()) { app.innerHTML='<div class="mc-page"><h1>Administrator access required</h1></div>'; return; }
-    if (!view.extraAttempted && !STATE._extraDone) {
-      view.extraAttempted=true; view.extraLoading=true;
-      app.innerHTML='<div class="mc-page"><h1>Merge Center</h1><p>Checking all player leagues, including NCAA…</p></div>';
-      loadExtraLeagues().catch(error=>console.warn('Additional player leagues could not be checked',error)).finally(()=>{
-        view.extraLoading=false; detectionCache=null; entityCache={};
-        if (STATE.view==='mergecenter') renderMergeCenter();
-      });
+    // Do not pull the 6,000+ player NBA/NCAA packs merely by opening this page.
+    // Those packs join detection after their own page is visited or global search loads them.
+    if(!view.detectionReady[view.type]){
+      view.detectionReady[view.type]=true;
+      app.innerHTML='<div class="mc-page"><div class="mc-head"><div><h1>Merge Center</h1><p>Preparing the '+esc(view.type)+' identity queue…</p></div></div><div class="mc-loading">Checking clear identity signals</div></div>';
+      const prepare=()=>{if(STATE.view==='mergecenter'){detect(false,view.type);renderMergeCenter();}};
+      if(window.requestIdleCallback)requestIdleCallback(prepare,{timeout:100});else setTimeout(prepare,0);
       return;
     }
-    if (view.extraLoading) return;
-    const all=detect();
+    const all=detect(false,view.type);
     const plan=automaticPlan(all.player),signature=plan.map(item=>item.candidate.id).join('|');
     if(plan.length&&!automaticFailure&&!automaticRunning&&automaticAttempted!==signature){
       automaticRunning=true;automaticAttempted=signature;
@@ -543,11 +547,11 @@
         (view.status==='all'||(view.status==='pending'?!reviewed[x.id]:reviewed[x.id]===view.status)) &&
         (view.reviewed==='all'||(view.reviewed==='yes'?!!reviewed[x.id]:!reviewed[x.id]));
     });
-    const counters=summary(),log=state().merges.slice().reverse().filter(m=>!m.batchId||state().batches.find(b=>b.id===m.batchId)?.pairs[0]===pairKey('player',m.survivor,m.source));
+    const counters=summary(view.type),log=state().merges.slice().reverse().filter(m=>!m.batchId||state().batches.find(b=>b.id===m.batchId)?.pairs[0]===pairKey('player',m.survivor,m.source));
     app.innerHTML='<div class="mc-page"><div class="mc-head"><div><h1>Merge Center</h1><p>Maintain database quality. Merge duplicate players, clubs and agents.</p></div><button class="es-button" id="mcRefresh">↻ Refresh detection</button></div>'+
       (automaticFailure?'<div class="mc-warning">Automatic merging paused: '+esc(automaticFailure)+' <button class="es-button" id="mcRetryAuto">Retry</button></div>':'')+
       '<div class="mc-quality">'+counters.map(([label,count,target])=>'<button data-mc-quality="'+target+'"><strong>'+count+'</strong><span>'+esc(label)+'</span></button>').join('')+'</div>'+
-      '<div class="mc-tabs" role="tablist">'+[['player','Players'],['club','Clubs'],['agent','Agents']].map(([key,label])=>'<button data-mc-tab="'+key+'" class="'+(view.type===key?'active':'')+'">'+label+' <span>'+all[key].filter(candidate=>!reviewed[candidate.id]).length+'</span></button>').join('')+'</div>'+
+      '<div class="mc-tabs" role="tablist">'+[['player','Players'],['club','Clubs'],['agent','Agents']].map(([key,label])=>'<button data-mc-tab="'+key+'" class="'+(view.type===key?'active':'')+'">'+label+' <span>'+(detectionCache[key]?detectionCache[key].filter(candidate=>!reviewed[candidate.id]).length:'…')+'</span></button>').join('')+'</div>'+
       (view.type==='player'?'<h2>Identity Resolution queue</h2><p>Clear identity matches merge automatically. Ambiguous cross-league matches remain here for review.'+(importQueue.length?' '+importQueue.length+' incoming records were flagged before joining the registry.':'')+'</p>':'')+
       '<details class="mc-manual"><summary>Review a pair manually</summary><p>Find both records, compare them, then choose which survives.</p><div class="mc-manual-grid"><div><label for="mcManualA">First record</label><input id="mcManualA" type="search" placeholder="Search name or ID"><div id="mcResultsA" class="mc-manual-results"></div></div><div><label for="mcManualB">Second record</label><input id="mcManualB" type="search" placeholder="Search name or ID"><div id="mcResultsB" class="mc-manual-results"></div></div></div><button class="es-button" id="mcCompareManual" disabled>Compare selected records</button></details>'+
       '<div class="mc-toolbar"><input id="mcSearch" type="search" placeholder="Search player, club or agent" value="'+esc(view.query)+'">'+
@@ -559,7 +563,7 @@
       '<section class="mc-log"><h2>Merge log</h2><div class="mc-list-head"><span>Date</span><span>Administrator</span><span>Merge</span><span>Undo</span></div>'+
       (log.map(m=>'<div class="mc-row"><span>'+esc(m.at.slice(0,10))+'</span><span>'+esc(m.admin)+'</span><span>'+(m.batchId?esc(state().batches.find(b=>b.id===m.batchId)?.count||1)+' automatic player merges':esc(m.type)+'<br>'+esc(m.source)+' → '+esc(m.survivor))+'</span><span>'+
         (m.undoneAt?'Undone':Date.now()-Date.parse(m.at)<=WINDOW?'<button class="es-button" data-mc-undo="'+esc(m.id)+'">Undo</button>':'Undo expired')+'</span></div>').join('')||'<p class="mc-empty">No merges yet.</p>')+'</section></div>';
-    document.getElementById('mcRefresh').onclick=async()=>{detectionCache=null;entityCache={};automaticFailure='';automaticAttempted='';const s=state();s.scannedAt=new Date().toISOString();await saveState(s);renderMergeCenter();};
+    document.getElementById('mcRefresh').onclick=async()=>{detectionCache={};entityCache={};view.detectionReady={};automaticFailure='';automaticAttempted='';const s=state();s.scannedAt=new Date().toISOString();await saveState(s);renderMergeCenter();};
     document.getElementById('mcRetryAuto')?.addEventListener('click',()=>{automaticFailure='';automaticAttempted='';renderMergeCenter();});
     document.querySelectorAll('[data-mc-tab]').forEach(b=>b.onclick=()=>{view.type=b.dataset.mcTab;view.pair=null;view.quality=null;renderMergeCenter();});
     const manualItems=entities(view.type), manualButton=document.getElementById('mcCompareManual');
@@ -570,7 +574,7 @@
     }
     manualButton.onclick=()=>{view.manualCandidate={id:pairKey(view.type,view.manualA.id,view.manualB.id),type:view.type,a:view.manualA,b:view.manualB,score:0,reason:'Manual review'};view.survivor=null;view.options=null;renderMergeCenter();};
     document.querySelectorAll('[data-mc-quality]').forEach(b=>b.onclick=()=>{const type=b.dataset.mcQuality;if(['player','club','agent'].includes(type)){view.type=type;view.query='';view.quality=null;}else{view.quality=type;}renderMergeCenter();});
-    const search=document.getElementById('mcSearch');search.oninput=()=>{view.query=search.value;renderMergeCenter();document.getElementById('mcSearch')?.focus();};
+    const search=document.getElementById('mcSearch');let searchTimer;search.oninput=()=>{view.query=search.value;clearTimeout(searchTimer);searchTimer=setTimeout(()=>{renderMergeCenter();document.getElementById('mcSearch')?.focus();},140);};
     for (const [id,key] of [['mcConfidence','confidence'],['mcStatus','status'],['mcReviewed','reviewed']]) {const select=document.getElementById(id);select.value=view[key];select.onchange=()=>{view[key]=select.value;renderMergeCenter();};}
     document.querySelectorAll('[data-mc-review]').forEach(b=>b.onclick=()=>{view.pair=b.dataset.mcReview;view.survivor=null;view.options=null;renderMergeCenter();});
     document.querySelectorAll('[data-mc-dismiss]').forEach(b=>b.onclick=async()=>{const s=state();s.reviewed[b.dataset.mcDismiss]='dismissed';await saveState(s);renderMergeCenter();});
