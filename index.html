@@ -2321,12 +2321,16 @@ function esAuthStorage(){
 const Store = (()=>{
   const cfg = window.EUROSCOUT_CONFIG||{};
   const enabled = !!(window.ESAccess || (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY));
-  let sb=null, user=null, role=null, member=false, cache={};
+  let sb=null, user=null, role=null, member=false, cache={},lastError="";
   const LKEY="euroscout:records";
   const APP_KEYS=["euroscout:sessions:v1","euroscout:shortcuts:v1","euroscout:names:v1","euroscout:watchAlertsSeen:v1","euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1","euroscout:market:v1","euroscout:mergeCenter:v1","euroscout:agencyLogos:v1","euroscout:agencyNotes:v1","euroscout:manualPlayers:v1"];
   const local = {
     all(){try{return JSON.parse(localStorage.getItem(LKEY))||{}}catch(e){return{}}},
-    set(o){localStorage.setItem(LKEY,JSON.stringify(o))}
+    set(o){try{localStorage.setItem(LKEY,JSON.stringify(o));return true;}catch(e){
+      /* The protected cloud snapshot is authoritative. A full browser cache must
+         never prevent that request from being sent. */
+      console.warn('EuroScout local cache could not be updated:',e);return false;
+    }}
   };
   async function initSB(){
     if(window.ESAccess){
@@ -2389,15 +2393,19 @@ const Store = (()=>{
   }
   function get(id){if(window.ESAccess&&!ESAccess.internal)return {report:"",rating:0,tags:[],watch:false,board:null,eye:{}};return cache[id]||{report:"",rating:0,tags:[],watch:false,board:null,eye:{}};}
   async function save(id,rec){
-    if(enabled && !canEdit()) return;    // viewers cannot write
-    cache[id]={...get(id),...rec}; local.set(cache);
-    if(window.ESAccess){return await persistPrivate();}
+    lastError="";
+    if(!id)throw Error('Player record not found.');
+    if(enabled && !canEdit()){lastError='You do not have permission to edit this player.';return false;}
+    cache[id]={...get(id),...rec};const cached=local.set(cache);
+    if(window.ESAccess)return persistPrivate();
     if(sb && user && canEdit()){
       const r=cache[id];
-      try{await sb.from("scouting").upsert({player_id:id,report:r.report,rating:r.rating,
+      try{const {error}=await sb.from("scouting").upsert({player_id:id,report:r.report,rating:r.rating,
         tags:r.tags,watch:r.watch,board:r.board,eye:r.eye,updated_at:new Date().toISOString(),
-        updated_by:user.email},{onConflict:"player_id"});}catch(e){}
+        updated_by:user.email},{onConflict:"player_id"});if(error)throw error;}catch(e){lastError=e?.message||'Cloud save failed.';console.error('EuroScout save failed:',e);return false;}
     }
+    if(!cached){lastError='Browser storage is full. Clear site data and try again.';return false;}
+    return true;
   }
   async function bulkSet(items){
     if(enabled && !canEdit()) return 0;
@@ -2421,13 +2429,13 @@ const Store = (()=>{
   }
   let privateTimer,privateWaiters=[],privateDirty=false;
   function persistPrivate(){
-    if(!ESAccess.internal||!canEdit())return Promise.resolve(false);
+    if(!ESAccess.internal||!canEdit()){lastError='You do not have permission to edit this player.';return Promise.resolve(false);}
     privateDirty=true;clearTimeout(privateTimer);const promise=new Promise(resolve=>privateWaiters.push(resolve));
     privateTimer=setTimeout(async()=>{const waiters=privateWaiters;privateWaiters=[];
       const appData={};for(const k of APP_KEYS){try{appData[k]=JSON.parse(localStorage.getItem(k)||'null');}catch{}}
       const snapshot={...ESAccess.state,records:cache,appData};
-      try{await ESAccess.saveState(snapshot);privateDirty=privateWaiters.length>0;waiters.forEach(r=>r(true));}
-      catch(e){toast('Cloud save failed: '+e.message+' Your local changes are retained.');waiters.forEach(r=>r(false));}
+      try{await ESAccess.saveState(snapshot);lastError="";privateDirty=privateWaiters.length>0;waiters.forEach(r=>r(true));}
+      catch(e){lastError=e?.message||'Cloud save failed.';console.error('EuroScout protected snapshot save failed:',e);toast('Cloud save failed: '+lastError+' Your local changes are retained.');waiters.forEach(r=>r(false));}
     },500);return promise;
   }
   async function refreshPrivate(){
@@ -2455,6 +2463,7 @@ const Store = (()=>{
   return {
     get enabled(){return enabled}, get user(){return user}, get role(){return role}, get member(){return member},
     canEdit, initSB, load, get, save, bulkSet, pushAppKey, migrateLocalUp, resolveMembership,
+    get lastError(){return lastError},
     async signIn(email){if(!sb)return;const redirect=location.origin+location.pathname;
       const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:redirect}});if(error)throw error;},
     async signInPassword(email,password){if(!sb)return;
