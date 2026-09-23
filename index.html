@@ -6247,7 +6247,17 @@ function renderWatchlist(){
     openProfile(r.dataset.id);});
 }
 
-function scoutSeason(p){const v=String(p.statsSeason||p.season||leagueOf(p)?.meta?.season||'');const m=v.match(/(20\d{2})\D+(?:20)?(\d{2})/);return m?m[1]+'/'+m[2]:'';}
+function scoutSeason(p){
+ const own=String(p?.statsSeason||p?.season||''),explicit=own.match(/(20\d{2})\D+(?:20)?(\d{2})/);
+ if(explicit)return explicit[1]+'/'+explicit[2];
+ /* The official roster import creates zero-game placeholders for the upcoming
+    season. They intentionally share the underlying league id with historical
+    statistics, so the league metadata still says 2025/26. Treat the record's
+    roster provenance as authoritative before consulting that metadata. */
+ if(p?._rosterOnly)return '2026/27';
+ const inherited=String(leagueOf(p)?.meta?.season||'').match(/(20\d{2})\D+(?:20)?(\d{2})/);
+ return inherited?inherited[1]+'/'+inherited[2]:'';
+}
 let seasonPoolCache=null;
 function scoutSeasonPool(s){
  const m=next26Get(),mb=next26bGet();allDbTeams();
