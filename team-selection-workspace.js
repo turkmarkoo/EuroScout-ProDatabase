@@ -26,6 +26,9 @@ function buildCompetitions(){
  if(typeof allClubs!=='function')return[];
  const clubs=allClubs(),defs=new Map(),data=window.STATE?.data||{};
  for(const L of data.leagues||[])if(typeof showsTeams!=='function'||showsTeams(L.meta))defs.set(L.meta.id,{...L.meta});
+ /* Authenticated payloads may retain registry clubs without the original
+    league collection, so club memberships are a second competition source. */
+ for(const club of clubs)for(const league of club.leagues||[]){if(!league?.id)continue;const old=defs.get(league.id)||{};defs.set(league.id,{...old,id:league.id,name:league.name||old.name||league.id});}
  const addCurrent=source=>Object.entries(source||{}).forEach(([id,value])=>{const old=defs.get(id)||{};defs.set(id,{...old,id,name:value.name||old.name||id,_teamKeys:(value.teams||[]).map(t=>t.key).filter(Boolean)});});
  addCurrent(data.season2627?.comps);addCurrent(data.domestic2627?.leagues);
  return[...defs.values()].map(meta=>{
