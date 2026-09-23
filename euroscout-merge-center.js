@@ -103,7 +103,7 @@
     const fibaA=externalId(a.fiba,'fiba'),fibaB=externalId(b.fiba,'fiba');
     if(euroA&&euroB&&euroA!==euroB || fibaA&&fibaB&&fibaA!==fibaB)return 0;
     if(euroA&&euroB&&euroA===euroB || fibaA&&fibaB&&fibaA===fibaB)return 99;
-    const nameA=playerFold(a.name),nameB=playerFold(b.name),exactName=nameA&&nameA===nameB;
+    const nameA=playerFold(a.name),nameB=playerFold(b.name);const _tA=nameA.split(' ').filter(Boolean),_tB=nameB.split(' ').filter(Boolean);const _sameSet=_tA.length===_tB.length&&_tA.length>1&&[..._tA].sort().join(' ')===[..._tB].sort().join(' ');const exactName=!!nameA&&(nameA===nameB||_sameSet);
     const lastA=nameA.split(' ').at(-1),lastB=nameB.split(' ').at(-1);
     if(!exactName&&(!lastA||lastA!==lastB))return 0;
     if(a.born&&b.born&&String(a.born)!==String(b.born))return 0;
@@ -121,7 +121,13 @@
   function realgmId(entity){const p=entity.player||{};return String(p.realgmId||p.realGMId||p.profile_url?.match(/\/Summary\/(\d+)/i)?.[1]||'');}
   function sameClubContext(a,b){const words=value=>new Set(fold(value).split(' ').filter(word=>word.length>3&&!['basketball','club','team'].includes(word)));const left=words(a.team),right=words(b.team);if(!left.size||!right.size)return false;const shared=[...left].filter(word=>right.has(word)).length;return shared>=2||shared>=1&&Math.min(left.size,right.size)===1;}
   function automaticPlayerMatch(a,b){
-    if(!a||!b||a.id===b.id||!playerFold(a.name)||playerFold(a.name)!==playerFold(b.name))return false;
+    if(!a||!b||a.id===b.id)return false;
+    const nameA=playerFold(a.name),nameB=playerFold(b.name);if(!nameA||!nameB)return false;
+    const tokA=nameA.split(' ').filter(Boolean),tokB=nameB.split(' ').filter(Boolean),lastA=tokA.at(-1),lastB=tokB.at(-1),firstA=tokA[0]||'',firstB=tokB[0]||'';
+    const sameTokenSet=tokA.length===tokB.length&&tokA.length>1&&[...tokA].sort().join(' ')===[...tokB].sort().join(' ');
+    const initialCompat=!!lastA&&lastA===lastB&&!!firstA&&!!firstB&&(firstA===firstB||(firstA.length===1&&firstB.startsWith(firstA))||(firstB.length===1&&firstA.startsWith(firstB))||firstA.startsWith(firstB)||firstB.startsWith(firstA));
+    const strongName=nameA===nameB||sameTokenSet;
+    if(!strongName&&!initialCompat)return false;
     const bornA=birthYear(a.born),bornB=birthYear(b.born);if(bornA&&bornB&&bornA!==bornB)return false;
     const heightA=Number(a.height),heightB=Number(b.height),heightKnown=!!(heightA&&heightB);
     if(heightKnown&&Math.abs(heightA-heightB)>5)return false;
@@ -137,13 +143,9 @@
       Number(positionA&&positionA===positionB)+Number(sameClubContext(a,b));
     // An equal known birth year plus an exact normalized name is a clear identity
     // unless one of the hard-conflict checks above rejected the pair.
-    if(bornA&&bornB)return true;
-    // Exact full names plus one matching bio field are enough when only one feed
-    // supplies a birth year. Hard conflicts above still keep the pair for review.
-    if(bornA||bornB)return signals>=1;
-    // With no birth year, require two independent agreements. This resolves the
-    // common 77% duplicate class while keeping bare name-only matches manual.
-    return signals>=2;
+    if(strongName){if(bornA&&bornB)return true;if(bornA||bornB)return signals>=1;return signals>=2;}
+    // Initial / prefix first name (Facu vs Facundo): shared known birth year plus a hard bio signal (height or country), not position alone.
+    return !!(bornA&&bornB)&&(!!(heightKnown&&Math.abs(heightA-heightB)<=3)||!!(countryKnown&&countryA===countryB));
   }
   function userRecordPayload(entity){
     const record=entity?.report||{};let report={};try{report=JSON.parse(record.report||'{}')||{};}catch{report={overall:record.report||''};}
@@ -166,7 +168,7 @@
       if(!id.startsWith('player:'))return;
       id.slice(7).split('|').forEach(playerId=>blocked.add(playerId));
     });
-    const eligible=all.filter(candidate=>candidate.score>=70&&!currentState.reviewed[candidate.id]&&
+    const eligible=all.filter(candidate=>!currentState.reviewed[candidate.id]&&
       !currentState.autoSkipped[candidate.id]&&!blocked.has(candidate.a.id)&&!blocked.has(candidate.b.id)&&
       automaticPlayerMatch(candidate.a,candidate.b)&&!conflictingUserData(candidate.a,candidate.b));
     eligible.sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id));
