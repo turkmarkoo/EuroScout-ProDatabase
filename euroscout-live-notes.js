@@ -30,6 +30,7 @@ function shortName(n){const parts=String(n||'').trim().split(/\s+/);return parts
 function visible(p,slot){const f=filters[slot];return (!f.pos||posGroup(p)===f.pos)&&(!f.q||fold(p.name).includes(fold(f.q))||shirt(p)===f.q.trim());}
 /* The players the arrow keys walk through: what is on screen, left panel then right. */
 function walkList(){return ['a','b'].flatMap(k=>(liveRoster(STATE.scouting[k])?.players||[]).filter(p=>visible(p,k)));}
+function compactTeamOptions(key){const r=liveRoster(key);return key?'<option value="'+escAttr(key)+'" selected>'+esc(r?.t.name||'Selected team')+'</option>':'<option value="" selected>— pick a team · 2026/27 —</option>';}
 
 function logViewing(r,event,date,gameDate){const who=author();const w=r._workflow={...(r._workflow||{})};w.viewings=[...(w.viewings||[])];if(!w.viewings.some(v=>!v.removed&&v.event===event&&v.date===date&&v.author===who)){w.viewings.push({id:crypto.randomUUID(),event,date,gameDate:gameDate||'',mode:SX?.active()?.mode==='Live'?'Live':'Video',notes:'',author:who,updatedAt:new Date().toISOString(),source:'matchup'});}w.updatedAt=new Date().toISOString();}
 function migrateContext(p,r){let changed=false;for(const [k]of cats){if(!r[k])continue;r[k]=r[k].split('\n').map(line=>{const m=line.match(/ \[([^\[\]]+?) · (\d{4}-\d{2}-\d{2}) · ([^\[\]]+@[^\[\]]+)\]$/);if(!m)return line;changed=true;logViewing(r,m[1],m[2],'');return line.slice(0,m.index);}).join('\n');}if(changed&&editable())saveRec(p,{report:JSON.stringify(r)});}
@@ -40,7 +41,7 @@ function step(delta){const list=walkList();if(!list.length)return;if(document.ac
 function otherSide(){if(document.activeElement?.classList.contains('rosterRow'))document.activeElement.blur();const s=STATE.scouting,cur=rosterPlayers().find(p=>p.id===selected);if(!cur)return;const from=canonKey(s.a)===cur._liveClub?'a':'b',to=from==='a'?'b':'a';const mine=(liveRoster(s[from])?.players||[]).filter(p=>visible(p,from)),theirs=(liveRoster(s[to])?.players||[]).filter(p=>visible(p,to));if(!theirs.length)return;choose(theirs[Math.min(Math.max(0,mine.findIndex(p=>p.id===selected)),theirs.length-1)].id);}
 
 function columnHTML(key,slot){const r=liveRoster(key),f=filters[slot];
- return '<div class="rosterCol mx-col" data-slot="'+slot+'"><div class="mx-colhead">'+(r?clubBadge(r.club,26):'')+'<select class="scoutTeamSel" data-slot="'+slot+'" aria-label="Team '+slot.toUpperCase()+'">'+scoutingTeamOptions(key)+'</select></div>'+
+ return '<div class="rosterCol mx-col" data-slot="'+slot+'"><div class="mx-colhead">'+(r?clubBadge(r.club,26):'')+'<select class="scoutTeamSel" data-slot="'+slot+'" aria-label="Team '+slot.toUpperCase()+'">'+compactTeamOptions(key)+'</select></div>'+
  (r?'<input class="mx-rsearch" type="search" data-slot="'+slot+'" value="'+escAttr(f.q)+'" placeholder="Search players…" aria-label="Search '+escAttr(r.t.name)+' players"><div class="mx-posfilter" role="group" aria-label="Position filter">'+[['','All'],['G','G'],['W','W'],['B','B']].map(([v,l])=>'<button type="button" class="mx-pos'+(f.pos===v?' on':'')+'" data-pos="'+v+'" data-slot="'+slot+'" aria-pressed="'+(f.pos===v)+'">'+l+'</button>').join('')+'</div><div class="rosterList">'+
   r.players.map(p=>'<button type="button" class="rosterRow mx-row" data-id="'+escAttr(p.id)+'" title="'+escAttr(p.name)+'"'+(visible(p,slot)?'':' hidden')+'><span class="rrNum">'+esc(shirt(p)||'–')+'</span><span class="rrName">'+esc(shortName(p.name))+'</span><span class="mx-mark" data-mark="'+(SX?SX.markOf(p):'')+'"></span><span class="mx-rpos">'+posShort(p)+'</span></button>').join('')+
   (r.players.length?'':'<div class="empty">No confirmed 2026/27 assignments yet.</div>')+'</div>':'<div class="empty">Pick a team to see its roster.</div>')+'</div>';}
@@ -75,10 +76,20 @@ renderScouting=function(partial=false){
  const count=k=>bulletParse(rep[k]||'').length,total=cats.reduce((n,[k])=>n+count(k),0);
  const notebook='<section class="liveNotebook mx-notebook">'+(p?headerHTML(p)+'<div class="liveBody"><div class="mx-catbar"><div class="liveCategories" role="tablist" aria-label="Note categories">'+[['all','All notes'],...cats].map(([key,label])=>'<button type="button" role="tab" class="mx-cat'+(key===category?' on':'')+'" aria-selected="'+(key===category)+'" data-cat="'+key+'">'+label+' ('+(key==='all'?total:count(key))+')</button>').join('')+'</div><button type="button" class="mx-similar'+(showSimilar?' on':'')+'" id="mxSimilar" aria-pressed="'+showSimilar+'" title="Notes that overlap with the one you are writing">💡 Similar <span id="mxSimilarN"></span></button></div>'+
   '<div class="liveNoteTools"><input id="liveSearch" type="search" placeholder="Search this player’s notes…" aria-label="Search player notes"><span id="liveStatus" role="status">'+esc(busyStatus||(editable()?'✓ Changes save automatically':'Read only'))+'</span></div><div id="liveRelated" hidden></div><div id="liveBullets"></div></div>':'<div class="empty">Choose two teams, then select a player to begin taking notes.</div>')+'</section>';
- const markup='<div class="view scoutingView liveScouting mx">'+contextHTML()+'<div class="liveLayout mx-layout">'+columnHTML(s.a,'a')+notebook+columnHTML(s.b,'b')+'</div></div>';
  const app=document.querySelector('#app');
- if(partial&&document.querySelector('.liveScouting')){const t=document.createElement('template');t.innerHTML=markup;document.querySelector('.liveNotebook').replaceWith(t.content.querySelector('.liveNotebook'));document.querySelector('.mx-context').replaceWith(t.content.querySelector('.mx-context'));}
- else app.innerHTML=markup;
+ const live=document.querySelector('.liveScouting');
+ if(partial&&live){
+  /* Player and note-category changes only affect the center notebook and the
+     compact game header. Rebuilding both roster columns also regenerated every
+     team option and player row on each click, which made live scouting pause for
+     several seconds on the full database. */
+  const t=document.createElement('template');
+  t.innerHTML=contextHTML()+notebook;
+  document.querySelector('.liveNotebook').replaceWith(t.content.querySelector('.liveNotebook'));
+  document.querySelector('.mx-context').replaceWith(t.content.querySelector('.mx-context'));
+ }else{
+  app.innerHTML='<div class="view scoutingView liveScouting mx">'+contextHTML()+'<div class="liveLayout mx-layout">'+columnHTML(s.a,'a')+notebook+columnHTML(s.b,'b')+'</div></div>';
+ }
  wireFrame();wireRows();if(p)wireNotebook(p,rep);tick();backgroundLeagues();
 };
 /* College and NBA / G League players only exist once those files are loaded. They are
@@ -89,7 +100,7 @@ function backgroundLeagues(){if(extraAsked||STATE._extraDone||typeof loadExtraLe
 
 function fullRedraw(){document.querySelector('.liveScouting')?.remove();renderScouting(true);}
 function wireFrame(){const s=STATE.scouting;
- document.querySelectorAll('.scoutTeamSel').forEach(el=>el.onchange=()=>{s[el.dataset.slot]=el.value;filters[el.dataset.slot]={q:'',pos:''};const a=SX?.active();if(a){const c=clubByKey(canonKey(el.value));SX.update({[el.dataset.slot]:{key:canonKey(el.value),name:c?c.name:''}});}fullRedraw();});
+ document.querySelectorAll('.scoutTeamSel').forEach(el=>{const hydrate=()=>{if(el.dataset.loaded)return;const value=s[el.dataset.slot]||'';el.innerHTML=scoutingTeamOptions(value);el.value=value;el.dataset.loaded='true';};el.onpointerdown=hydrate;el.onfocus=hydrate;el.onkeydown=hydrate;el.onchange=()=>{s[el.dataset.slot]=el.value;filters[el.dataset.slot]={q:'',pos:''};const a=SX?.active();if(a){const c=clubByKey(canonKey(el.value));SX.update({[el.dataset.slot]:{key:canonKey(el.value),name:c?c.name:''}});}fullRedraw();};});
  document.querySelectorAll('.mx-rsearch').forEach(el=>el.oninput=()=>{filters[el.dataset.slot].q=el.value;applyFilter(el.dataset.slot);});
  document.querySelectorAll('.mx-pos').forEach(el=>el.onclick=()=>{filters[el.dataset.slot].pos=el.dataset.pos;document.querySelectorAll('.mx-pos[data-slot="'+el.dataset.slot+'"]').forEach(b=>{const on=b===el;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});applyFilter(el.dataset.slot);});
  const start=document.querySelector('#mxStart');if(start)start.onclick=startSession;
@@ -101,7 +112,7 @@ function wireFrame(){const s=STATE.scouting;
 function applyFilter(slot){const col=document.querySelector('.mx-col[data-slot="'+slot+'"]');if(!col)return;const byId=new Map((liveRoster(STATE.scouting[slot])?.players||[]).map(p=>[p.id,p]));col.querySelectorAll('.rosterRow').forEach(row=>{const p=byId.get(row.dataset.id);row.hidden=!p||!visible(p,slot);});}
 function wireRows(){document.querySelectorAll('.rosterRow').forEach(el=>{const on=el.dataset.id===selected;el.classList.toggle('liveSelected',on);el.setAttribute('aria-pressed',on);el.onclick=()=>choose(el.dataset.id,true);});}
 function refreshMarks(){if(!SX)return;const byId=new Map(rosterPlayers().map(p=>[p.id,p]));document.querySelectorAll('.rosterRow').forEach(row=>{const p=byId.get(row.dataset.id),m=row.querySelector('.mx-mark');if(p&&m)m.dataset.mark=SX.markOf(p);});}
-function tick(){clearInterval(timer);if(!SX?.active())return;const paint=()=>{if(!document.querySelector('.liveScouting')){clearInterval(timer);return;}refreshMarks();};paint();timer=setInterval(paint,2000);}
+function tick(){if(!SX?.active()){clearInterval(timer);timer=null;return;}if(timer)return;timer=setInterval(()=>{if(!document.querySelector('.liveScouting')){clearInterval(timer);timer=null;return;}refreshMarks();},2000);}
 
 function swapTeams(){const s=STATE.scouting;[s.a,s.b]=[s.b,s.a];[filters.a,filters.b]=[filters.b,filters.a];const a=SX?.active();if(a)SX.update({a:a.b,b:a.a,scoreA:a.scoreB,scoreB:a.scoreA});fullRedraw();}
 function startSession(){const s=STATE.scouting;SX.openStart({a:s.a,b:s.b},a=>{if(!a)return;s.a=a.a.key;s.b=a.b.key;s.gameDate=a.gameDate;fullRedraw();});}
