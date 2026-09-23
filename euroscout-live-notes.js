@@ -11,6 +11,8 @@ const SX=window.ESSessions;
 let selected='',chosen='',category='nOff',busyStatus='',showSimilar=false,timer=null;
 const filters={a:{q:'',pos:''},b:{q:'',pos:''}};
 let clubIndex=null,rosters=new Map();
+const pendingNoteSaves=new Map();
+let noteSaveTimer=null,noteSaveRunning=false;
 
 const fold=t=>String(t||'').replace(/[đĐ]/g,'dj').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const author=()=>SX?SX.me():(window.ESAccess?.user?.email||'');
@@ -43,6 +45,31 @@ function logViewing(r,event,date,gameDate){const who=author();const w=r._workflo
 function migrateContext(p,r){let changed=false;for(const [k]of cats){if(!r[k])continue;r[k]=r[k].split('\n').map(line=>{const m=line.match(/ \[([^\[\]]+?) · (\d{4}-\d{2}-\d{2}) · ([^\[\]]+@[^\[\]]+)\]$/);if(!m)return line;changed=true;logViewing(r,m[1],m[2],'');return line.slice(0,m.index);}).join('\n');}if(changed&&editable())saveRec(p,{report:JSON.stringify(r)});}
 function editable(){return window.ESAccess?ESAccess.internal&&ESAccess.owner:true}
 const workspace=()=>window.ESWorkspace?ESWorkspace.visible():editable();
+function noteStatus(text){const el=document.querySelector('#liveStatus');if(el)el.textContent=text;}
+function queueNoteSave(p,report){
+ if(!editable())return;
+ const id=gid(p),next={...report,_notesUpdated:new Date().toISOString()},payload=JSON.stringify(next);
+ /* Make the next player switch/read instant. Cloud persistence is intentionally
+    batched so a live typist never serializes the full protected state per key. */
+ Store.stage(id,{report:payload});
+ pendingNoteSaves.set(id,{p,payload});
+ noteStatus('✓ Captured · syncing…');
+ clearTimeout(noteSaveTimer);noteSaveTimer=setTimeout(flushNoteSaves,1200);
+}
+async function flushNoteSaves(){
+ clearTimeout(noteSaveTimer);noteSaveTimer=null;
+ if(noteSaveRunning||!pendingNoteSaves.size)return;
+ noteSaveRunning=true;const batch=[...pendingNoteSaves.entries()];batch.forEach(([id])=>pendingNoteSaves.delete(id));
+ const results=await Promise.allSettled(batch.map(([,entry])=>saveRec(entry.p,{report:entry.payload})));
+ let failed=false;results.forEach((result,i)=>{if(result.status==='rejected'||result.value===false){failed=true;const [id,entry]=batch[i];if(!pendingNoteSaves.has(id))pendingNoteSaves.set(id,entry);}});
+ noteSaveRunning=false;
+ if(failed)noteStatus('Captured · cloud sync pending.');
+ else if(!pendingNoteSaves.size)noteStatus('✓ Saved to player profile');
+ /* A failed network request stays staged and retries on the next edit or when
+    the page is hidden; do not hammer the live scouting screen in a loop. */
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushNoteSaves();});
+window.addEventListener('pagehide',flushNoteSaves);
 function choose(id,keepFocus){if(!id)return;selected=id;chosen=id;busyStatus='';renderScouting(true);if(!keepFocus)document.querySelector('.rosterRow.liveSelected')?.scrollIntoView({block:'nearest'});}
 function step(delta){const list=walkList();if(!list.length)return;if(document.activeElement?.classList.contains('rosterRow'))document.activeElement.blur();const i=list.findIndex(p=>p.id===selected);choose(list[(i<0?0:i+delta+list.length)%list.length].id);}
 function otherSide(){if(document.activeElement?.classList.contains('rosterRow'))document.activeElement.blur();const s=STATE.scouting,cur=rosterPlayers().find(p=>p.id===selected);if(!cur)return;const from=canonKey(s.a)===cur._liveClub?'a':'b',to=from==='a'?'b':'a';const mine=(liveRoster(s[from])?.players||[]).filter(p=>visible(p,from)),theirs=(liveRoster(s[to])?.players||[]).filter(p=>visible(p,to));if(!theirs.length)return;choose(theirs[Math.min(Math.max(0,mine.findIndex(p=>p.id===selected)),theirs.length-1)].id);}
@@ -149,7 +176,7 @@ function wireNotebook(p,rep){
   for(const m of matches.slice(0,4)){const button=document.createElement('button');button.className='btn ghost';button.textContent=m.label+': '+m.note;button.type='button';button.onclick=()=>{category=m.key;renderScouting(true);const row=document.querySelectorAll('#liveBullets .bl-txt')[m.index];row?.scrollIntoView({block:'nearest'});row?.focus()};related.append(button);}}
  /* Move a note to another category: the ⇄ button on the row, Alt + the category's
     letter while typing in it, or drag the row's handle onto a category tab. */
- function moveNote(from,text,to){text=String(text||'').trim();if(!text||from===to||!cats.some(c=>c[0]===to))return;const r=effectiveReport(p),src=bulletParse(r[from]||''),i=src.indexOf(text);if(i<0)return;src.splice(i,1);r[from]=src.map(t=>'\u2022 '+t).join('\n');r[to]=bulletParse(r[to]||'').concat([text]).map(t=>'\u2022 '+t).join('\n');busyStatus='Moved to '+cats.find(c=>c[0]===to)[1]+'.';saveRec(p,{report:JSON.stringify(r)}).then(()=>refreshMarks()).catch(()=>{});renderScouting(true);}
+ function moveNote(from,text,to){text=String(text||'').trim();if(!text||from===to||!cats.some(c=>c[0]===to))return;const r=effectiveReport(p),src=bulletParse(r[from]||''),i=src.indexOf(text);if(i<0)return;src.splice(i,1);r[from]=src.map(t=>'\u2022 '+t).join('\n');r[to]=bulletParse(r[to]||'').concat([text]).map(t=>'\u2022 '+t).join('\n');busyStatus='Moved to '+cats.find(c=>c[0]===to)[1]+'.';queueNoteSave(p,r);refreshMarks();renderScouting(true);}
  window.__mxMove=(to)=>{const row=document.activeElement?.closest?.('#liveBullets .bl-item');if(!row)return false;moveNote(row.closest('[data-note-section]').dataset.noteSection,row.querySelector('.bl-txt').textContent,to);return true;};
  function closeMoveMenu(){document.querySelector('.mx-movemenu')?.remove();}
  function decorate(list,field){list.querySelectorAll('.bl-item').forEach(row=>{if(row.querySelector('.mx-move'))return;const b=document.createElement('button');b.type='button';b.className='mx-move';b.title='Move to another category';b.setAttribute('aria-label','Move note to another category');b.textContent='\u21c4';
@@ -161,8 +188,8 @@ function wireNotebook(p,rep){
   const list=document.createElement('div');section.append(list);host.append(section);
   if(!editable()){list.innerHTML='<ul class="mx-readonly">'+bulletParse(rep[field]||'').map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>';continue;}
   let editor=makeBulletList(list,rep[field]||'','Write an observation…',()=>{/* An editor that has been redrawn away must never write its stale rows back. */if(!list.isConnected)return;if(SX?.active()&&chosen!==p.id){chosen=p.id;SX.select(p,p._liveClub);}const r=effectiveReport(p);r[field]=editor.serialize();
-   if(r._workflow?.noteTimes){r._workflow={...r._workflow};delete r._workflow.noteTimes;}counts();
-   saveRec(p,{report:JSON.stringify(r)}).then(ok=>{counts();refreshMarks();const st=document.querySelector('#liveStatus');if(st)st.textContent=ok===false?'Saved locally; cloud sync failed.':'✓ Saved to player profile';}).catch(()=>{const st=document.querySelector('#liveStatus');if(st)st.textContent='Could not sync changes.'});});
+   if(r._workflow?.noteTimes){r._workflow={...r._workflow};delete r._workflow.noteTimes;}queueNoteSave(p,r);
+   counts();refreshMarks();});
   const addRow=list.querySelector('.bl-addrow');list.prepend(addRow);const addButton=addRow.querySelector('button');addButton.textContent='+  Add note';addButton.dataset.addNote=field;
   addButton.onclick=()=>{const ul=list.querySelector('.bl-ul');[...ul.children].slice(0,-1).forEach(li=>{if(!li.querySelector('.bl-txt').textContent.trim())li.remove();});const row=ul.lastElementChild;ul.prepend(row);row.querySelector('.bl-txt')?.focus();row.scrollIntoView({block:'nearest'});};
   decorate(list,field);
