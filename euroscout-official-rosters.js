@@ -1,5 +1,11 @@
 (function(){
-'use strict';const data=window.EUROSCOUT_OFFICIAL_ROSTERS;if(!data)return;const byId=new Map(data.roster.flatMap(r=>r.ids.map(id=>[id,r])));
+'use strict';const data=window.EUROSCOUT_OFFICIAL_ROSTERS;if(!data)return;
+data.players=data.players||[];data.roster=data.roster||[];data.teams=data.teams||[];
+const jonasSource='https://zalgiris.lt/komandos/kauno-zalgiris';
+if(!data.teams.some(t=>t.id==='zalgiris-2026'))data.teams.push({id:'zalgiris-2026',name:'Žalgiris Kaunas',key:'euroleague|ZAL',source:jonasSource,code:'ZAL',country:'Lithuania',aliases:['Zalgiris Kaunas','Kauno Žalgiris']});
+if(!data.roster.some(r=>r.ids?.includes('nba-287')||searchFold(r.name)==='jonas valanciunas'))data.roster.push({id:'zalgiris-jonas-valanciunas',ids:['zalgiris-jonas-valanciunas','nba-287'],name:'Jonas Valančiūnas',teamId:'zalgiris-2026',teamName:'Žalgiris Kaunas',league:'euroleague',born:1992,dob:'1992-05-06',height:211,weight:120,number:'17',img:'https://cdn.nba.com/headshots/nba/latest/1040x760/202685.png',source:jonasSource,profile:jonasSource,existing:true});
+if(!data.players.some(p=>p.id==='zalgiris-jonas-valanciunas'))data.players.push({id:'zalgiris-jonas-valanciunas',code:'202685',name:'Jonas Valančiūnas',league:'euroleague',team:'ZAL',teamName:'Žalgiris Kaunas',born:1992,dob:'1992-05-06',height:211,weight:120,country:'Lithuania',pos:'Center',role:'Big',jersey:'17',img:'https://cdn.nba.com/headshots/nba/latest/1040x760/202685.png',_rosterOnly:true,_strictIdentity:true,qualified:false,g:null,gameLog:[],pct:{},z:{},arch:[]});
+const byId=new Map(data.roster.flatMap(r=>r.ids.map(id=>[id,r])));
 function current(p){return p&&(byId.get(p.id)||(p._grp||[]).map(x=>byId.get(x.id)).find(Boolean))||null;}
 function key(p){const r=current(p);return r?canonKey(data.teams.find(t=>t.id===r.teamId).key):null;}
 function link(uni){for(const r of data.roster)for(let i=1;i<r.ids.length;i++)uni(r.ids[0],r.ids[i]);}
