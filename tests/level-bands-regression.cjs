@@ -16,4 +16,10 @@ assert.equal(bandIndexFromGrade(9.5),5,'exceptional grade reaches NBA');
 
 const matchup=fs.readFileSync('euroscout-live-notes.js','utf8');
 assert(matchup.includes("LEVEL_BANDS.map((_,i)=>'<i class=\"'"),'matchup must render one segment per level');
+const optionSearch=fs.readFileSync('euroscout-option-search.js','utf8');
+for(const selector of ['#mxLevel','#esLevel','#eProj','.es-blueprint-level','.es-level-picker']){
+ assert(optionSearch.includes(selector),`${selector} must remain a native dropdown`);
+}
+const ui=fs.readFileSync('euroscout-ui.js','utf8');
+assert(ui.includes("LEVEL_BANDS.map((name,i)=>({name,i})).reverse()"),'profile levels must be ordered highest first');
 console.log('level band regression checks passed');

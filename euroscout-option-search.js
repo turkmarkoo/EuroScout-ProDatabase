@@ -14,7 +14,7 @@ function leagueLabel(o){
 }
 
 let current=null;
-function eligible(s){return s instanceof HTMLSelectElement&&!s.disabled&&!s.multiple&&s.size<=1&&(s.options.length>=7||/team|club|agent|agency|league|country|arch|role|position/i.test(s.id));}
+function eligible(s){return s instanceof HTMLSelectElement&&!s.matches('#mxLevel,#esLevel,#eProj,.es-blueprint-level,.es-level-picker')&&!s.disabled&&!s.multiple&&s.size<=1&&(s.options.length>=7||/team|club|agent|agency|league|country|arch|role|position/i.test(s.id));}
 function open(s,initial=''){
  if(current)current.close();
  const restore=document.activeElement,overlay=document.createElement('div');overlay.className='es-option-overlay';
