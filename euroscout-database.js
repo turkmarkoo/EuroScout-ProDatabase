@@ -5,12 +5,56 @@
   const fields=['player','pos','height','age','nationality','club','competition','games','pts','reb','ast','pir','grade'];
   const labels={player:'Player',pos:'Pos',height:'HT',age:'Age',nationality:'Nationality',club:'Club',competition:'Competition',games:'GP',pts:'PTS',reb:'REB',ast:'AST',pir:'PIR',grade:'Grade'};
   const FILTER_VISIBILITY_KEY='euroscout:dbFiltersCollapsed:v1';
+  const SEARCH_RESULT_LIMIT=160;
+  const searchIndex=new Map();
+  let searchGeneration=0;
   let filtersCollapsed=false;
   try{filtersCollapsed=localStorage.getItem(FILTER_VISIBILITY_KEY)==='1';}catch(e){}
   function visible(){const saved=STATE.scout.dbColumns;return Array.isArray(saved)?saved.filter(key=>fields.includes(key)):fields;}
   function photo(p){const img=photoOf(p);return img?'<img src="'+escape(img)+'" loading="lazy" alt="" onerror="this.remove()">':escape(initials(p.name));}
   function club(p){return esCurrentRosterProfile(p);}
   function playerLeague(p){const current=club(p);return current.leagues.join(', ')||leagueOf(p)?.meta?.name||'—';}
+  function searchText(p){
+    const id=gid(p),notes=noteText(p),key=[p.name,p._seasonClub,p.teamName,p.country,notes].join('\u0000');
+    const cached=searchIndex.get(id);if(cached?.key===key)return cached.text;
+    const text=searchFold([p.name,p._seasonClub||p.teamName||'',countryLabel(p.country)||p.country||'',notes].join(' '));
+    searchIndex.set(id,{key,text});return text;
+  }
+  function bindSearchRows(root){
+    root.querySelectorAll('.es-db-table tbody tr').forEach(row=>{row.onclick=e=>{if(e.target.closest('button,input')){if(e.target.closest('.eststar'))toggleTag(row.dataset.id,WATCH_TAG).then(renderScout);return;}openProfile(row.dataset.id);};});
+    root.querySelectorAll('.es-db-card').forEach(card=>{card.onclick=e=>{if(e.target.closest('.cardwatch')){e.stopPropagation();toggleTag(card.dataset.id,WATCH_TAG).then(renderScout);return;}if(e.target.closest('button'))return;openProfile(card.dataset.id);};});
+  }
+  function paintSearchResults(wrap,s,pool){
+    s._displayPool=pool;
+    const main=wrap.querySelector('.scoutmain'),oldStatus=main?.querySelector('.es-db-search-status');
+    oldStatus?.remove();main?.querySelector('.es-db-loadmore')?.remove();main?.querySelector('.empty')?.remove();
+    if(s.view==='table'){
+      const body=main?.querySelector('.es-db-table tbody');if(body)body.innerHTML=tableRows(pool.slice(0,SEARCH_RESULT_LIMIT),0);
+    }else{
+      const board=main?.querySelector('.board');if(board)board.innerHTML=pool.slice(0,SEARCH_RESULT_LIMIT).map(scoutCard).join('');
+    }
+    if(main){
+      const anchor=s.view==='table'?main.querySelector('.estwrap'):main.querySelector('.board');
+      if(!pool.length)anchor?.insertAdjacentHTML('afterend','<div class="empty">No players match. Try another name, club, country or note.</div>');
+      else if(pool.length>SEARCH_RESULT_LIMIT)anchor?.insertAdjacentHTML('afterend','<div class="es-db-search-status es-db-loadmore" role="status">Showing the first '+SEARCH_RESULT_LIMIT.toLocaleString()+' of '+pool.length.toLocaleString()+' matches · keep typing to narrow the results</div>');
+      bindSearchRows(main);
+    }
+    const apply=wrap.querySelector('.es-db-apply');if(apply)apply.textContent='Apply filters · '+pool.length.toLocaleString()+' players';
+  }
+  function scheduleSearchResults(wrap,s){
+    const generation=++searchGeneration,needle=searchFold(String(s.q||'').trim()),base=s._dbSearchBase||s._displayPool||[];
+    if(!needle){renderScout();return;}
+    const input=wrap.querySelector('#esDbSearch');input?.setAttribute('aria-busy','true');
+    const matches=[];let index=0;
+    const step=()=>{
+      if(generation!==searchGeneration||!wrap.isConnected)return;
+      const started=performance.now();
+      while(index<base.length&&performance.now()-started<7){const p=base[index++];if(searchText(p).includes(needle))matches.push(p);}
+      if(index<base.length){setTimeout(step,0);return;}
+      input?.removeAttribute('aria-busy');paintSearchResults(wrap,s,matches);
+    };
+    step();
+  }
   function tableRows(pool,offset){return pool.map((p,i)=>{
     const current=club(p),grade=statGradeOverall(p),watched=isWatched(p),shown=new Set(visible());
     const cell=(key,value,cls='')=>shown.has(key)?'<td data-col="'+key+'" class="'+cls+'">'+value+'</td>':'';
@@ -34,8 +78,12 @@
   renderScout=function(){
     // Free Agents owns delegated handlers on #app. Drop them before rebuilding the database.
     const app=document.getElementById('app');if(app){app.onclick=null;app.onchange=null;app.oninput=null;app.onkeydown=null;app.removeAttribute('data-view');}
-    const position=STATE.scout.dbPos;STATE.scout.dbPos=({PG:'Guard',SG:'Guard',SF:'Forward',PF:'Big',C:'Big'})[position]||position;
-    document.body.classList.remove('fa2-active');document.body.classList.add('es-database-page');oldRender();if(STATE.scout.simRef)return;enhance();
+    const s=STATE.scout,position=s.dbPos;s.dbPos=({PG:'Guard',SG:'Guard',SF:'Forward',PF:'Big',C:'Big'})[position]||position;
+    const query=s.q||'';if(query)s.q='';
+    document.body.classList.remove('fa2-active');document.body.classList.add('es-database-page');oldRender();
+    s._dbSearchBase=(s._displayPool||[]).slice();s.q=query;
+    if(s.simRef)return;enhance();
+    if(query){const wrap=$('#app .scoutwrap');if(wrap)scheduleSearchResults(wrap,s);}
   };
   const oldRenderAll=render;
   let wasDatabase=false,previousNavCollapsed=false;
@@ -55,7 +103,7 @@
     s.railHidden=false;wrap.classList.remove('rail-hidden');wrap.classList.toggle('es-db-rail-hidden',filtersCollapsed);
     rail.id='esDbFilterRail';
     rail.replaceChildren();const title=document.createElement('div');title.className='es-db-filter-head';title.innerHTML='<strong>Filters</strong>';const reset=document.createElement('button');reset.type='button';reset.textContent='↻ Reset all';reset.onclick=clear;title.append(reset);rail.append(title);
-    const search=document.createElement('input');search.id='esDbSearch';search.placeholder='Search players, clubs, countries…';search.value=s.q||'';search.setAttribute('aria-label','Search player database');rail.append(search);search.oninput=()=>{s.q=search.value;const pos=search.selectionStart;clearTimeout(window.esDbTyping);window.esDbTyping=setTimeout(()=>{renderScout();const next=$('#esDbSearch');next?.focus();next?.setSelectionRange(pos,pos);},180);};
+    const search=document.createElement('input');search.id='esDbSearch';search.placeholder='Search players, clubs, countries…';search.value=s.q||'';search.setAttribute('aria-label','Search player database');rail.append(search);search.oninput=()=>{s.q=search.value;clearTimeout(window.esDbTyping);window.esDbTyping=setTimeout(()=>{if(STATE.view!=='scout'||!search.isConnected)return;scheduleSearchResults(wrap,s);},80);};
     const position=document.createElement('div');position.className='es-db-filter';position.innerHTML='<span>Position</span>';const pills=document.createElement('div');pills.className='es-db-position';[['','All'],['Guard','Guard'],['Forward','Forward'],['Big','Big']].forEach(([key,label])=>{const b=document.createElement('button');b.textContent=label;b.type='button';b.classList.toggle('on',(s.dbPos||'')===key);b.onclick=()=>{s.dbPos=key;renderScout();};pills.append(b);});position.append(pills);rail.append(position);
     rail.append(select('Level',s.level??'',[['','All levels'],...LEVEL_BANDS.map((v,i)=>[i,v])],v=>{s.level=v===''?null:Number(v);renderScout();}));
     const leagues=STATE.data.leagues.filter(l=>!l.meta.teamsOnly&&!isOtherLeague(l.meta));const selected=[...s.leagues][0]||'';rail.append(select('Competition',s.competition||'all',[['all','All competitions'],['bclq','BCL Qualifiers · 2026/27']],v=>{s.competition=v;renderScout();}));

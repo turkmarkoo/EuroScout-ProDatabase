@@ -2,6 +2,7 @@ const fs=require('fs'),assert=require('assert/strict');
 
 const html=fs.readFileSync('index.html','utf8');
 const notes=fs.readFileSync('euroscout-live-notes.js','utf8');
+const database=fs.readFileSync('euroscout-database.js','utf8');
 
 assert(!/focusin[^\n]+loadExtraLeagues/.test(html),'focusing search must not load every extra league');
 assert(!/backgroundLeagues\(\)/.test(notes),'Scouting Matchup must not load NBA/NCAA packs in the background');
@@ -22,5 +23,11 @@ assert.match(notes,/setTimeout\(flushNoteSaves,1200\)/,
   'live note cloud writes must be batched after typing settles');
 assert.match(notes,/queueNoteSave\(p,r\);[\s\S]{0,80}counts\(\);refreshMarks\(\)/,
   'the bullet editor must queue a batched save rather than persist every keystroke');
+assert.match(database,/search\.oninput=[^\n]+scheduleSearchResults\(wrap,s\)/,
+  'player database typing must update results without rebuilding the whole page');
+assert.doesNotMatch(database,/search\.oninput=[^\n]+renderScout\(\)/,
+  'player database typing must not synchronously rebuild all filters and counts');
+assert.match(database,/performance\.now\(\)-started<7/,
+  'large player searches must yield between short filtering slices');
 
 console.log('Runtime performance guards passed.');
