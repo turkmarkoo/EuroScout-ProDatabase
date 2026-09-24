@@ -8,8 +8,11 @@ const SEASON_START=2026, MAX=3;
 /* Leagues outside Europe. A player whose only 2025/26 lines are here has not played in Europe yet. */
 const COLLEGE=new Set(['ncaam','ncaa','naia','juco']);
 const NOT_EUROPE=new Set(['nba','gleague','cebl','bsn','cba','jbl','kbl','pba','arg','nbb','nbl','sl',...COLLEGE]);
-const lines=p=>{const g=gid(p);return allPlayersEvery().filter(x=>gid(x)===g&&x.league!=='sl');};
-function next(p){try{return effective26keys(p,next26Get(),next26bGet()).map(canonKey).filter(k=>k&&!String(k).startsWith('__'));}catch(e){return [];}}
+/* Only completed 2025/26 stat lines describe a player's origin. Current-season
+   roster-only rows are also stored in STATE.data, but treating those as history
+   makes every new European signing look as if he already played in Europe. */
+const lines=p=>{const g=gid(p);return allPlayersEvery().filter(x=>gid(x)===g&&x.league!=='sl'&&!x._rosterOnly);};
+function next(p){try{return [...new Set(effective26keys(p,next26Get(),next26bGet()).concat(p._liveClub||[]).map(canonKey).filter(k=>k&&!String(k).startsWith('__')))];}catch(e){return p._liveClub?[canonKey(p._liveClub)]:[];}}
 const isEuropeClub=k=>!NOT_EUROPE.has(String(k).split('|')[0]);
 /* Where a 2026/27 signing came from, read off the transfer list: most college and
    overseas players have no stat line here, but their transfer names the last club. */
@@ -25,14 +28,16 @@ function index(){
 }
 function origin(p){
  index();const hits=(byName.get(nameKey(p.name))||[]).filter(t=>!t.birth_year||!p.born||Number(t.birth_year)===Number(p.born));
- for(const t of hits){const f=fold(t.from);if(origins.college.has(f))return 'college';if(origins.usPro.has(f)||origins.other.has(f))return 'overseas';}
+ for(const t of hits){const f=fold(t.from);if(origins.college.has(f))return 'college';if(origins.usPro.has(f))return 'us-pro';if(origins.other.has(f))return 'outside-europe';}
  return '';
 }
 const RULES=[
- {key:'college',label:'Coming out of NCAA',title:'Played college basketball in 2025/26 and signed in Europe for 2026/27',
-  test:(p,c)=>!c.europe&&(c.origin==='college'||(c.lines.length>0&&c.lines.every(x=>COLLEGE.has(x.league))&&c.next.some(isEuropeClub)))},
- {key:'rookie',label:'EU rookie',title:'Arrives from the NBA, G League or another league outside Europe, with no European club in 2025/26. Limited to players 26 or younger — the database cannot see earlier European seasons.',
-  test:(p,c)=>{if(c.europe||c.origin==='college')return false;const born=Number(p.born)||0;if(born&&born<SEASON_START-26)return false;const overseasLine=c.lines.length>0&&c.lines.every(x=>NOT_EUROPE.has(x.league))&&!c.lines.every(x=>COLLEGE.has(x.league))&&c.next.some(isEuropeClub);return c.origin==='overseas'||overseasLine;}},
+ {key:'uspro',label:'Coming from NBA/G League',title:'Played in the NBA or G League in 2025/26 and joined a European club for 2026/27',
+  test:(p,c)=>!c.europe&&c.toEurope&&(c.origin==='us-pro'||c.lines.some(x=>x.league==='nba'||x.league==='gleague'))},
+ {key:'college',label:'Coming from NCAA',title:'Played college basketball in 2025/26 and signed in Europe for 2026/27',
+  test:(p,c)=>!c.europe&&c.toEurope&&(c.origin==='college'||(c.lines.length>0&&c.lines.every(x=>COLLEGE.has(x.league))))},
+ {key:'rookie',label:'Rookie in Europe',title:'Arrives from college, the NBA, G League or another league outside Europe, with no European club in the 2025/26 data. Limited to players 26 or younger because earlier European seasons are not yet available.',
+  test:(p,c)=>{if(c.europe||!c.toEurope)return false;const born=Number(p.born)||0;if(born&&born<SEASON_START-26)return false;const outsideLine=c.lines.length>0&&c.lines.every(x=>NOT_EUROPE.has(x.league));return !!c.origin||outsideLine;}},
  {key:'newteam',label:'New team',title:'Signed for 2026/27 with a club he did not play for in 2025/26',
   test:(p,c)=>c.next.length>0&&c.lines.some(x=>!NOT_EUROPE.has(x.league))&&!c.next.some(k=>c.current.has(k))},
  {key:'breakout',label:'Breakout season',title:'Production jumped compared with the previous season',
@@ -46,7 +51,7 @@ const RULES=[
 ];
 function of(p){
  if(!p)return [];
- let c;try{const ls=lines(p);c={lines:ls,next:next(p),current:new Set(ls.map(x=>canonKey(x.league+'|'+x.team))),status:careerStatus(p),origin:origin(p),europe:ls.some(x=>!NOT_EUROPE.has(x.league))};}catch(e){return [];}
+ let c;try{const ls=lines(p),nx=next(p);c={lines:ls,next:nx,current:new Set(ls.map(x=>canonKey(x.league+'|'+x.team))),status:careerStatus(p),origin:origin(p),europe:ls.some(x=>!NOT_EUROPE.has(x.league)),toEurope:nx.some(isEuropeClub)};}catch(e){return [];}
  const out=[];for(const r of RULES){try{if(r.test(p,c))out.push({key:r.key,label:r.label,title:r.title});}catch(e){}if(out.length>=MAX)break;}
  return out;
 }
