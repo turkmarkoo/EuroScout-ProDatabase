@@ -1,7 +1,7 @@
 /* Shared market intelligence. Never stored in public datasets or mixed with statistical grades. */
 (function(){'use strict';
 const KEY='euroscout:market:v1';
-const enums={availability:['Free Agent','Likely Available','Expiring Contract','Potentially Available','Under Contract','Unknown'],medical:['Healthy','Minor Injury','Out','Rehab','Returning','Unknown'],nbaStatus:['Free Agent','Waived','Training Camp','Exhibit 10','Two-Way','G League','Draft Rights','Unknown'],interest:['Priority','Monitoring','Discussing','Too expensive','Not interested'],confidence:['Confirmed','Reported','Unverified']};
+const enums={availability:['Free Agent','Likely Available','Expiring Contract','Potentially Available','Under Contract','Retired','Unknown'],medical:['Healthy','Minor Injury','Out','Rehab','Returning','Unknown'],nbaStatus:['Free Agent','Waived','Training Camp','Exhibit 10','Two-Way','G League','Draft Rights','Unknown'],interest:['Priority','Monitoring','Discussing','Too expensive','Not interested'],confidence:['Confirmed','Reported','Unverified']};
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const days=(date,now=new Date())=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return null;const t=Date.parse(date+'T00:00:00Z');if(!Number.isFinite(t)||new Date(t).toISOString().slice(0,10)!==date)return null;const n=Math.floor((Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())-t)/864e5);return n<0?null:n;};
 const url=s=>{try{const u=new URL(s);return /^https?:$/.test(u.protocol)?u.href:'';}catch{return '';}};
