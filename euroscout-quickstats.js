@@ -14,6 +14,7 @@ const fmtDate=v=>{const m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})/);return
 function pctOf(p,k){
  const saved=p.pct&&p.pct[k];
  if(saved!=null)return LOWER_IS_BETTER.has(k)?100-saved:saved;
+ if(p._verifiedExternal)return null;
  // Only compare qualified players in the same competition and season. A
  // qualifier's one-game line is not a trustworthy percentile distribution.
  if(p.qualified===false||Number(p.g)<5||Number(p.mpg)<10||p[k]==null||p[k]===''||!Number.isFinite(Number(p[k])))return null;
@@ -57,7 +58,18 @@ const PAGES={
 };
 
 function linesOf(p){const g=gid(p);return allPlayersEvery().filter(x=>gid(x)===g&&x.league!=='sl').sort((a,b)=>(b.min||0)-(a.min||0));}
-function seasonOf(p){const value=p.season||leagueOf(p)?.meta?.season||p._seasonLabel||'';const match=String(value).match(/(20\d{2})\s*[/–-]\s*((?:20)?\d{2})/);return match?match[1]+'/'+match[2].slice(-2):'Season unknown';}
+const seasonLabel=value=>{const match=String(value||'').match(/(20\d{2})\s*[/–-]\s*((?:20)?\d{2})/);return match?match[1]+'/'+match[2].slice(-2):'';};
+function currentRosterOnly(p){
+ const scope=[p.statsScope,p._rosterSeason,p._seasonLabel].map(seasonLabel).find(Boolean);
+ return scope==='2026/27'||p._rosterOnly||/^bclq-/.test(String(p.id||''))||
+  ((!p.g||Number(p.g)===0)&&seasonLabel(p.currentRosterSeason||p._officialRoster?.season)==='2026/27');
+}
+function seasonOf(p){
+ const scope=seasonLabel(p.statsScope);
+ if(scope)return scope;
+ if(currentRosterOnly(p))return seasonLabel(p.currentRosterSeason||p._officialRoster?.season||p._seasonLabel||p.season)||'2026/27';
+ return seasonLabel(p.season||p._seasonLabel||leagueOf(p)?.meta?.statsSeason||leagueOf(p)?.meta?.season)||'Season unknown';
+}
 function paint(){
  const host=document.getElementById('qsPanel');if(!host||!current)return;
  const all=linesOf(current),seasons=[...new Set(all.map(seasonOf))].sort((a,b)=>(parseInt(b,10)||0)-(parseInt(a,10)||0)||b.localeCompare(a));
@@ -82,5 +94,5 @@ function open(p){
 function close(){const m=document.getElementById('qsMask');if(m)m.remove();current=null;}
 const isOpen=()=>!!document.getElementById('qsMask');
 document.addEventListener('keydown',e=>{if(!isOpen()||document.getElementById('mtscMask'))return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return;}if(/^[1-8]$/.test(e.key)&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();tab=TABS[+e.key-1][0];paint();}},true);
-window.ESQuickStats={open,close,isOpen,follow(p){if(isOpen()&&p){current=player(p.id)||p;line=null;seasonChoice='';percentilePools.clear();paint();}}};
+window.ESQuickStats={open,close,isOpen,seasonOf,follow(p){if(isOpen()&&p){current=player(p.id)||p;line=null;seasonChoice='';percentilePools.clear();paint();}}};
 })();
