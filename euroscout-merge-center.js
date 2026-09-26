@@ -62,14 +62,38 @@
   let automaticRunning=false, automaticAttempted='',automaticMerged=0,automaticFailure='';
   const AUTO_OPTIONS={reports:true,notes:true,statistics:true,timeline:true,watchlist:true,review:true,external:true,images:true};
 
+  // Build comparisons from the same canonical record and current-season assignment
+  // used by Player Profile. Imported statistical rows remain available as history,
+  // but their historical teamName/league fields are never shown as the current club.
+  function canonicalPlayerEntity(id, fallback) {
+    const profile=(typeof player==='function'&&player(id))||fallback||{};
+    const group=profile._grp?.length?profile._grp:[profile];
+    let assignment=null,club=null,currentClub='',currentLeague='';
+    try {
+      assignment=typeof effective26==='function'?effective26(profile):null;
+      if(assignment&&typeof isStatus==='function'&&isStatus(assignment))currentClub=statusLabel(assignment);
+      else if(assignment){club=typeof clubByKey==='function'?clubByKey(assignment):null;currentClub=club?.name||'';}
+      if(club)currentLeague=typeof comps2627Label==='function'?comps2627Label(club):'';
+    } catch {}
+    const external=[...new Set(group.flatMap(p=>[p._ext,p._rgm,p._proballers,p._otherLink]).filter(Boolean))].join('\n');
+    const fiba=group.map(p=>p.fibaId||p._fiba).find(Boolean)||'';
+    return {
+      id,name:profile.name||fallback?.name||'',born:profile.born||'',country:profile.country||'',
+      height:profile.height||'',position:profile.role||profile.pos||'',team:currentClub,league:currentLeague,
+      photo:(typeof photoOf==='function'?photoOf(profile):profile.photo)||'',external,fiba,player:profile,
+      report:Store.get(id)||{report:'{}',rating:0,watch:false,eye:{}},sources:{
+        profile:'Player Profile · canonical record',current:'Player Profile · 2026/27',
+        scouting:'Player Profile · saved scouting data',statistics:'Imported statistics · preserved entries'
+      }
+    };
+  }
+
   function entities(type) {
     if(entityCache[type])return entityCache[type];
     if (type === 'player') {
       const map = new Map();
       allPlayersEvery().forEach(p => { const id = gid(p); if (!map.has(id) || p.id === id) map.set(id, p); });
-      return entityCache[type]=[...map.entries()].map(([id,p]) => ({ id, name:p.name, born:p.born || '', country:p.country || '',
-        height:p.height || '', position:p.role || p.pos || '', team:p.teamName || '', league:p.league || '', photo:photoOf(p) || '',
-        external:p._ext || '', fiba:p.fibaId || p._fiba || '', player:p, report:Store.get(id) }));
+      return entityCache[type]=[...map.entries()].map(([id,p]) => canonicalPlayerEntity(id,p));
     }
     if (type === 'club') return entityCache[type]=allClubs().map(c => ({ id:c.key, name:c.name, country:c.country || '',
       competitions:(c.leagues || []).map(l => l.name).join(', '), roster:(c.teams || []).length,
@@ -240,16 +264,21 @@
     if (type === 'player') {
       const ar=reportParts(a.report), br=reportParts(b.report);
       const notes=r=>['nAth','nOff','nDef','nIntel','nProj'].map(k=>r[k]).filter(Boolean).join(' · ');
+      const ap=a.sources||{},bp=b.sources||{};
       const fields = [
-        ['Photo',a.photo,b.photo,'image'],['Name',a.name,b.name],['Birth year',a.born,b.born],
-        ['Nationality',a.country,b.country],['Height',a.height&&a.height+' cm',b.height&&b.height+' cm'],
-        ['Club',a.team,b.team],['League',a.league,b.league],
-        ['Agent',a.player.agent,b.player.agent],['Agency',a.player.agency,b.player.agency],
-        ['External links',a.external,b.external],['Reports',ar.overall||('Rating '+(a.report.rating||0)),br.overall||('Rating '+(b.report.rating||0))],
-        ['Notes',notes(ar),notes(br)],['Statistics',(a.player._grp||[a.player]).length+' entries',(b.player._grp||[b.player]).length+' entries'],
-        ['Timeline',JSON.stringify({eye:a.report.eye||{},workflow:ar._workflow||{}}),JSON.stringify({eye:b.report.eye||{},workflow:br._workflow||{}})],
-        ['Watchlist',a.report.watch?'Yes':'No',b.report.watch?'Yes':'No'],
-        ['Review queue',ar._workflow?.review?.status||'—',br._workflow?.review?.status||'—']
+        ['Photo',a.photo,b.photo,'image',ap.profile,bp.profile],['Name',a.name,b.name,null,ap.profile,bp.profile],
+        ['Birth year',a.born,b.born,null,ap.profile,bp.profile],['Nationality',a.country,b.country,null,ap.profile,bp.profile],
+        ['Height',a.height&&a.height+' cm',b.height&&b.height+' cm',null,ap.profile,bp.profile],
+        ['Current season','2026/27','2026/27',null,ap.current,bp.current],
+        ['Current club',a.team,b.team,null,ap.current,bp.current],['Current league',a.league,b.league,null,ap.current,bp.current],
+        ['Agent',a.player.agent,b.player.agent,null,ap.profile,bp.profile],['Agency',a.player.agency,b.player.agency,null,ap.profile,bp.profile],
+        ['External links',a.external,b.external,null,ap.profile,bp.profile],
+        ['Reports',ar.overall||('Rating '+(a.report.rating||0)),br.overall||('Rating '+(b.report.rating||0)),null,ap.scouting,bp.scouting],
+        ['Notes',notes(ar),notes(br),null,ap.scouting,bp.scouting],
+        ['Statistics',(a.player._grp||[a.player]).length+' entries',(b.player._grp||[b.player]).length+' entries',null,ap.statistics,bp.statistics],
+        ['Timeline',JSON.stringify({eye:a.report.eye||{},workflow:ar._workflow||{}}),JSON.stringify({eye:b.report.eye||{},workflow:br._workflow||{}}),null,ap.scouting,bp.scouting],
+        ['Watchlist',a.report.watch?'Yes':'No',b.report.watch?'Yes':'No',null,ap.scouting,bp.scouting],
+        ['Review queue',ar._workflow?.review?.status||'—',br._workflow?.review?.status||'—',null,ap.scouting,bp.scouting]
       ]; return fields;
     }
     if (type === 'club') return [['Club',a.name,b.name],['Country',a.country,b.country],
@@ -263,6 +292,9 @@
   function imageOrText(value, kind) {
     if (kind !== 'image') return esc(val(value));
     return value ? '<img class="mc-thumb" src="'+esc(value)+'" alt="">' : '—';
+  }
+  function comparisonCell(value,kind,source){
+    return imageOrText(value,kind)+(source?'<small class="mc-source">'+esc(source)+'</small>':'');
   }
   function saveState(next) {
     next.merges.forEach(m=>{if(Date.now()-Date.parse(m.at)>WINDOW){delete m.before;delete m.after;}});
@@ -495,17 +527,19 @@
     view.options ||= Object.fromEntries(['reports','notes','statistics','timeline','watchlist','review','external','images'].map(x=>[x,true]));
     const warnings=[];
     if (candidate.type==='player') {
-      for (const [label,key] of [['Birth year','born'],['Nationality','country'],['Current club','team']])
-        if (candidate.a[key]&&candidate.b[key]&&fold(candidate.a[key])!==fold(candidate.b[key])) warnings.push(label+' mismatch');
+      for (const [label,key,source] of [['Birth year','born','profile'],['Nationality','country','profile'],['Height','height','profile'],['Current club','team','current'],['Current league','league','current']])
+        if (candidate.a[key]&&candidate.b[key]&&fold(candidate.a[key])!==fold(candidate.b[key])) warnings.push({label,key,source});
     }
+    const warningHTML=warnings.length?'<div class="mc-warning"><strong>⚠ Review profile differences</strong>'+warnings.map(item=>
+      '<div class="mc-warning-row"><b>'+esc(item.label)+' differs</b><span>'+esc(candidate.a.name)+': '+esc(val(candidate.a[item.key]))+'<small>'+esc(candidate.a.sources?.[item.source]||'Player Profile')+'</small></span><span>'+esc(candidate.b.name)+': '+esc(val(candidate.b[item.key]))+'<small>'+esc(candidate.b.sources?.[item.source]||'Player Profile')+'</small></span></div>').join('')+'</div>':'';
     app.innerHTML='<div class="mc-page"><button class="es-button" id="mcBack">← Back to suggestions</button>'+
       '<div class="mc-head"><div><h1>Review possible '+esc(candidate.type)+' duplicate</h1><p>Compare both records before choosing the survivor.</p></div></div>'+
-      (warnings.length?'<div class="mc-warning">⚠ '+warnings.map(esc).join(' · ')+'</div>':'')+
+      warningHTML+
       '<div class="mc-compare"><div class="mc-record"><h2>'+esc(candidate.a.name)+'</h2><small>'+esc(candidate.a.id)+'</small></div>'+
       '<div class="mc-record"><h2>'+esc(candidate.b.name)+'</h2><small>'+esc(candidate.b.id)+'</small></div></div>'+
-      '<div class="mc-fields">'+fields.map(([label,left,right,kind])=>{
+      '<div class="mc-fields">'+fields.map(([label,left,right,kind,leftSource,rightSource])=>{
         const differs=val(left)!==val(right);
-        return '<div class="mc-field'+(differs?' differs':'')+'"><strong>'+esc(label)+'</strong><span>'+imageOrText(left,kind)+'</span><span>'+imageOrText(right,kind)+'</span></div>';
+        return '<div class="mc-field'+(differs?' differs':'')+'"><strong>'+esc(label)+'</strong><span>'+comparisonCell(left,kind,leftSource)+'</span><span>'+comparisonCell(right,kind,rightSource)+'</span></div>';
       }).join('')+'</div><section class="mc-controls"><h2>Which record survives?</h2><div class="mc-choice">'+
       [candidate.a,candidate.b].map(x=>'<label><input type="radio" name="mcSurvivor" value="'+esc(x.id)+'"'+(view.survivor===x.id?' checked':'')+'> '+esc(x.name)+' <small>'+esc(x.id)+'</small></label>').join('')+'</div>'+
       (candidate.type==='player'?'<h2>Information to combine</h2><div class="mc-options">'+
@@ -594,7 +628,7 @@
     EuroScoutAgencyResearch.agentsOf=p=>[...new Set(original(p).map(canonicalAgent))];
   }
   function openPair(id) { view.type='player'; view.pair=id; view.manualCandidate=null; goView('mergecenter'); }
-  window.EuroScoutMergeCenter={canonicalPlayer,canonicalClub,canonicalAgent,activeClubMerges,hasManualGroup,detect,merge,undo,resolveImport,previewImport,playerConfidence,automaticPlayerMatch,automaticPlan,autoMergeBatch,openPair};
+  window.EuroScoutMergeCenter={canonicalPlayer,canonicalPlayerEntity,canonicalClub,canonicalAgent,activeClubMerges,hasManualGroup,detect,merge,undo,resolveImport,previewImport,playerConfidence,automaticPlayerMatch,automaticPlan,autoMergeBatch,openPair};
   window.renderMergeCenter=renderMergeCenter;
 })();
 
