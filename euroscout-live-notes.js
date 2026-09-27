@@ -13,6 +13,9 @@ const filters={a:{q:'',pos:''},b:{q:'',pos:''}};
 let clubIndex=null,rosters=new Map();
 const pendingNoteSaves=new Map();
 let noteSaveTimer=null,noteSaveRunning=false;
+const NOTE_RECOVERY_KEY='euroscout:pending-notes:v1';
+let noteRecovery={};try{noteRecovery=JSON.parse(localStorage.getItem(NOTE_RECOVERY_KEY)||'{}')||{};}catch{noteRecovery={};}
+function writeNoteRecovery(){try{if(Object.keys(noteRecovery).length)localStorage.setItem(NOTE_RECOVERY_KEY,JSON.stringify(noteRecovery));else localStorage.removeItem(NOTE_RECOVERY_KEY);}catch(error){console.warn('Matchup note recovery could not be updated:',error);}}
 
 const fold=t=>String(t||'').replace(/[đĐ]/g,'dj').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const author=()=>SX?SX.me():(window.ESAccess?.user?.email||'');
@@ -48,11 +51,11 @@ const workspace=()=>window.ESWorkspace?ESWorkspace.visible():editable();
 function noteStatus(text){const el=document.querySelector('#liveStatus');if(el)el.textContent=text;}
 function queueNoteSave(p,report){
  if(!editable())return;
- const id=gid(p),next={...report,_notesUpdated:new Date().toISOString()},payload=JSON.stringify(next);
+ const id=gid(p),at=new Date().toISOString(),next={...report,_notesUpdated:at},payload=JSON.stringify(next);
  /* Make the next player switch/read instant. Cloud persistence is intentionally
     batched so a live typist never serializes the full protected state per key. */
  Store.stage(id,{report:payload});
- pendingNoteSaves.set(id,{p,payload});
+ pendingNoteSaves.set(id,{p,payload,at});noteRecovery[id]={id,pid:p.id,payload,at};writeNoteRecovery();
  noteStatus('✓ Captured · syncing…');
  clearTimeout(noteSaveTimer);noteSaveTimer=setTimeout(flushNoteSaves,1200);
 }
@@ -61,15 +64,26 @@ async function flushNoteSaves(){
  if(noteSaveRunning||!pendingNoteSaves.size)return;
  noteSaveRunning=true;const batch=[...pendingNoteSaves.entries()];batch.forEach(([id])=>pendingNoteSaves.delete(id));
  const results=await Promise.allSettled(batch.map(([,entry])=>saveRec(entry.p,{report:entry.payload})));
- let failed=false;results.forEach((result,i)=>{if(result.status==='rejected'||result.value===false){failed=true;const [id,entry]=batch[i];if(!pendingNoteSaves.has(id))pendingNoteSaves.set(id,entry);}});
+ let failed=false;results.forEach((result,i)=>{const [id,entry]=batch[i];if(result.status==='rejected'||result.value===false){failed=true;if(!pendingNoteSaves.has(id))pendingNoteSaves.set(id,entry);}else if(noteRecovery[id]?.payload===entry.payload)delete noteRecovery[id];});writeNoteRecovery();
  noteSaveRunning=false;
  if(failed)noteStatus('Captured · cloud sync pending.');
  else if(!pendingNoteSaves.size)noteStatus('✓ Saved to player profile');
  /* A failed network request stays staged and retries on the next edit or when
     the page is hidden; do not hammer the live scouting screen in a loop. */
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushNoteSaves();});
-window.addEventListener('pagehide',flushNoteSaves);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){writeNoteRecovery();flushNoteSaves();}});
+window.addEventListener('pagehide',()=>{writeNoteRecovery();flushNoteSaves();});
+async function recoverNoteSaves(attempt=0){
+ const rows=Object.values(noteRecovery);if(!rows.length)return;
+ if(!editable()){if(attempt<15)setTimeout(()=>recoverNoteSaves(attempt+1),1000);return;}
+ for(const row of rows){
+  const current=Store.get(row.id)||{},stamp=parseReport(current.report)._notesUpdated||current.updated_at||'';
+  if(stamp&&stamp>=row.at){delete noteRecovery[row.id];continue;}
+  try{if(await Store.save(row.id,{report:row.payload})!==false)delete noteRecovery[row.id];}catch(error){console.warn('Unsynced matchup notes are still queued:',error);}
+ }
+ writeNoteRecovery();
+}
+setTimeout(recoverNoteSaves,1200);
 function choose(id,keepFocus){if(!id)return;selected=id;chosen=id;busyStatus='';renderScouting(true);if(!keepFocus)document.querySelector('.rosterRow.liveSelected')?.scrollIntoView({block:'nearest'});}
 function step(delta){const list=walkList();if(!list.length)return;if(document.activeElement?.classList.contains('rosterRow'))document.activeElement.blur();const i=list.findIndex(p=>p.id===selected);choose(list[(i<0?0:i+delta+list.length)%list.length].id);}
 function otherSide(){if(document.activeElement?.classList.contains('rosterRow'))document.activeElement.blur();const s=STATE.scouting,cur=rosterPlayers().find(p=>p.id===selected);if(!cur)return;const from=canonKey(s.a)===cur._liveClub?'a':'b',to=from==='a'?'b':'a';const mine=(liveRoster(s[from])?.players||[]).filter(p=>visible(p,from)),theirs=(liveRoster(s[to])?.players||[]).filter(p=>visible(p,to));if(!theirs.length)return;choose(theirs[Math.min(Math.max(0,mine.findIndex(p=>p.id===selected)),theirs.length-1)].id);}
