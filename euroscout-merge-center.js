@@ -296,10 +296,59 @@
   function comparisonCell(value,kind,source){
     return imageOrText(value,kind)+(source?'<small class="mc-source">'+esc(source)+'</small>':'');
   }
+  const sameValue=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+  function valueAt(root,path){
+    let value=root;
+    for(const part of path){if(value==null||!Object.hasOwn(value,part))return {exists:false,value:undefined};value=value[part];}
+    return {exists:true,value};
+  }
+  function diffValues(before,after,path=[],out=[],beforeExists=true,afterExists=true){
+    if(beforeExists&&afterExists&&sameValue(before,after))return out;
+    const beforeObject=beforeExists&&before&&typeof before==='object',afterObject=afterExists&&after&&typeof after==='object';
+    if(beforeObject&&afterObject&&Array.isArray(before)===Array.isArray(after)){
+      const keys=new Set([...Object.keys(before),...Object.keys(after)]);
+      for(const key of keys)diffValues(before[key],after[key],path.concat(key),out,Object.hasOwn(before,key),Object.hasOwn(after,key));
+      return out;
+    }
+    out.push({path,beforeExists,afterExists,before:beforeExists?before:undefined,after:afterExists?after:undefined});
+    return out;
+  }
+  function storageChanges(before,after){
+    const changed={};
+    for(const key of new Set([...Object.keys(before||{}),...Object.keys(after||{})])){
+      const left=before?.[key]??null,right=after?.[key]??null;if(left===right)continue;
+      try{changed[key]={json:true,changes:diffValues(left==null?null:JSON.parse(left),right==null?null:JSON.parse(right))};}
+      catch{changed[key]={json:false,before:left,after:right};}
+    }
+    return changed;
+  }
+  function restoreStorageChanges(changed,verify=true){
+    const restored=[];
+    for(const [key,delta] of Object.entries(changed||{})){
+      if(!delta.json){if(verify&&localStorage.getItem(key)!==delta.after)throw Error('Related data changed since the merge. Review those edits before undoing.');delta.before==null?localStorage.removeItem(key):localStorage.setItem(key,delta.before);restored.push(key);continue;}
+      const raw=localStorage.getItem(key);let value=raw==null?null:JSON.parse(raw);
+      if(verify)for(const change of delta.changes){const current=valueAt(value,change.path);if(current.exists!==change.afterExists||change.afterExists&&!sameValue(current.value,change.after))throw Error('Related data changed since the merge. Review those edits before undoing.');}
+      for(const change of delta.changes.slice().reverse()){
+        if(!change.path.length){value=change.beforeExists?change.before:null;continue;}
+        let parent=value;for(const part of change.path.slice(0,-1))parent=parent[part];const leaf=change.path.at(-1);
+        if(change.beforeExists)parent[leaf]=change.before;else if(Array.isArray(parent))parent.splice(Number(leaf),1);else delete parent[leaf];
+      }
+      value==null?localStorage.removeItem(key):localStorage.setItem(key,JSON.stringify(value));restored.push(key);
+    }
+    return restored;
+  }
+  function compactUndo(next){
+    next.merges.forEach(m=>{
+      if(m.before&&m.after&&!m.changes){const keysBefore={...m.before};delete keysBefore.record;m.changes=storageChanges(keysBefore,m.after);if(Object.hasOwn(m.before,'record'))m.recordBefore=m.before.record;delete m.before;delete m.after;}
+      if(Date.now()-Date.parse(m.at)>WINDOW){delete m.changes;delete m.recordBefore;delete m.recordAfter;delete m.before;delete m.after;}
+    });
+    next.batches.forEach(b=>{if(Date.now()-Date.parse(b.at)>WINDOW){delete b.before;delete b.after;delete b.recordsBefore;delete b.recordsAfter;}});
+    return next;
+  }
   function saveState(next) {
-    next.merges.forEach(m=>{if(Date.now()-Date.parse(m.at)>WINDOW){delete m.before;delete m.after;}});
-    next.batches.forEach(b=>{if(Date.now()-Date.parse(b.at)>WINDOW){delete b.before;delete b.after;}});
-    localStorage.setItem(KEY,JSON.stringify(next));
+    compactUndo(next);
+    try{localStorage.setItem(KEY,JSON.stringify(next));}
+    catch(error){if(error?.name==='QuotaExceededError'||/quota/i.test(error?.message||''))throw Error('The Merge Center storage is full. Refresh once to compact older undo data, then retry the merge.');throw error;}
     try { Sync.stampKey(KEY); } catch {}
     return Store.pushAppKey(KEY);
   }
@@ -428,7 +477,8 @@
     keys.forEach(k=>before[k]=localStorage.getItem(k));
     if (type==='player') before.record=structuredClone(Store.get(survivor));
     const entry={ id:crypto.randomUUID(), type, survivor, source, at:new Date().toISOString(),
-      admin:Store.user?.email||window.ESAccess?.user?.email||'Administrator', options, before, after:{} };
+      admin:Store.user?.email||window.ESAccess?.user?.email||'Administrator', options, changes:{} };
+    if(type==='player')entry.recordBefore=structuredClone(before.record);
     const oldState=state();
     try {
       const pending=[];
@@ -451,7 +501,8 @@
           localStorage.setItem(key,JSON.stringify(replaceId(data,sourceIds,survivor)));
         }
         pending.push(Store.save(survivor,merged));
-        for (const key of keys) { entry.after[key]=localStorage.getItem(key); pending.push(Store.pushAppKey(key)); }
+        const after={};for (const key of keys) { after[key]=localStorage.getItem(key); pending.push(Store.pushAppKey(key)); }
+        const storageBefore={...before};delete storageBefore.record;entry.changes=storageChanges(storageBefore,after);entry.recordAfter=structuredClone(merged);
       }
       const next=state(); next.merges.push(entry); next.reviewed[candidate.id]='merged';
       pending.push(saveState(next));
@@ -477,16 +528,17 @@
     if (!entry || entry.undoneAt || Date.now()-Date.parse(entry.at)>WINDOW) throw Error('Undo is no longer available.');
     if (!window.confirm('Undo this merge and restore both identities?')) return;
     const original=structuredClone(old), postRecord=entry.type==='player'?structuredClone(Store.get(entry.survivor)):null;
+    const postStorage={};
     try {
     if (entry.type==='player') {
-      for (const [key,post] of Object.entries(entry.after)) if (localStorage.getItem(key)!==post)
-        throw Error('Related data changed since the merge. Review those edits before undoing.');
       const pending=[];
-      for (const [key,raw] of Object.entries(entry.before)) if (key!=='record') {
-        raw==null?localStorage.removeItem(key):localStorage.setItem(key,raw);
-        pending.push(Store.pushAppKey(key));
+      if(entry.recordAfter&&!sameValue(Store.get(entry.survivor),entry.recordAfter))throw Error('This player was edited since the merge. Review those edits before undoing.');
+      if(entry.changes){for(const key of Object.keys(entry.changes))postStorage[key]=localStorage.getItem(key);restoreStorageChanges(entry.changes,true).forEach(key=>pending.push(Store.pushAppKey(key)));}
+      else{
+        for (const [key,post] of Object.entries(entry.after||{})) if (localStorage.getItem(key)!==post)throw Error('Related data changed since the merge. Review those edits before undoing.');
+        for (const [key,raw] of Object.entries(entry.before||{})) if (key!=='record') {postStorage[key]=localStorage.getItem(key);raw==null?localStorage.removeItem(key):localStorage.setItem(key,raw);pending.push(Store.pushAppKey(key));}
       }
-      pending.push(Store.save(entry.survivor,entry.before.record));
+      pending.push(Store.save(entry.survivor,entry.recordBefore??entry.before?.record));
       OVR=ovrMerged(); rebuildLinks(); applyOverrides();
       entry.undoneAt=new Date().toISOString();
       pending.push(saveState(old));
@@ -501,7 +553,7 @@
     } catch(error) {
       const rollback=[];
       if(entry.type==='player') {
-        for(const [key,post] of Object.entries(entry.after)) {post==null?localStorage.removeItem(key):localStorage.setItem(key,post);rollback.push(Store.pushAppKey(key));}
+        for(const [key,post] of Object.entries(postStorage)) {post==null?localStorage.removeItem(key):localStorage.setItem(key,post);rollback.push(Store.pushAppKey(key));}
         rollback.push(Store.save(entry.survivor,postRecord));
         OVR=ovrMerged(); rebuildLinks(); applyOverrides();
       }
@@ -628,7 +680,8 @@
     EuroScoutAgencyResearch.agentsOf=p=>[...new Set(original(p).map(canonicalAgent))];
   }
   function openPair(id) { view.type='player'; view.pair=id; view.manualCandidate=null; goView('mergecenter'); }
-  window.EuroScoutMergeCenter={canonicalPlayer,canonicalPlayerEntity,canonicalClub,canonicalAgent,activeClubMerges,hasManualGroup,detect,merge,undo,resolveImport,previewImport,playerConfidence,automaticPlayerMatch,automaticPlan,autoMergeBatch,openPair};
+  window.EuroScoutMergeCenter={canonicalPlayer,canonicalPlayerEntity,canonicalClub,canonicalAgent,activeClubMerges,hasManualGroup,detect,merge,undo,resolveImport,previewImport,playerConfidence,automaticPlayerMatch,automaticPlan,autoMergeBatch,openPair,
+    _test:{storageChanges,restoreStorageChanges,compactUndo}};
   window.renderMergeCenter=renderMergeCenter;
 })();
 
