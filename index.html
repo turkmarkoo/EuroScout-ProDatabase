@@ -1832,7 +1832,7 @@ body.drawer-lock{overflow:hidden}
 <script src="euroscout-clubs.js?v=20260914-virtus-merge"></script>
 <script src="euroscout-countries.js?v=20260921-bclq-codes"></script>
 <script src="config.js"></script>
-<script src="euroscout-access.js?v=20260923-errors-performance"></script><script src="euroscout-dragons.js?v=20260927-1"></script>
+<script src="euroscout-access.js?v=20260923-errors-performance"></script>
 <!-- Manual overrides are loaded from the authorized snapshot. -->
 <script src="data/exhibitions.js"></script>
 <!-- Scouting seeds are loaded from the authorized snapshot. -->
@@ -2664,9 +2664,8 @@ function mergeGroupRecords(){
       if(r.report&&r.report!==base.report){
         const a=parseReport(base.report||""),b=parseReport(r.report);
         const keys=["nAth","nOff","nDef","nIntel","nProj"];let ch=false;
-        keys.forEach(k=>{const av=(a[k]||"").trim(),bv=(b[k]||"").trim();
-          if(!av&&bv){a[k]=bv;ch=true;}
-          else if(av&&bv&&av!==bv&&!av.includes(bv)){a[k]=av+"\n\u2014\n"+bv;ch=true;}});
+        keys.forEach(k=>{const av=(a[k]||"").trim(),bv=(b[k]||"").trim(),merged=mergeNoteText(av,bv);
+          if(merged!==av){a[k]=merged;ch=true;}});
         if(ch){base.report=JSON.stringify(a);dirty=true;}
       }
     }
@@ -2925,7 +2924,7 @@ async function boot(){
   const storePromise=Store.initSB().catch(e=>console.warn("Access initialization delayed",e));
   // An authenticated snapshot already includes core data. Use whichever valid source arrives first.
   const privateRaw=storePromise.then(()=>{const core=ESAccess.internal&&ESAccess.state?.core;return core&&Array.isArray(core.leagues)&&core.leagues.length?core:rawPromise;});
-  let raw=await Promise.race([rawPromise,privateRaw,new Promise(resolve=>setTimeout(()=>resolve(null),30000))]);
+  const raw=await Promise.race([rawPromise,privateRaw,new Promise(resolve=>setTimeout(()=>resolve(null),30000))]);
   // The embedded sign-in handoff can take up to 12 seconds. Keep the loading
   // state until it settles so the wrong access state never flashes briefly.
   await storePromise;
@@ -2954,7 +2953,6 @@ async function boot(){
   window.EuroScoutMemberships?.apply(raw);
   window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutBCLQ?.apply(raw);window.EuroScoutNCAABridge?.apply(raw);
   window.EuroScoutManualPlayers?.apply(raw);
-  raw = await window.EuroScoutDragons?.apply(raw) || raw;
   STATE.data = raw;
   window.EuroScoutEditPlayerV2?.prune(raw);
   injectExhibitions(raw);
@@ -2965,7 +2963,6 @@ async function boot(){
     p.t_fgm=t.fgm;p.t_fga=t.fga;p.t_f3m=t.f3m;p.t_f3a=t.f3a;p.t_ftm=t.ftm;p.t_fta=t.fta;p.t_pir=Math.round(t.pir);
     p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);
   }));
-  window.EuroScoutDragons?.finish(raw);
   OVR=ovrMerged(); applyOverrides(); rebuildLinks();
   muInit();
   await Store.load();
@@ -4040,10 +4037,12 @@ function esc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"
 function noteSec(id,label,ph,rep){return '<div class="nsec"><div class="nlab">'+label+'</div>'
   +'<div class="blist" id="'+id+'" data-ph="'+escAttr(ph)+'"></div></div>';}
 /* ---------- bullet-list note editor (HoopScout-style): draggable contenteditable rows ---------- */
+function noteIdentity(txt){return String(txt||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();}
 function bulletParse(txt){ if(!txt)return [];
-  return String(txt).split(/\r?\n/)
+  const seen=new Set();return String(txt).split(/\r?\n/)
     .map(l=>l.replace(/^\s*(?:[\u2022\u2023\u2043\u25aa\u25cf\u00b7*\u2013\u2014\-]|\d+[.)])\s+/,'').replace(/^\s*[\u2022\u2023\u2043\u25aa\u25cf\u00b7*\u2013\u2014\-]\s*/,'').trim())
-    .filter(Boolean); }
+    .filter(Boolean).filter(line=>{const key=noteIdentity(line);if(seen.has(key))return false;seen.add(key);return true;}); }
+function mergeNoteText(left,right){return bulletParse([left,right].filter(Boolean).join("\n")).map(line=>"\u2022 "+line).join("\n");}
 function placeCaretEnd(el){ if(!el)return; el.focus(); try{const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r);}catch(e){} }
 function makeBulletList(host,initial,ph,onChange){
   host.classList.add("blist");host.innerHTML="";
@@ -7261,7 +7260,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/aba-rosters-2026.js?v=20260910-1"></script>
 <script src="euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260920-fix"></script>
 <script src="data/bclq-2026.js?v=20260921-final"></script><script src="euroscout-bclq-2026.js?v=20260921-jerseys"></script><script src="data/ncaa-europe-bridge.js?v=20260925-1"></script><script src="euroscout-ncaa-bridge.js?v=20260925-1"></script>
-<link rel="stylesheet" href="euroscout-merge-center.css?v=20260926-canonical-profile"><script src="euroscout-merge-center.js?v=20260927-compact-undo"></script>
+<link rel="stylesheet" href="euroscout-merge-center.css?v=20260926-canonical-profile"><script src="euroscout-merge-center.js?v=20260927-compact-undo-notes"></script>
 <link rel="stylesheet" href="euroscout-other-leagues.css?v=20260923-rosters"><script src="euroscout-other-leagues.js?v=20260923-rosters"></script>
 <script src="data/agency-metadata.js?v=20260923-1"></script><link rel="stylesheet" href="euroscout-agencies-v2.css?v=20260923-counts"><script src="euroscout-agencies-v2.js?v=20260923-counts"></script><script src="global-command-palette.js?v=20260922-performance"></script><script src="euroscout-manual-players.js?v=20260922-1"></script><script src="euroscout-command-palette.js?v=20260922-performance"></script><script>esSetup();boot().catch(function(error){console.error('EuroScout initialization failed',error);document.getElementById('app').textContent='EuroScout could not finish loading. Please reload.';}).finally(function(){var root=document.documentElement;root.classList.remove('es-preload');root.classList.add('es-ready');setTimeout(function(){document.getElementById('esSplash')?.remove();},300);});</script>
-<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-sessions.js?v=20260921-1"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260920-2"><link rel="stylesheet" href="team-selection-workspace.css?v=20260923-1"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260921-1"><script src="data/signal-origins.js?v=20260925-1"></script><script src="euroscout-signals.js?v=20260925-2"></script><script src="euroscout-quickstats.js?v=20260925-season-scope"></script><script src="data/competition-assets.js?v=20260923-2"></script><script src="team-selection-workspace.js?v=20260923-logos"></script><script src="euroscout-live-notes.js?v=20260923-live-note-batching"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>
+<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-sessions.js?v=20260921-1"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260920-2"><link rel="stylesheet" href="team-selection-workspace.css?v=20260923-1"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260921-1"><script src="data/signal-origins.js?v=20260925-1"></script><script src="euroscout-signals.js?v=20260925-2"></script><script src="euroscout-quickstats.js?v=20260925-season-scope"></script><script src="data/competition-assets.js?v=20260923-2"></script><script src="team-selection-workspace.js?v=20260923-logos"></script><script src="euroscout-live-notes.js?v=20260927-note-dedupe"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>

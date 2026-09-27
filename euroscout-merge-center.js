@@ -368,10 +368,12 @@
   function mergeReport(target, source, options) {
     let a={},b={}; try { a=JSON.parse(target||'{}'); } catch { a={overall:target||''}; }
     try { b=JSON.parse(source||'{}'); } catch { b={overall:source||''}; }
+    const mergeNotes=(left,right)=>{const seen=new Set();return [left,right].filter(Boolean).join('\n').split(/\r?\n/).map(line=>line.replace(/^\s*(?:[•‣⁃▪●·*–—-]|\d+[.)])\s*/,'').trim()).filter(Boolean).filter(line=>{const key=line.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();if(seen.has(key))return false;seen.add(key);return true;}).map(line=>'• '+line).join('\n');};
     for (const [key,value] of Object.entries(b)) {
       const category = key==='_workflow' ? 'timeline' : key.startsWith('n') || key==='overall' ? 'notes' : 'reports';
       if (!options[category] || value == null || value === '') continue;
-      if (a[key] == null || a[key] === '') a[key]=value;
+      if (/^n(?:Ath|Off|Def|Intel|Proj)$/.test(key)) a[key]=mergeNotes(a[key],value);
+      else if (a[key] == null || a[key] === '') a[key]=value;
       else if (typeof value === 'string' && typeof a[key] === 'string' && !a[key].includes(value)) a[key] += '\n—\n'+value;
       else if (Array.isArray(a[key]) && Array.isArray(value)) a[key]=[...new Set([...a[key],...value])];
       else if (typeof a[key] === 'object' && typeof value === 'object') a[key]={...value,...a[key]};
@@ -681,7 +683,7 @@
   }
   function openPair(id) { view.type='player'; view.pair=id; view.manualCandidate=null; goView('mergecenter'); }
   window.EuroScoutMergeCenter={canonicalPlayer,canonicalPlayerEntity,canonicalClub,canonicalAgent,activeClubMerges,hasManualGroup,detect,merge,undo,resolveImport,previewImport,playerConfidence,automaticPlayerMatch,automaticPlan,autoMergeBatch,openPair,
-    _test:{storageChanges,restoreStorageChanges,compactUndo}};
+    _test:{storageChanges,restoreStorageChanges,compactUndo,mergeReport}};
   window.renderMergeCenter=renderMergeCenter;
 })();
 
