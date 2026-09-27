@@ -60,6 +60,13 @@ function restore(){try{const c=JSON.parse(localStorage.getItem(CACHE)||'null');i
 function assemble(rowsByComp){problems=[];games=LIVE.flatMap(s=>build(s.id,s.name,rowsByComp[s.id]||[])).concat(fromFile()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));}
 
 function refresh(force){
+ if(window.EuroScoutDragons?.active()){
+  const rows=EuroScoutDragons.fixtures();
+  const covered=new Set(rows.map(g=>g.comp));
+  problems=[];games=rows.map(g=>({...g,home:{...g.home,key:g.league_id+'|'+g.home.code},away:{...g.away,key:g.league_id+'|'+g.away.code}})).concat(fromFile().filter(g=>!covered.has(g.comp))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
+  loadedAt=Date.now();state='ready';window.dispatchEvent(new Event('euroscout-fixtures'));return Promise.resolve(games);
+ }
+
  if(pending)return pending;
  const cached=restore();
  if(cached&&!games.length){assemble(cached.rows.reduce((m,[id,rows])=>(m[id]=rows,m),{}));loadedAt=cached.at;state='cached';}

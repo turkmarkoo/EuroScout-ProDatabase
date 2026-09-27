@@ -1832,7 +1832,7 @@ body.drawer-lock{overflow:hidden}
 <script src="euroscout-clubs.js?v=20260914-virtus-merge"></script>
 <script src="euroscout-countries.js?v=20260921-bclq-codes"></script>
 <script src="config.js"></script>
-<script src="euroscout-access.js?v=20260923-errors-performance"></script>
+<script src="euroscout-access.js?v=20260923-errors-performance"></script><script src="euroscout-dragons.js?v=20260927-1"></script>
 <!-- Manual overrides are loaded from the authorized snapshot. -->
 <script src="data/exhibitions.js"></script>
 <!-- Scouting seeds are loaded from the authorized snapshot. -->
@@ -2925,7 +2925,7 @@ async function boot(){
   const storePromise=Store.initSB().catch(e=>console.warn("Access initialization delayed",e));
   // An authenticated snapshot already includes core data. Use whichever valid source arrives first.
   const privateRaw=storePromise.then(()=>{const core=ESAccess.internal&&ESAccess.state?.core;return core&&Array.isArray(core.leagues)&&core.leagues.length?core:rawPromise;});
-  const raw=await Promise.race([rawPromise,privateRaw,new Promise(resolve=>setTimeout(()=>resolve(null),30000))]);
+  let raw=await Promise.race([rawPromise,privateRaw,new Promise(resolve=>setTimeout(()=>resolve(null),30000))]);
   // The embedded sign-in handoff can take up to 12 seconds. Keep the loading
   // state until it settles so the wrong access state never flashes briefly.
   await storePromise;
@@ -2954,6 +2954,7 @@ async function boot(){
   window.EuroScoutMemberships?.apply(raw);
   window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutBCLQ?.apply(raw);window.EuroScoutNCAABridge?.apply(raw);
   window.EuroScoutManualPlayers?.apply(raw);
+  raw = await window.EuroScoutDragons?.apply(raw) || raw;
   STATE.data = raw;
   window.EuroScoutEditPlayerV2?.prune(raw);
   injectExhibitions(raw);
@@ -2964,6 +2965,7 @@ async function boot(){
     p.t_fgm=t.fgm;p.t_fga=t.fga;p.t_f3m=t.f3m;p.t_f3a=t.f3a;p.t_ftm=t.ftm;p.t_fta=t.fta;p.t_pir=Math.round(t.pir);
     p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);
   }));
+  window.EuroScoutDragons?.finish(raw);
   OVR=ovrMerged(); applyOverrides(); rebuildLinks();
   muInit();
   await Store.load();
