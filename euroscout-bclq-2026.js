@@ -31,7 +31,17 @@ function apply(raw){
  const teams=data.teams.map(t=>({code:t.code,name:t.name,source:t.source}));
  let L=raw.leagues.find(l=>l.meta.id==='bclq');
  if(!L){L={meta:{id:'bclq',name:'BCL Qualifiers',season:'2026/27',qualifier:true,source:data.source,checked:data.checked},teams,players:[]};raw.leagues.push(L);}
- const have=new Set(L.players.map(p=>p.id));for(const r of data.players)if(!have.has('bclq-'+r.id))L.players.push(record(r));
+ // A private/cloud snapshot can already contain the qualifier roster from before
+ // game statistics were published. Refresh every official entry instead of only
+ // inserting missing ids, otherwise those stale roster-only rows keep blank cards.
+ Object.assign(L.meta,{id:'bclq',name:'BCL Qualifiers',season:'2026/27',qualifier:true,source:data.source,checked:data.checked});
+ L.teams=teams;
+ const existing=new Map(L.players.map(p=>[p.id,p]));
+ for(const r of data.players){
+  const fresh=record(r),current=existing.get(fresh.id);
+  if(current)Object.assign(current,fresh);
+  else{L.players.push(fresh);existing.set(fresh.id,fresh);}
+ }
  L.meta.playerCount=L.players.length;
  // The existing 2026/27 official roster layer already holds all 326 identities.
  // Update stable biographical details, but keep each historical league's jersey and club intact.

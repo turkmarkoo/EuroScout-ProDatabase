@@ -1,0 +1,16 @@
+EuroScout BCL Qualifiers statistics refresh — 28 September 2026
+
+Upload both files to the EuroScout site root, replacing the existing files:
+
+- index.html
+- euroscout-bclq-2026.js
+
+The update refreshes existing BCL Qualifiers player records with the published
+2026/27 statistics. It fixes saved/cloud snapshots that already contained an
+empty roster record and were therefore skipping the later statistics update.
+
+The current data file contains 326 qualifier players, including 252 players
+with game appearances and published statistics. The refresh does not duplicate
+players and keeps notes and scouting records attached to their existing identity.
+
+After uploading, hard-refresh EuroScout once to load the new script version.
