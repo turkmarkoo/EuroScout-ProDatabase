@@ -2188,7 +2188,7 @@ const STATE = {data:null, league:null, view:"dashboard", allLeagues:false,
   compare:{slots:[null,null,null,null]}, fit:{role:"",arch:"",ageMax:"",levelMin:"",contract:"",minGrade:0,wStyle:50,wProd:30,wAge:20}, scouting:{a:null,b:null}, watchSort:"rating", profileScope:"league", statMode:"pg",
   charts:{type:"scatter", x:"pts40", y:"ts", dist:"pir", colorBy:"league", fLeague:null, fTeam:"", fCountry:"", fRole:"", hi:null, size:600},
   sim:{stat:0.4,pos:0.35,arch:0.25},
-  scout:{q:"",leagues:new Set(),roles:new Set(),tags:new Set(),status:"all",sort:"grade",riserOnly:false,simRef:null,simAgeMax:null,simLevelMin:null,simFreeOnly:false,arch:null,filters:[],level:null,next26:null,season:"2026/27",statsSeason:"2025/26",view:"table",tsort:{key:"grade",dir:-1},railHidden:false,railOpen:false,ratingMin:null}};
+  scout:{q:"",leagues:new Set(),roles:new Set(),tags:new Set(),status:"all",sort:"grade",riserOnly:false,simRef:null,simAgeMax:null,simLevelMin:null,simFreeOnly:false,arch:null,filters:[],level:null,next26:null,season:"2026/27",statsSeason:"2026/27",view:"table",tsort:{key:"grade",dir:-1},railHidden:false,railOpen:false,ratingMin:null}};
 
 /* Tag vocabulary — "Watchlist" is a tag so flagged players surface in the board.
    Curated archetype/skill tags a scout reaches for; free tags still allowed on the card. */
@@ -3852,7 +3852,14 @@ function wireProfileNav(p){
 let CURRENT=null;
 let DRAWER_OPEN=false;
 let PROF_HIST=[];      // ids of profiles we can step back through
-function openProfile(id,fromHist){const _p=player(id);if(!_p)return;
+function currentSeasonProfile(p){
+  const group=(p&&p._grp&&p._grp.length?p._grp:[p]).filter(Boolean);
+  const current=group.filter(x=>scoutSeason(x)==='2026/27');
+  if(!current.length)return p;
+  return current.slice().sort((a,b)=>(Number(b.g)||0)-(Number(a.g)||0)||(Number(b.mpg)||0)-(Number(a.mpg)||0)||String(a.id).localeCompare(String(b.id)))[0];
+}
+function openProfile(id,fromHist,exact){let _p=player(id);if(!_p)return;
+  if(!exact){const preferred=currentSeasonProfile(_p);if(preferred){_p=preferred;id=preferred.id;}}
   const prev=CURRENT, wasOpen=DRAWER_OPEN;
   if(!fromHist&&wasOpen&&prev&&prev!==id)PROF_HIST.push(prev);
   CURRENT=id;const _L=leagueOf(_p);if(_L)STATE.league=_L;
@@ -3944,7 +3951,7 @@ function closeDrawer(silent){
   if(!silent){try{if(/^#p=/.test(location.hash))history.replaceState(null,"",location.pathname+location.search);}catch(e){}}
 }
 function switchComp(leagueId,id){const L=STATE.data.leagues.find(x=>x.meta.id===leagueId);
-  if(L){STATE.league=L;const sel=$("#leagueSel");if(sel)sel.value=leagueId;}openProfile(id);}
+  if(L){STATE.league=L;const sel=$("#leagueSel");if(sel)sel.value=leagueId;}openProfile(id,false,true);}
 function applyTheme(){window.MTSTheme?.apply();}
 function syncStickyTop(){const h=document.querySelector("header");if(!h)return;
   const off=Math.round(h.getBoundingClientRect().height);
