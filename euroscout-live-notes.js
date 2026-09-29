@@ -11,23 +11,11 @@ const SX=window.ESSessions;
 let selected='',chosen='',category='nOff',busyStatus='',showSimilar=false,timer=null;
 const filters={a:{q:'',pos:''},b:{q:'',pos:''}};
 let clubIndex=null,rosters=new Map();
-const pendingNoteSaves=new Map();
-let noteSaveTimer=null,noteSaveRunning=false;
-const NOTE_RECOVERY_KEY='euroscout:pending-notes:v1';
-let noteRecovery={};try{noteRecovery=JSON.parse(localStorage.getItem(NOTE_RECOVERY_KEY)||'{}')||{};}catch{noteRecovery={};}
-function writeNoteRecovery(){try{if(Object.keys(noteRecovery).length)localStorage.setItem(NOTE_RECOVERY_KEY,JSON.stringify(noteRecovery));else localStorage.removeItem(NOTE_RECOVERY_KEY);}catch(error){console.warn('Matchup note recovery could not be updated:',error);}}
 
 const fold=t=>String(t||'').replace(/[đĐ]/g,'dj').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const author=()=>SX?SX.me():(window.ESAccess?.user?.email||'');
 function todayStr(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
-const JERSEY_SEASON='2026/27';
-function jerseyContext(p){
- const playerId=gid(p),teamId=p?._liveClub,roster=teamId?liveRoster(teamId):null;
- if(!playerId)throw Error('Player record not found.');
- if(!teamId||!roster)throw Error('Season or team record not found.');
- return {playerId,seasonId:JERSEY_SEASON,teamId,key:JERSEY_SEASON+'|'+teamId,teamName:roster.t?.name||teamId};
-}
-function numberKey(p){return JERSEY_SEASON+'|'+p._liveClub;}
+function numberKey(p){return '2026/27|'+p._liveClub;}
 function shirt(p){const v=recOf(p).jerseyNumbers?.[numberKey(p)];if(v!=null)return String(v);const r=window.EuroScoutExpansion?.record(p);return r&&canonKey('directory|'+r.club)===p._liveClub&&r.jersey!=null?String(r.jersey):'';}
 function jerseyOrder(a,b){const rank=p=>{const n=shirt(p);return n==='00'?-2:n==='0'?-1:/^\d{1,2}$/.test(n)?Number(n):1000};return rank(a)-rank(b)||a.name.localeCompare(b.name);}
 function resetRosters(){clubIndex=null;rosters.clear();}
@@ -42,54 +30,18 @@ function shortName(n){const parts=String(n||'').trim().split(/\s+/);return parts
 function visible(p,slot){const f=filters[slot];return (!f.pos||posGroup(p)===f.pos)&&(!f.q||fold(p.name).includes(fold(f.q))||shirt(p)===f.q.trim());}
 /* The players the arrow keys walk through: what is on screen, left panel then right. */
 function walkList(){return ['a','b'].flatMap(k=>(liveRoster(STATE.scouting[k])?.players||[]).filter(p=>visible(p,k)));}
-function teamButton(key,slot){const r=liveRoster(key),label=r?.t.name||'Select team';return '<button type="button" class="scoutTeamButton" data-slot="'+slot+'" aria-label="Select Team '+slot.toUpperCase()+'"><span>'+esc(label)+'</span><b>⌄</b></button>';}
+function compactTeamOptions(key){const r=liveRoster(key);return key?'<option value="'+escAttr(key)+'" selected>'+esc(r?.t.name||'Selected team')+'</option>':'<option value="" selected>— pick a team · 2026/27 —</option>';}
 
 function logViewing(r,event,date,gameDate){const who=author();const w=r._workflow={...(r._workflow||{})};w.viewings=[...(w.viewings||[])];if(!w.viewings.some(v=>!v.removed&&v.event===event&&v.date===date&&v.author===who)){w.viewings.push({id:crypto.randomUUID(),event,date,gameDate:gameDate||'',mode:SX?.active()?.mode==='Live'?'Live':'Video',notes:'',author:who,updatedAt:new Date().toISOString(),source:'matchup'});}w.updatedAt=new Date().toISOString();}
-function migrateContext(p,r){let changed=false;for(const [k]of cats){if(!r[k])continue;const original=r[k],withoutContext=original.split('\n').map(line=>{const m=line.match(/ \[([^\[\]]+?) · (\d{4}-\d{2}-\d{2}) · ([^\[\]]+@[^\[\]]+)\]$/);if(!m)return line;changed=true;logViewing(r,m[1],m[2],'');return line.slice(0,m.index);}).join('\n'),clean=mergeNoteText(withoutContext,'');if(clean!==original)changed=true;r[k]=clean;}if(changed&&editable())saveRec(p,{report:JSON.stringify(r)});}
+function migrateContext(p,r){let changed=false;for(const [k]of cats){if(!r[k])continue;r[k]=r[k].split('\n').map(line=>{const m=line.match(/ \[([^\[\]]+?) · (\d{4}-\d{2}-\d{2}) · ([^\[\]]+@[^\[\]]+)\]$/);if(!m)return line;changed=true;logViewing(r,m[1],m[2],'');return line.slice(0,m.index);}).join('\n');}if(changed&&editable())saveRec(p,{report:JSON.stringify(r)});}
 function editable(){return window.ESAccess?ESAccess.internal&&ESAccess.owner:true}
 const workspace=()=>window.ESWorkspace?ESWorkspace.visible():editable();
-function noteStatus(text){const el=document.querySelector('#liveStatus');if(el)el.textContent=text;}
-function queueNoteSave(p,report){
- if(!editable())return;
- const id=gid(p),at=new Date().toISOString(),next={...report,_notesUpdated:at},payload=JSON.stringify(next);
- /* Make the next player switch/read instant. Cloud persistence is intentionally
-    batched so a live typist never serializes the full protected state per key. */
- Store.stage(id,{report:payload});
- pendingNoteSaves.set(id,{p,payload,at});noteRecovery[id]={id,pid:p.id,payload,at};writeNoteRecovery();
- noteStatus('✓ Captured · syncing…');
- clearTimeout(noteSaveTimer);noteSaveTimer=setTimeout(flushNoteSaves,1200);
-}
-async function flushNoteSaves(){
- clearTimeout(noteSaveTimer);noteSaveTimer=null;
- if(noteSaveRunning||!pendingNoteSaves.size)return;
- noteSaveRunning=true;const batch=[...pendingNoteSaves.entries()];batch.forEach(([id])=>pendingNoteSaves.delete(id));
- const results=await Promise.allSettled(batch.map(([,entry])=>saveRec(entry.p,{report:entry.payload})));
- let failed=false;results.forEach((result,i)=>{const [id,entry]=batch[i];if(result.status==='rejected'||result.value===false){failed=true;if(!pendingNoteSaves.has(id))pendingNoteSaves.set(id,entry);}else if(noteRecovery[id]?.payload===entry.payload)delete noteRecovery[id];});writeNoteRecovery();
- noteSaveRunning=false;
- if(failed)noteStatus('Captured · cloud sync pending.');
- else if(!pendingNoteSaves.size)noteStatus('✓ Saved to player profile');
- /* A failed network request stays staged and retries on the next edit or when
-    the page is hidden; do not hammer the live scouting screen in a loop. */
-}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){writeNoteRecovery();flushNoteSaves();}});
-window.addEventListener('pagehide',()=>{writeNoteRecovery();flushNoteSaves();});
-async function recoverNoteSaves(attempt=0){
- const rows=Object.values(noteRecovery);if(!rows.length)return;
- if(!editable()){if(attempt<15)setTimeout(()=>recoverNoteSaves(attempt+1),1000);return;}
- for(const row of rows){
-  const current=Store.get(row.id)||{},stamp=parseReport(current.report)._notesUpdated||current.updated_at||'';
-  if(stamp&&stamp>=row.at){delete noteRecovery[row.id];continue;}
-  try{if(await Store.save(row.id,{report:row.payload})!==false)delete noteRecovery[row.id];}catch(error){console.warn('Unsynced matchup notes are still queued:',error);}
- }
- writeNoteRecovery();
-}
-setTimeout(recoverNoteSaves,1200);
 function choose(id,keepFocus){if(!id)return;selected=id;chosen=id;busyStatus='';renderScouting(true);if(!keepFocus)document.querySelector('.rosterRow.liveSelected')?.scrollIntoView({block:'nearest'});}
 function step(delta){const list=walkList();if(!list.length)return;if(document.activeElement?.classList.contains('rosterRow'))document.activeElement.blur();const i=list.findIndex(p=>p.id===selected);choose(list[(i<0?0:i+delta+list.length)%list.length].id);}
 function otherSide(){if(document.activeElement?.classList.contains('rosterRow'))document.activeElement.blur();const s=STATE.scouting,cur=rosterPlayers().find(p=>p.id===selected);if(!cur)return;const from=canonKey(s.a)===cur._liveClub?'a':'b',to=from==='a'?'b':'a';const mine=(liveRoster(s[from])?.players||[]).filter(p=>visible(p,from)),theirs=(liveRoster(s[to])?.players||[]).filter(p=>visible(p,to));if(!theirs.length)return;choose(theirs[Math.min(Math.max(0,mine.findIndex(p=>p.id===selected)),theirs.length-1)].id);}
 
 function columnHTML(key,slot){const r=liveRoster(key),f=filters[slot];
- return '<div class="rosterCol mx-col" data-slot="'+slot+'"><div class="mx-colhead">'+(r?clubBadge(r.club,26):'')+teamButton(key,slot)+'</div>'+
+ return '<div class="rosterCol mx-col" data-slot="'+slot+'"><div class="mx-colhead">'+(r?clubBadge(r.club,26):'')+'<select class="scoutTeamSel" data-slot="'+slot+'" aria-label="Team '+slot.toUpperCase()+'">'+compactTeamOptions(key)+'</select></div>'+
  (r?'<input class="mx-rsearch" type="search" data-slot="'+slot+'" value="'+escAttr(f.q)+'" placeholder="Search players…" aria-label="Search '+escAttr(r.t.name)+' players"><div class="mx-posfilter" role="group" aria-label="Position filter">'+[['','All'],['G','G'],['W','W'],['B','B']].map(([v,l])=>'<button type="button" class="mx-pos'+(f.pos===v?' on':'')+'" data-pos="'+v+'" data-slot="'+slot+'" aria-pressed="'+(f.pos===v)+'">'+l+'</button>').join('')+'</div><div class="rosterList">'+
   r.players.map(p=>'<button type="button" class="rosterRow mx-row" data-id="'+escAttr(p.id)+'" title="'+escAttr(p.name)+'"'+(visible(p,slot)?'':' hidden')+'><span class="rrNum">'+esc(shirt(p)||'–')+'</span><span class="rrName">'+esc(shortName(p.name))+'</span><span class="mx-mark" data-mark="'+(SX?SX.markOf(p):'')+'"></span><span class="mx-rpos">'+posShort(p)+'</span></button>').join('')+
   (r.players.length?'':'<div class="empty">No confirmed 2026/27 assignments yet.</div>')+'</div>':'<div class="empty">Pick a team to see its roster.</div>')+'</div>';}
@@ -108,7 +60,7 @@ function headerHTML(p){const lv=levelBand(p),g=statGradeOverall(p),photo=photoOf
  return '<div class="livePlayer mx-player"><span class="liveAvatar mx-avatar">'+(photo?'<img src="'+escAttr(photo)+'" alt="">':esc(initials(p.name)))+(num?'<em>#'+esc(num)+'</em>':'')+'</span>'+
   '<div class="mx-id"><h2>'+esc(p.name)+' <button type="button" class="mx-star'+(isWatched(p)?' on':'')+'" id="mxWatch" aria-pressed="'+isWatched(p)+'" title="Watchlist">'+(isWatched(p)?'★':'☆')+'</button></h2><div class="mx-bio">'+bits.join('<i>|</i>')+'</div><div class="mx-club">'+clubBadge(liveRoster(p._liveClub)?.club,18)+esc(liveRoster(p._liveClub)?.t.name||'')+'</div>'+(window.ESSignals?'<div class="mx-signals">'+ESSignals.html(p)+'</div>':'')+'</div>'+
   '<div class="mx-rate">'+'<div class="mx-level"><small>Estimated level'+(lv&&!lv.manual?' · auto':'')+'</small>'+(editable()?'<select id="mxLevel" aria-label="Estimated level"><option value="">'+(lv&&!lv.manual?esc(lv.label):'Auto')+'</option>'+LEVEL_BANDS.map((name,i)=>({name,i})).reverse().map(({name,i})=>'<option value="'+i+'"'+(lv&&lv.manual&&lv.i===i?' selected':'')+'>'+esc(name)+'</option>').join('')+'</select>':'<b>'+esc(lv?lv.label:'—')+'</b>')+'<span class="mx-segs">'+[0,1,2,3,4].map(i=>'<i class="'+(lv&&i<=lv.i?'on':'')+'"></i>').join('')+'</span></div>'+(g!=null?'<div class="mx-grade"><small>Grade</small><b>'+Number(g).toFixed(1)+'</b></div>':'')+'</div>'+
-  '<div class="mx-buttons"><button type="button" class="btn ghost sm" id="liveProfile">Open profile ↗</button><button type="button" class="btn ghost sm" id="liveNumber">Jersey #'+esc(num||'—')+'</button>'+(workspace()?'<button type="button" class="btn ghost sm" id="mxLogs">History</button>':'')+(window.ESQuickStats?'<button type="button" class="btn ghost sm" id="mxStats" title="Season statistics without leaving the matchup">📊 Stats</button>':'')+
+  '<div class="mx-buttons"><button type="button" class="btn ghost sm" id="liveProfile">Open profile ↗</button><button type="button" class="btn ghost sm" id="liveNumber">Jersey #'+esc(num||'—')+'</button>'+(workspace()?'<button type="button" class="btn ghost sm" id="mxLogs">History</button>':'')+(window.ESQuickStats?'<button type="button" class="btn ghost sm" id="mxStats" title="Season statistics without leaving the matchup">📊 Stats</button>':'')+(window.HUB_EMBED||typeof HUB_EMBED!=='undefined'&&HUB_EMBED?'<button type="button" class="btn primary sm" id="mxBoard" title="Add this player to one of your private Scout Boards">＋ Board</button>':'')+
   (a?'<span class="mx-stock" role="group" aria-label="Stock"><button type="button" class="btn ghost sm'+(stock==='up'?' on':'')+'" data-stock="up" aria-pressed="'+(stock==='up')+'" title="Stock up">▲ Up</button><button type="button" class="btn ghost sm'+(stock==='down'?' on':'')+'" data-stock="down" aria-pressed="'+(stock==='down')+'" title="Stock down">▼ Down</button></span>':'')+
   '<span class="mx-spacer"></span><button type="button" class="btn ghost sm" id="mxPrev">← Prev</button><button type="button" class="btn ghost sm" id="mxNext">Next →</button></div></div>';}
 
@@ -138,12 +90,17 @@ renderScouting=function(partial=false){
  }else{
   app.innerHTML='<div class="view scoutingView liveScouting mx">'+contextHTML()+'<div class="liveLayout mx-layout">'+columnHTML(s.a,'a')+notebook+columnHTML(s.b,'b')+'</div></div>';
  }
- wireFrame();wireRows();if(p)wireNotebook(p,rep);tick();
+ wireFrame();wireRows();if(p)wireNotebook(p,rep);tick();backgroundLeagues();
 };
+/* College and NBA / G League players only exist once those files are loaded. They are
+   fetched quietly the first time the matchup opens, so new signings show on the
+   2026/27 rosters and carry their signals. Never while a note is being typed. */
+let extraAsked=false;
+function backgroundLeagues(){if(extraAsked||STATE._extraDone||typeof loadExtraLeagues!=='function')return;extraAsked=true;setTimeout(()=>{loadExtraLeagues().then(()=>{const typing=document.activeElement&&(document.activeElement.isContentEditable||/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName));if(STATE.view==='scouting'&&!typing&&!document.querySelector('#modal,#sxMask,#qsMask')){resetRosters();renderScouting(true);fullRedraw();}else resetRosters();}).catch(()=>{});},1500);}
 
 function fullRedraw(){document.querySelector('.liveScouting')?.remove();renderScouting(true);}
 function wireFrame(){const s=STATE.scouting;
- document.querySelectorAll('.scoutTeamButton').forEach(el=>el.onclick=()=>{const slot=el.dataset.slot;window.ESTeamSelection?.open({slot,currentKey:s[slot],onConfirm:({team})=>{s[slot]=team.key;filters[slot]={q:'',pos:''};const a=SX?.active();if(a)SX.update({[slot]:{key:team.key,name:team.name}});fullRedraw();}});});
+ document.querySelectorAll('.scoutTeamSel').forEach(el=>{const hydrate=()=>{if(el.dataset.loaded)return;const value=s[el.dataset.slot]||'';el.innerHTML=scoutingTeamOptions(value);el.value=value;el.dataset.loaded='true';};el.onpointerdown=hydrate;el.onfocus=hydrate;el.onkeydown=hydrate;el.onchange=()=>{s[el.dataset.slot]=el.value;filters[el.dataset.slot]={q:'',pos:''};const a=SX?.active();if(a){const c=clubByKey(canonKey(el.value));SX.update({[el.dataset.slot]:{key:canonKey(el.value),name:c?c.name:''}});}fullRedraw();};});
  document.querySelectorAll('.mx-rsearch').forEach(el=>el.oninput=()=>{filters[el.dataset.slot].q=el.value;applyFilter(el.dataset.slot);});
  document.querySelectorAll('.mx-pos').forEach(el=>el.onclick=()=>{filters[el.dataset.slot].pos=el.dataset.pos;document.querySelectorAll('.mx-pos[data-slot="'+el.dataset.slot+'"]').forEach(b=>{const on=b===el;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});applyFilter(el.dataset.slot);});
  const start=document.querySelector('#mxStart');if(start)start.onclick=startSession;
@@ -165,8 +122,9 @@ function editGame(){const a=SX?.active();if(!a)return;const box=SX.modal('<h3>Ga
 function wireNotebook(p,rep){
  const s=STATE.scouting,date=todayStr();
  const avatar=document.querySelector('.liveAvatar img');if(avatar){const fallback=()=>{avatar.replaceWith(document.createTextNode(initials(p.name)))};avatar.onerror=fallback;if(avatar.complete&&!avatar.naturalWidth)fallback();}
- document.querySelector('#liveNumber').onclick=()=>{if(!editable())return;showModal('<h3>'+esc(p.name)+' · jersey number</h3><p>'+JERSEY_SEASON+' · '+esc(liveRoster(p._liveClub)?.t.name||'')+'</p><form id="jerseyForm"><label>Number (00, 0–99)<input name="jersey" type="text" inputmode="numeric" maxlength="2" pattern="[0-9]{1,2}" value="'+escAttr(shirt(p))+'" style="display:block;padding:12px;margin:12px 0"></label><p class="hint">Leave empty for unknown. #00 and #0 stay distinct.</p><button class="btn primary">Save number</button><p role="status" aria-live="polite"></p></form>');const form=document.querySelector('#jerseyForm'),button=form.querySelector('button'),status=form.querySelector('[role=status]');form.elements.jersey.focus();form.onsubmit=async e=>{e.preventDefault();const raw=form.elements.jersey.value.trim();if(raw&&!/^[0-9]{1,2}$/.test(raw)){status.textContent='❌ Validation failed: enter 00 or a number from 0 to 99.';return;}const value=raw==='00'?'00':raw?String(Number(raw)):'';button.disabled=true;button.textContent='Saving…';status.textContent='Saving…';try{const context=jerseyContext(p),numbers={...(recOf(p).jerseyNumbers||{}),[context.key]:value},ok=await saveRec(p,{jerseyNumbers:numbers});if(ok===false)throw Error(Store.lastError||'Cloud save failed.');status.textContent='✓ Saved';button.textContent='Saved';busyStatus='Jersey number saved.';console.info('Jersey number saved',{playerId:context.playerId,seasonId:context.seasonId,teamId:context.teamId,number:value||null});await new Promise(resolve=>setTimeout(resolve,450));hideModal();rosters.clear();fullRedraw();}catch(error){const message=error?.message||Store.lastError||'Unknown save error.';console.error('Jersey number save failed',{playerId:gid(p),seasonId:JERSEY_SEASON,teamId:p?._liveClub,error});status.textContent='❌ '+message;button.textContent='Save number';button.disabled=false;}};};
+ document.querySelector('#liveNumber').onclick=()=>{if(!editable())return;showModal('<h3>'+esc(p.name)+' · jersey number</h3><p>2026/27 · '+esc(liveRoster(p._liveClub)?.t.name||'')+'</p><form id="jerseyForm"><label>Number (00, 0–99)<input name="jersey" type="text" inputmode="numeric" maxlength="2" pattern="[0-9]{1,2}" value="'+escAttr(shirt(p))+'" style="display:block;padding:12px;margin:12px 0"></label><p class="hint">Leave empty for unknown. #00 and #0 stay distinct.</p><button class="btn primary">Save number</button><p role="status"></p></form>');const form=document.querySelector('#jerseyForm');form.elements.jersey.focus();form.onsubmit=async e=>{e.preventDefault();const raw=form.elements.jersey.value.trim();if(raw&&!/^[0-9]{1,2}$/.test(raw))return;const value=raw==='00'?'00':raw?String(Number(raw)):'';const numbers={...(recOf(p).jerseyNumbers||{}),[numberKey(p)]:value};form.querySelector('button').disabled=true;try{const ok=await saveRec(p,{jerseyNumbers:numbers});busyStatus=ok===false?'Number stored locally; cloud sync failed.':'Jersey number saved.';hideModal();rosters.clear();fullRedraw();}catch(e){form.querySelector('[role=status]').textContent='Could not save. Try again.';form.querySelector('button').disabled=false;}};};
  document.querySelector('#liveProfile').onclick=()=>openProfile(p.id);
+ const boardBtn=document.querySelector('#mxBoard');if(boardBtn)boardBtn.onclick=()=>addToScoutBoard(p.id);
  const level=document.querySelector('#mxLevel');if(level)level.onchange=async()=>{await window.wfFlushReport?.();ovrSaveLocal({bio:{[gid(p)||p.id]:{projLevel:level.value}}});busyStatus=level.value===''?'Level back to automatic.':'Estimated level saved.';rosters.clear();clubIndex=null;fullRedraw();};
  const hand=document.querySelector('#mxHand');if(hand)hand.onchange=async()=>{await window.wfFlushReport?.();ovrSaveLocal({bio:{[gid(p)||p.id]:{hand:hand.value}}});busyStatus=hand.value?'Dominant hand saved.':'Dominant hand cleared.';rosters.clear();clubIndex=null;fullRedraw();};
  const logsBtn=document.querySelector('#mxLogs');if(logsBtn)logsBtn.onclick=()=>SX?SX.openPlayerLog(p):openProfile(p.id);
@@ -190,7 +148,7 @@ function wireNotebook(p,rep){
   for(const m of matches.slice(0,4)){const button=document.createElement('button');button.className='btn ghost';button.textContent=m.label+': '+m.note;button.type='button';button.onclick=()=>{category=m.key;renderScouting(true);const row=document.querySelectorAll('#liveBullets .bl-txt')[m.index];row?.scrollIntoView({block:'nearest'});row?.focus()};related.append(button);}}
  /* Move a note to another category: the ⇄ button on the row, Alt + the category's
     letter while typing in it, or drag the row's handle onto a category tab. */
- function moveNote(from,text,to){text=String(text||'').trim();if(!text||from===to||!cats.some(c=>c[0]===to))return;const r=effectiveReport(p),src=bulletParse(r[from]||''),i=src.indexOf(text);if(i<0)return;src.splice(i,1);r[from]=src.map(t=>'\u2022 '+t).join('\n');r[to]=mergeNoteText(r[to]||'',text);busyStatus='Moved to '+cats.find(c=>c[0]===to)[1]+'.';queueNoteSave(p,r);refreshMarks();renderScouting(true);}
+ function moveNote(from,text,to){text=String(text||'').trim();if(!text||from===to||!cats.some(c=>c[0]===to))return;const r=effectiveReport(p),src=bulletParse(r[from]||''),i=src.indexOf(text);if(i<0)return;src.splice(i,1);r[from]=src.map(t=>'\u2022 '+t).join('\n');r[to]=bulletParse(r[to]||'').concat([text]).map(t=>'\u2022 '+t).join('\n');busyStatus='Moved to '+cats.find(c=>c[0]===to)[1]+'.';saveRec(p,{report:JSON.stringify(r)}).then(()=>refreshMarks()).catch(()=>{});renderScouting(true);}
  window.__mxMove=(to)=>{const row=document.activeElement?.closest?.('#liveBullets .bl-item');if(!row)return false;moveNote(row.closest('[data-note-section]').dataset.noteSection,row.querySelector('.bl-txt').textContent,to);return true;};
  function closeMoveMenu(){document.querySelector('.mx-movemenu')?.remove();}
  function decorate(list,field){list.querySelectorAll('.bl-item').forEach(row=>{if(row.querySelector('.mx-move'))return;const b=document.createElement('button');b.type='button';b.className='mx-move';b.title='Move to another category';b.setAttribute('aria-label','Move note to another category');b.textContent='\u21c4';
@@ -202,8 +160,8 @@ function wireNotebook(p,rep){
   const list=document.createElement('div');section.append(list);host.append(section);
   if(!editable()){list.innerHTML='<ul class="mx-readonly">'+bulletParse(rep[field]||'').map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>';continue;}
   let editor=makeBulletList(list,rep[field]||'','Write an observation…',()=>{/* An editor that has been redrawn away must never write its stale rows back. */if(!list.isConnected)return;if(SX?.active()&&chosen!==p.id){chosen=p.id;SX.select(p,p._liveClub);}const r=effectiveReport(p);r[field]=editor.serialize();
-   if(r._workflow?.noteTimes){r._workflow={...r._workflow};delete r._workflow.noteTimes;}queueNoteSave(p,r);
-   counts();refreshMarks();});
+   if(r._workflow?.noteTimes){r._workflow={...r._workflow};delete r._workflow.noteTimes;}counts();
+   saveRec(p,{report:JSON.stringify(r)}).then(ok=>{counts();refreshMarks();const st=document.querySelector('#liveStatus');if(st)st.textContent=ok===false?'Saved locally; cloud sync failed.':'✓ Saved to player profile';}).catch(()=>{const st=document.querySelector('#liveStatus');if(st)st.textContent='Could not sync changes.'});});
   const addRow=list.querySelector('.bl-addrow');list.prepend(addRow);const addButton=addRow.querySelector('button');addButton.textContent='+  Add note';addButton.dataset.addNote=field;
   addButton.onclick=()=>{const ul=list.querySelector('.bl-ul');[...ul.children].slice(0,-1).forEach(li=>{if(!li.querySelector('.bl-txt').textContent.trim())li.remove();});const row=ul.lastElementChild;ul.prepend(row);row.querySelector('.bl-txt')?.focus();row.scrollIntoView({block:'nearest'});};
   decorate(list,field);
