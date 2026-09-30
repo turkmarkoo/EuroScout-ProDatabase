@@ -66,6 +66,13 @@ TEAM_SLUGS = {
     "CLU":"u-bt-cluj-napoca","VNC":"umana-reyer-venice",
 }
 
+# Official EuroCup registrations occasionally include an additional family name
+# that is absent from the domestic provider. These links are reviewed identities,
+# not fuzzy matches, and keep the existing notes/ratings attached to one person.
+IDENTITY_LINKS = {
+    "014872": ["lnb-9559", "bcl-0327"],  # Ugo Doumbia Niang / Ugo Doumbia
+}
+
 
 def fetch(url: str) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": UA})
@@ -167,10 +174,14 @@ def main() -> None:
     existing = [player for league in leagues for player in league.get("players", [])]
     by_id = {player.get("id"): player for player in existing if player.get("id")}
     by_identity: dict[tuple[str, int], list[dict]] = {}
+    by_name: dict[str, list[dict]] = {}
     for player in existing:
+        player_name = fold(player.get("name"))
+        if player_name:
+            by_name.setdefault(player_name, []).append(player)
         born = integer(str(player.get("born") or ""))
         if born:
-            by_identity.setdefault((fold(player.get("name")), born), []).append(player)
+            by_identity.setdefault((player_name, born), []).append(player)
 
     clubs_payload = json.loads(fetch(f"{API}/clubs"))
     clubs = clubs_payload.get("data", clubs_payload)
@@ -221,10 +232,19 @@ def main() -> None:
             euro_id = f"eurocup-{euro_code}"
             direct = by_id.get(euro_id)
             identity_matches = by_identity.get((fold(name), born), []) if born else []
+            # Exact normalized names are stable enough to bridge providers even
+            # when a legacy feed omitted DOB or incorrectly stored draft year.
+            # This also joins NBA and G League copies to the official registration.
+            name_matches = by_name.get(fold(name), [])
+            reviewed_matches = [by_id[player_id] for player_id in IDENTITY_LINKS.get(euro_code, [])]
             references = list(dict.fromkeys([euro_id] + [
-                player["id"] for player in ([direct] if direct else []) + identity_matches if player and player.get("id")
+                player["id"] for player in (
+                    ([direct] if direct else []) + identity_matches + name_matches + reviewed_matches
+                ) if player and player.get("id")
             ]))
-            canonical = direct or (identity_matches[0] if identity_matches else None)
+            canonical = direct or (identity_matches[0] if identity_matches else None) or (
+                reviewed_matches[0] if reviewed_matches else None
+            ) or (name_matches[0] if name_matches else None)
             if canonical:
                 name = canonical.get("name") or name
                 matched += 1
@@ -259,7 +279,13 @@ def main() -> None:
                 "teamCode": code,
                 "teamName": club_name,
                 "existing": bool(canonical),
-                "match": "EuroCup ID" if direct else ("Full name and birth year" if identity_matches else "New official registration"),
+                "match": "EuroCup ID" if direct else (
+                    "Full name and birth year" if identity_matches else (
+                        "Reviewed identity alias" if reviewed_matches else (
+                            "Exact full name" if name_matches else "New official registration"
+                        )
+                    )
+                ),
             })
             players.append({
                 "id": euro_id,

@@ -23,9 +23,22 @@ for(const name of ['Carlos Stewart','Bastien Grasshoff','Swann Penda','Melvin Aj
 }
 const grasshoff=leMans.find(row=>row.name==='Bastien Grasshoff');
 assert.equal(grasshoff.ids.includes('lnb-9352'),true);
+const doumbia=leMans.find(row=>row.id==='014872');
+assert.deepEqual([...doumbia.ids].sort(),['bcl-0327','eurocup-014872','lnb-9559'].sort());
+
+const aris=data.roster.filter(row=>row.teamCode==='ARI');
+const robinsonEarl=aris.find(row=>row.id==='014910');
+assert.equal(robinsonEarl.ids.includes('gl-243'),true);
+assert.equal(robinsonEarl.ids.includes('nba-270'),true);
+const liddell=aris.find(row=>row.id==='014911');
+assert.equal(liddell.ids.includes('gl-140'),true);
+assert.equal(liddell.ids.includes('nba-170'),true);
 
 const links=[];api.link((left,right)=>links.push([left,right]));
 assert.equal(links.some(pair=>pair[0]==='eurocup-014866'&&pair[1]==='lnb-9352'),true);
+assert.equal(links.some(pair=>pair[0]==='eurocup-014872'&&pair[1]==='lnb-9559'),true);
+assert.equal(links.some(pair=>pair[0]==='eurocup-014910'&&pair[1]==='nba-270'),true);
+assert.equal(links.some(pair=>pair[0]==='eurocup-014911'&&pair[1]==='nba-170'),true);
 
 const raw={leagues:[
   {meta:{id:'eurocup'},teams:[],players:[]},
@@ -38,8 +51,8 @@ assert.equal(api.key(raw.leagues[1].players[0]),'lnb|LEM');
 assert.equal(raw.season2627.comps.eurocup.teams.length,32);
 
 const html=fs.readFileSync('index.html','utf8');
-assert.match(html,/eurocup-rosters-2026\.js\?v=20260930-full/);
-assert.match(html,/euroscout-eurocup-rosters\.js\?v=20260930-full/);
+assert.match(html,/eurocup-rosters-2026\.js\?v=20260930-identities/);
+assert.match(html,/euroscout-eurocup-rosters\.js\?v=20260930-identities/);
 assert.match(html,/EuroScoutEuroCup\?\.apply\(raw\)/);
 assert.match(html,/EuroScoutEuroCup\?\.key\(p\)/);
 
