@@ -5,6 +5,10 @@ const byId=new Map(data.players.map(p=>[p.id,p]));
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
 const key=(name,born)=>norm(name)+'|'+String(born||'').slice(0,4);
 const official=window.EUROSCOUT_OFFICIAL_ROSTERS;
+const teamLogos={
+ OPA:'https://www.bkopava.cz/data/img/team/bk-opava.png',
+ FOB:'https://fribourg-olympic.ch/wp-content/uploads/2025/12/FOB_Logo_Small-920x1024.png'
+};
 const rosterByIdentity=new Map((official?.roster||[]).map(r=>[key(r.name,r.born),r]));
 const posMap={'Point Guard':['PG','Guard'],'Shooting Guard':['SG','Guard'],'Guard':['G','Guard'],'Small Forward':['SF','Forward'],'Power Forward':['PF','Forward'],'Forward':['F','Forward'],'Center':['C','Big'],'Centre':['C','Big'],'Big':['C','Big']};
 function record(r){
@@ -28,7 +32,7 @@ function record(r){
 }
 function apply(raw){
  if(!raw?.leagues)return;
- const teams=data.teams.map(t=>({code:t.code,name:t.name,source:t.source}));
+ const teams=data.teams.map(t=>({code:t.code,name:t.name,source:t.source,logo:teamLogos[t.code]||t.logo||null}));
  let L=raw.leagues.find(l=>l.meta.id==='bclq');
  if(!L){L={meta:{id:'bclq',name:'BCL Qualifiers',season:'2026/27',qualifier:true,source:data.source,checked:data.checked},teams,players:[]};raw.leagues.push(L);}
  // A private/cloud snapshot can already contain the qualifier roster from before
