@@ -1955,7 +1955,7 @@ function next26Set(m){try{localStorage.setItem(NEXT26_KEY,JSON.stringify(m));}ca
   try{Sync.stampKey(NEXT26_KEY);}catch(e){} try{Store.pushAppKey(NEXT26_KEY);}catch(e){}}
 function effective26(p,m){m=m||next26Get();
   const k=m[gid(p)]||m[p.id]||((p._grp||[]).map(x=>m[x.id]).find(Boolean));
-  const registered=window.EuroScoutKzsPro?.key(p)||window.EuroScoutOfficialRosters?.key(p)||window.EuroScoutBBL?.key(p)||window.EuroScoutTransferConfirmations?.key(p)||window.EuroScoutABA?.key(p)||window.EuroScoutElite2?.key(p)||window.EuroScoutExpansion?.key(p)||window.EuroScoutNCAA?.key(p);
+  const registered=window.EuroScoutKzsPro?.key(p)||window.EuroScoutEuroCup?.key(p)||window.EuroScoutOfficialRosters?.key(p)||window.EuroScoutBBL?.key(p)||window.EuroScoutTransferConfirmations?.key(p)||window.EuroScoutABA?.key(p)||window.EuroScoutElite2?.key(p)||window.EuroScoutExpansion?.key(p)||window.EuroScoutNCAA?.key(p);
   if(registered&&k){const automated=readAssignmentMap(AUTO_APPLIED_KEY),ids=[gid(p),p.id,...(p._grp||[]).map(x=>x.id)];if(ids.some(id=>automated[id]))return registered;}
   return k?canonKey(k):(registered||null);}   // keyed per person, so it is shared across every competition he plays
 function set26(pid,key){const m=next26Get();const p=player(pid);
@@ -2011,7 +2011,7 @@ function showsTeams(m){return !!(m&&!m.exhibition&&(
 // stat-scope leagues: the ones that belong in stats filters/percentiles (never the browse-only ones)
 function isStatLeague(m){return !!(m&&!isOtherLeague(m)&&!m.teamsOnly);}
 function allDbTeams(){if(DBTEAM_LIST)return DBTEAM_LIST;const out=[];(STATE.data.leagues||[]).forEach(L=>{if(!showsTeams(L.meta))return;(L.teams||[]).forEach(t=>{const lg=L.meta.id;const country=t.country||(lg==='nba'?(t.name==='Toronto Raptors'?'Canada':'United States'):lg==='gleague'?(t.name==='Raptors 905'?'Canada':/Mexico|México/i.test(t.name)?'Mexico':'United States'):'');const logo=t.logo||(lg==='nba'&&/^161061\d{4}$/.test(String(t.code))?'https://cdn.nba.com/logos/nba/'+t.code+'/primary/L/logo.svg':null);out.push({key:lg+"|"+t.code,name:t.name,city:t.city||"",country,lg,lgName:L.meta.name,conf:t.conference||null,code:t.code,logo});});});EuroScoutClubs.extend(out);
-  DBTEAM_LIST=out;DBTEAM_BYKEY=new Map(out.map(t=>[t.key,t]));buildClubs();EuroScoutClubs.linkAliases(DBTEAM_BYKEY,CLUB_BY_TEAMKEY);window.EuroScoutMemberships?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutBBL?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutOfficialRosters?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutKzsPro?.decorate(CLUBS,CLUB_BY_TEAMKEY);DOM27=null;NEXTCOMP=null;return out;}
+  DBTEAM_LIST=out;DBTEAM_BYKEY=new Map(out.map(t=>[t.key,t]));buildClubs();EuroScoutClubs.linkAliases(DBTEAM_BYKEY,CLUB_BY_TEAMKEY);window.EuroScoutMemberships?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutEuroCup?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutBBL?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutOfficialRosters?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutKzsPro?.decorate(CLUBS,CLUB_BY_TEAMKEY);DOM27=null;NEXTCOMP=null;return out;}
 
 /* ---------- clubs: one entry per real club, tagged with every competition it plays ---------- */
 let CLUBS=null, CLUB_BY_TEAMKEY=null;
@@ -2607,7 +2607,7 @@ function rebuildLinks(){
     const a=normName(arr[i].name).split(" ")[0], b=normName(arr[j].name).split(" ")[0];
     const m=Math.min(a.length,b.length);
     if(m>=3&&a.slice(0,m)===b.slice(0,m))uni(arr[i].id,arr[j].id);}});
-  window.EuroScoutABA?.link(uni);
+  window.EuroScoutABA?.link(uni);window.EuroScoutEuroCup?.link(uni);
   window.EuroScoutBBL?.link(uni);window.EuroScoutOfficialRosters?.link(uni);window.EuroScoutKzsPro?.link(uni);window.EuroScoutBCLQ?.link(uni);
   window.EuroScoutFEB?.link(uni);
   window.EuroScoutElite2?.link(uni);
@@ -2926,7 +2926,7 @@ async function boot(){
   window.EuroScoutElite2?.apply(raw);
   window.EuroScoutExpansion?.apply(raw);
   window.EuroScoutMemberships?.apply(raw);
-  window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutKzsPro?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
+  window.EuroScoutEuroCup?.apply(raw);window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutKzsPro?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
   if(window.ESAccess&&!ESAccess.internal){ESAccess.external(raw);return;}
   // A partially migrated private snapshot must never replace a valid public core.
   // Only apply it when it contains a complete, non-empty league collection.
@@ -2937,7 +2937,7 @@ async function boot(){
   window.EuroScoutElite2?.apply(raw);
   window.EuroScoutExpansion?.apply(raw);
   window.EuroScoutMemberships?.apply(raw);
-  window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutKzsPro?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
+  window.EuroScoutEuroCup?.apply(raw);window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutKzsPro?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
   window.EuroScoutManualPlayers?.apply(raw);
   STATE.data = raw;
   window.EuroScoutEditPlayerV2?.prune(raw);
@@ -5911,7 +5911,7 @@ async function loadExtraPack(label){
     window.EuroScoutNCAA?.apply(STATE.data);
     window.EuroScoutExpansion?.apply(STATE.data);
     window.EuroScoutMemberships?.apply(STATE.data);
-    window.EuroScoutBBL?.apply(STATE.data);window.EuroScoutOfficialRosters?.apply(STATE.data);window.EuroScoutKzsPro?.apply(STATE.data);window.EuroScoutBCLQ?.apply(STATE.data);
+    window.EuroScoutEuroCup?.apply(STATE.data);window.EuroScoutBBL?.apply(STATE.data);window.EuroScoutOfficialRosters?.apply(STATE.data);window.EuroScoutKzsPro?.apply(STATE.data);window.EuroScoutBCLQ?.apply(STATE.data);
     window.EuroScoutEditPlayerV2?.prune(STATE.data);
     // derived per-player fields the core boot computes (astto etc.) for the new leagues
     pack.leagues.forEach(L=>L.players.forEach(p=>{
@@ -7261,7 +7261,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/realgm-representation.js?v=20260907-13"></script>
 <script src="euroscout-representation.js?v=20260907-13"></script>
 <script src="data/aba-rosters-2026.js?v=20260910-1"></script>
-<script src="euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260920-fix"></script><script src="data/kzs-pro-2026.js?v=20260930-1"></script><script src="euroscout-kzs-pro.js?v=20260930-1"></script>
+<script src="euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"></script><script src="eurocup-rosters-2026.js?v=20260930-full"></script><script src="euroscout-eurocup-rosters.js?v=20260930-full"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260920-fix"></script><script src="data/kzs-pro-2026.js?v=20260930-1"></script><script src="euroscout-kzs-pro.js?v=20260930-1"></script>
 <script src="data/bclq-2026.js?v=20260921-final"></script><script src="euroscout-bclq-2026.js?v=20260930-profile-stats"></script>
 <link rel="stylesheet" href="euroscout-merge-center.css?v=20260921-1"><script src="euroscout-merge-center.js?v=20260922-3"></script>
 <link rel="stylesheet" href="euroscout-agencies-v2.css?v=20260923-rebuild"><script src="euroscout-agencies-v2.js?v=20260923-rebuild"></script><script src="global-command-palette.js?v=20260922-performance"></script><script src="euroscout-manual-players.js?v=20260929-nathan-soliman"></script><script src="euroscout-command-palette.js?v=20260922-performance"></script><script>esSetup();boot().catch(function(error){console.error('EuroScout initialization failed',error);document.getElementById('app').textContent='EuroScout could not finish loading. Please reload.';}).finally(function(){var root=document.documentElement;root.classList.remove('es-preload');root.classList.add('es-ready');setTimeout(function(){document.getElementById('esSplash')?.remove();},300);});</script>
