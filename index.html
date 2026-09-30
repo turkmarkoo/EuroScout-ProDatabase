@@ -1956,8 +1956,8 @@ function next26Set(m){try{localStorage.setItem(NEXT26_KEY,JSON.stringify(m));}ca
 function effective26(p,m){m=m||next26Get();
   const k=m[gid(p)]||m[p.id]||((p._grp||[]).map(x=>m[x.id]).find(Boolean));
   const registered=window.EuroScoutKzsPro?.key(p)||window.EuroScoutEuroCup?.key(p)||window.EuroScoutOfficialRosters?.key(p)||window.EuroScoutBBL?.key(p)||window.EuroScoutTransferConfirmations?.key(p)||window.EuroScoutABA?.key(p)||window.EuroScoutElite2?.key(p)||window.EuroScoutExpansion?.key(p)||window.EuroScoutNCAA?.key(p);
-  if(registered&&k){const automated=readAssignmentMap(AUTO_APPLIED_KEY),ids=[gid(p),p.id,...(p._grp||[]).map(x=>x.id)];if(ids.some(id=>automated[id]))return registered;}
-  return k?canonKey(k):(registered||null);}   // keyed per person, so it is shared across every competition he plays
+  if(k){const automated=readAssignmentMap(AUTO_APPLIED_KEY),ids=[gid(p),p.id,...(p._grp||[]).map(x=>x.id)];if(ids.some(id=>automated[id]))return registered?canonKey(registered):null;}
+  return k?canonKey(k):(registered?canonKey(registered):null);}   // keyed per person, so it is shared across every competition he plays
 function set26(pid,key){const m=next26Get();const p=player(pid);
   const ids=p?[gid(p),p.id].concat((p._grp||[]).map(x=>x.id)):[pid];
   [...new Set(ids)].forEach(k=>delete m[k]);          // clear every alias for this person
@@ -7248,7 +7248,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-market-records.js?v=16"></script>
 <script src="euroscout-market.js?v=20260921-fa-v2"></script>
 <script src="euroscout-freeagents-v2.js?v=20260921-filters-columns"></script>
-<script src="euroscout-country-picker.js?v=20260922-1"></script><script src="euroscout-edit-player-v2.js?v=20260930-hub-profile-sync"></script>
+<script src="euroscout-country-picker.js?v=20260922-1"></script><script src="euroscout-edit-player-v2.js?v=20260930-free-agent"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
 <script src="euroscout-transfer-confirmations.js?v=20260915-verified"></script>
 <script src="euroscout-transfer-verification.js?v=20260920-v1"></script>
