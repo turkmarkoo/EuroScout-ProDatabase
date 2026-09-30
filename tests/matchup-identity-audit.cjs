@@ -20,4 +20,7 @@ const ilic=lietkabelis.filter(row=>['Milos Ilic','Veljko Ilic'].includes(row.nam
 assert.equal(ilic.length,2);
 assert.deepEqual(Array.from(ilic,row=>row.name).sort(),['Milos Ilic','Veljko Ilic']);
 assert.equal(new Set(ilic.map(row=>row.ids[0])).size,2);
+const cowan=sets[0].roster.find(row=>row.ids?.includes('eurocup-012003'));
+assert.ok(cowan,'Anthony Cowan Jr must remain in the official EuroCup directory');
+for(const id of ['aba-5608','bcl-0319','bsl-0202','bsn-80'])assert.ok(cowan.ids.includes(id),`Anthony Cowan identity must include ${id}`);
 console.log('Stable-ID ownership and matchup name-collision audit passed for official roster directories.');

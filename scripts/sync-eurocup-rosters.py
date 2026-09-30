@@ -71,6 +71,7 @@ TEAM_SLUGS = {
 # not fuzzy matches, and keep the existing notes/ratings attached to one person.
 IDENTITY_LINKS = {
     "014872": ["lnb-9559", "bcl-0327"],  # Ugo Doumbia Niang / Ugo Doumbia
+    "012003": ["aba-5608", "bcl-0319", "bsl-0202", "bsn-80"],  # Anthony Cowan Jr / Anthony Cowan
 }
 
 
