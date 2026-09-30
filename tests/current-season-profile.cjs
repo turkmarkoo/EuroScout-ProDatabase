@@ -5,9 +5,16 @@ const path=require('path');
 const vm=require('vm');
 
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+const quickstats=fs.readFileSync(path.join(__dirname,'..','euroscout-quickstats.js'),'utf8');
 
 test('2026/27 is the default database statistics season',()=>{
   assert.match(html,/season:"2026\/27",statsSeason:"2026\/27"/);
+});
+
+test('played DragonsData lines replace empty current-roster shells in quick stats',()=>{
+  assert.match(quickstats,/playedLines=seasonLines\.filter\(x=>Number\(x\.g\)>0\)/);
+  assert.match(quickstats,/shown=playedLines\.length\?playedLines:seasonLines/);
+  assert.match(html,/euroscout-quickstats\.js\?v=20260930-current-stats/);
 });
 
 test('profiles prefer a linked 2026/27 statistics line',()=>{

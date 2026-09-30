@@ -74,7 +74,10 @@ function paint(){
  const host=document.getElementById('qsPanel');if(!host||!current)return;
  const all=linesOf(current),seasons=[...new Set(all.map(seasonOf))].sort((a,b)=>(parseInt(b,10)||0)-(parseInt(a,10)||0)||b.localeCompare(a));
  if(!seasonChoice||!seasons.includes(seasonChoice))seasonChoice=seasons[0]||'Season unknown';
- const shown=all.filter(x=>seasonOf(x)===seasonChoice);
+ const seasonLines=all.filter(x=>seasonOf(x)===seasonChoice),playedLines=seasonLines.filter(x=>Number(x.g)>0);
+ // Current-roster profiles carry identity and photos but no box score. Once a
+ // DragonsData line exists, keep that empty roster shell out of the selector.
+ const shown=playedLines.length?playedLines:seasonLines;
  if(!line||!shown.includes(line))line=shown.find(x=>x.league===current.league)||shown[0]||current;
  const L=leagueOf(line);
  host.innerHTML='<header class="qs-head"><div><h2>'+esc(current.name)+'</h2><div class="qs-filters"><label>Season<select id="qsSeason" aria-label="Statistics season">'+seasons.map(s=>'<option'+(s===seasonChoice?' selected':'')+'>'+esc(s)+'</option>').join('')+'</select></label><label>Competition'+(shown.length>1?'<select id="qsLine" aria-label="Competition">'+shown.map((x,i)=>'<option value="'+i+'"'+(x===line?' selected':'')+'>'+esc((leagueOf(x)?.meta?.name||x.league)+' · '+(x.teamName||x.team)+' · '+(x.g||0)+' g')+'</option>').join('')+'</select>':'<span class="qs-single">'+esc((L?.meta?.name||line.league)+' · '+(line.teamName||line.team))+'</span>')+'</label></div></div>'+
