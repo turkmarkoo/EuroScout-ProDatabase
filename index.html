@@ -306,6 +306,7 @@ textarea:focus{border-color:var(--accent2)}
 .modalbox{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:420px;width:100%;padding:26px;box-shadow:var(--shadow-lift)}
 .modalbox h3{margin:0 0 6px;font-family:var(--disp);font-weight:700;font-size:20px}
 .modalbox p{color:var(--muted);font-size:13px;margin:0 0 14px;line-height:1.6}
+.es-board-pick{display:grid;gap:8px;margin-top:14px}.es-board-pick button{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--txt);text-align:left;cursor:pointer}.es-board-pick button:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft)}.es-board-pick button:disabled{opacity:.65;cursor:default}.es-board-pick button span{display:grid;gap:3px}.es-board-pick button small{color:var(--muted)}.es-board-pick button strong{color:var(--accent-deep);white-space:nowrap}.es-board-status{min-height:20px;margin-top:10px!important}
 .close{position:absolute;top:14px;right:16px;background:none;border:0;color:var(--muted);font-size:22px}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:12px 20px;border-radius:11px;z-index:200;font-size:13.5px;font-family:var(--mono);box-shadow:var(--shadow-lift);opacity:0;transition:opacity .2s}
 .toast.show{opacity:1}
@@ -3922,18 +3923,28 @@ function sendToHub(){
 }
 function addToScoutBoard(id){
   const p=player(id||CURRENT);if(!p){toast('Open a player first.');return;}
-  if(!HUB_EMBED||!window.parent||window.parent===window){toast('Open EuroScout inside DragonHub to add this player to a board.');return;}
   const L=leagueOf(p)||{meta:{}},currentKey=effective26(p),currentClub=currentKey&&!isStatus(currentKey)?clubByKey(currentKey):null;
   const club=currentClub?currentClub.name:(p.teamName||p.team||''),link=location.origin+location.pathname+'#p='+encodeURIComponent(p.id);
   const payload={kind:'database',id:String(p.id),name:p.name||'',born:p.born?String(p.born):'',position:p.role||(p.pos&&p.pos!=='-'?p.pos:''),height:p.height||'',nationality:p.country||'',country:p.country||'',club:club,team:club,photo:photoOf(p)||p.img||'',url:link,refs:['euroscout:'+String(p.id)],source:'EuroScout',profilePriority:30};
+  if(!HUB_EMBED||!window.parent||window.parent===window){showModal('<h3>Add '+esc(p.name)+' to a Scout Board</h3><p>Scout Boards use your DragonHub account. Open this profile through DragonHub to add the player without leaving EuroScout.</p><a class="btn primary" href="https://dragonshub.mtscouting.com" target="_blank" rel="noopener">Open DragonHub ↗</a>');return;}
   let target='*';try{if(document.referrer)target=new URL(document.referrer).origin;}catch(e){}
-  try{window.parent.postMessage({type:'dragonshub:add-to-board',from:'euroscout',player:payload},target);toast('Choose a Scout Board. You will stay on this screen.');}catch(e){toast('Could not reach DragonHub');}
+  const requestId='board-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);window.__boardPicker={requestId,payload,target};
+  showModal('<h3>Add '+esc(p.name)+' to a Scout Board</h3><p>Loading your private boards…</p><div class="es-board-pick" id="esBoardPick"></div><p class="es-board-status" id="esBoardStatus" role="status"></p>');
+  try{window.parent.postMessage({type:'dragonshub:list-boards',from:'euroscout',requestId,player:payload},target);}catch(e){const s=document.getElementById('esBoardStatus');if(s)s.textContent='Could not reach DragonHub.';}
 }
 window.addEventListener('message',function(e){
-  const msg=e&&e.data;if(!msg||msg.type!=='dragonshub:add-to-board-result')return;
+  const msg=e&&e.data;if(!msg||!['dragonshub:board-options','dragonshub:add-to-board-result'].includes(msg.type))return;
   let expected='';try{if(document.referrer)expected=new URL(document.referrer).origin;}catch(_){}
   if(expected&&e.origin!==expected)return;
-  const result=msg.result||{};toast((result.playerName||'Player')+' added to '+(result.boardName||'Scout Board'));
+  const picker=window.__boardPicker;if(!picker||msg.requestId!==picker.requestId)return;
+  const status=document.getElementById('esBoardStatus');
+  if(msg.error){if(status)status.textContent=msg.error;return;}
+  if(msg.type==='dragonshub:board-options'){
+    const box=document.getElementById('esBoardPick'),boards=msg.result&&msg.result.boards||[];if(!box)return;
+    box.innerHTML=boards.length?boards.map(b=>'<button type="button" data-es-board="'+escAttr(b.id)+'"'+(b.added?' disabled':'')+'><span><b>'+esc(b.name)+'</b><small>'+b.count+' player'+(b.count===1?'':'s')+'</small></span><strong>'+(b.added?'✓ Added':'＋ Add')+'</strong></button>').join(''):'<p>No Scout Boards are available yet.</p>';
+    box.querySelectorAll('[data-es-board]:not(:disabled)').forEach(button=>button.onclick=()=>{button.disabled=true;if(status)status.textContent='Adding player…';window.parent.postMessage({type:'dragonshub:add-to-board',from:'euroscout',requestId:picker.requestId,boardId:button.dataset.esBoard,player:picker.payload},picker.target);});return;
+  }
+  const result=msg.result||{};window.__boardPicker=null;hideModal();toast((result.playerName||'Player')+(result.alreadyAdded?' is already on ':' added to ')+(result.boardName||'Scout Board'));
 });
 
 function openDrawerUI(){
@@ -5199,7 +5210,7 @@ function renderProfile(){
               ${(()=>{const k=effective26(p), c=k&&!isStatus(k)?clubByKey(k):null; const label=isStatus(k)?statusLabel(k):(c?`Signed · ${c.name}`:(p.teamName?`Current · ${p.teamName}`:'Status not set')); return `<span class="profile-status-chip">${esc(label)}</span>`;})()}
             </div>
             <div class="ph-actions">
-              ${HUB_EMBED?`<button class="btn primary sm" onclick="addToScoutBoard('${escAttr(p.id)}')" title="Add this player to one of your private Scout Boards">＋ Add to board</button>`:''}
+              <button class="btn primary sm" onclick="addToScoutBoard('${escAttr(p.id)}')" title="Add this player to one of your private Scout Boards">＋ Add to board</button>
               <button class="btn ghost sm" onclick="drawerJump('reportPanel')">Notes</button>
               <button class="btn ghost sm" onclick="toggleCompare('${p.id}')" title="${inCompare(p.id)?'In compare — click to remove':'Add this player to the comparison'}">\u21c6 ${inCompare(p.id)?'In compare':'Compare'}</button>
               <button class="btn ghost sm" onclick="copyPlayerLink('${p.id}',this)" title="Copy a shareable link to this player">🔗 Copy link</button>
@@ -7254,4 +7265,4 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/bclq-2026.js?v=20260921-final"></script><script src="euroscout-bclq-2026.js?v=20260930-profile-stats"></script>
 <link rel="stylesheet" href="euroscout-merge-center.css?v=20260921-1"><script src="euroscout-merge-center.js?v=20260922-3"></script>
 <link rel="stylesheet" href="euroscout-agencies-v2.css?v=20260923-rebuild"><script src="euroscout-agencies-v2.js?v=20260923-rebuild"></script><script src="global-command-palette.js?v=20260922-performance"></script><script src="euroscout-manual-players.js?v=20260929-nathan-soliman"></script><script src="euroscout-command-palette.js?v=20260922-performance"></script><script>esSetup();boot().catch(function(error){console.error('EuroScout initialization failed',error);document.getElementById('app').textContent='EuroScout could not finish loading. Please reload.';}).finally(function(){var root=document.documentElement;root.classList.remove('es-preload');root.classList.add('es-ready');setTimeout(function(){document.getElementById('esSplash')?.remove();},300);});</script>
-<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-sessions.js?v=20260921-1"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260920-2"><link rel="stylesheet" href="team-selection-workspace.css?v=20260930-1"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260921-1"><script src="data/signal-origins.js?v=20260920-1"></script><script src="euroscout-signals.js?v=20260920-2"></script><script src="euroscout-quickstats.js?v=20260930-profile-stats"></script><script src="data/competition-assets.js?v=20260930-1"></script><script src="team-selection-workspace.js?v=20260930-logos"></script><script src="euroscout-live-notes.js?v=20260930-team-picker"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>
+<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-sessions.js?v=20260921-1"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20260920-2"><link rel="stylesheet" href="team-selection-workspace.css?v=20260930-1"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260921-1"><script src="data/signal-origins.js?v=20260920-1"></script><script src="euroscout-signals.js?v=20260920-2"></script><script src="euroscout-quickstats.js?v=20260930-profile-stats"></script><script src="data/competition-assets.js?v=20260930-1"></script><script src="team-selection-workspace.js?v=20260930-logos"></script><script src="euroscout-live-notes.js?v=20260930-board-picker2"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>
