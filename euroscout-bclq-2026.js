@@ -14,7 +14,7 @@ const posMap={'Point Guard':['PG','Guard'],'Shooting Guard':['SG','Guard'],'Guar
 function record(r){
  const [pos,role]=posMap[r.position]||[r.position||'',r.position||''];
  const country=window.EuroScoutCountries?.canonical(r.nationality)||null;
- const p={id:'bclq-'+r.id,code:String(r.id),fibaId:r.id,name:r.name,league:'bclq',team:r.teamCode,teamName:r.teamName,
+ const p={id:'bclq-stat-'+r.id,code:String(r.id),fibaId:r.id,name:r.name,league:'bclq',team:r.teamCode,teamName:r.teamName,
   competitionId:'bclq',stage:'Q',statsSeason:'2026/27',season:'2026/27',_qualifier:true,_strictIdentity:true,
   born:r.born?Number(r.born.slice(0,4)):null,dob:r.born||null,age:r.born?2026-Number(r.born.slice(0,4)):null,
   height:r.height||null,jersey:r.jersey||'',country,nationalities:(r.nationalities||[]).map(n=>window.EuroScoutCountries?.canonical(n)||n),pos,role,officialPosition:r.position||null,
@@ -42,8 +42,8 @@ function apply(raw){
  L.teams=teams;
  const existing=new Map(L.players.map(p=>[p.id,p]));
  for(const r of data.players){
-  const fresh=record(r),current=existing.get(fresh.id);
-  if(current)Object.assign(current,fresh);
+  const fresh=record(r),legacy=existing.get('bclq-'+r.id),current=existing.get(fresh.id)||(legacy?.league==='bclq'?legacy:null);
+  if(current){const oldId=current.id;Object.assign(current,fresh);if(oldId!==fresh.id){existing.delete(oldId);existing.set(fresh.id,current);}}
   else{L.players.push(fresh);existing.set(fresh.id,fresh);}
  }
  L.meta.playerCount=L.players.length;
@@ -61,6 +61,6 @@ function apply(raw){
   }
  }
 }
-function link(uni){for(const r of data.players){const match=rosterByIdentity.get(key(r.name,r.born));if(!match)continue;for(const id of match.ids||[])uni('bclq-'+r.id,id);}}
+function link(uni){for(const r of data.players){const match=rosterByIdentity.get(key(r.name,r.born));if(!match)continue;for(const id of match.ids||[])uni('bclq-stat-'+r.id,id);}}
 window.EuroScoutBCLQ={apply,link,data,byId};
 })();

@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const vm=require('node:vm');
+const root=path.join(__dirname,'..'),context={window:{}};vm.createContext(context);
+new vm.Script(fs.readFileSync(path.join(root,'data','bclq-2026.js'),'utf8')).runInContext(context);
+context.window.EUROSCOUT_OFFICIAL_ROSTERS={roster:[{name:'Giorgi Ochkhikidze',born:2004,ids:['bclq-301279']}]};
+new vm.Script(fs.readFileSync(path.join(root,'euroscout-bclq-2026.js'),'utf8')).runInContext(context);
+const raw={leagues:[{meta:{id:'bcl',name:'Basketball Champions League'},teams:[],players:[{id:'bclq-301279',name:'Giorgi Ochkhikidze',born:2004,league:'bcl',g:null,ppg:null}]}]};
+context.window.EuroScoutBCLQ.apply(raw);
+const rows=raw.leagues.flatMap(l=>l.players).filter(p=>p.name==='Giorgi Ochkhikidze');
+assert.equal(rows.length,2);
+const stats=rows.find(p=>p.league==='bclq');
+assert.equal(stats.id,'bclq-stat-301279');
+assert.deepEqual({season:stats.statsSeason,g:stats.g,ppg:stats.ppg,apg:stats.apg},{season:'2026/27',g:2,ppg:19.5,apg:9});
+const links=[];context.window.EuroScoutBCLQ.link((a,b)=>links.push([a,b]));
+assert.ok(links.some(([a,b])=>a==='bclq-stat-301279'&&b==='bclq-301279'));
+console.log('BCL qualifier statistics use a unique linked profile line.');

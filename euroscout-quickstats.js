@@ -61,7 +61,7 @@ function linesOf(p){const g=gid(p);return allPlayersEvery().filter(x=>gid(x)===g
 const seasonLabel=value=>{const match=String(value||'').match(/(20\d{2})\s*[/–-]\s*((?:20)?\d{2})/);return match?match[1]+'/'+match[2].slice(-2):'';};
 function currentRosterOnly(p){
  const scope=[p.statsScope,p._rosterSeason,p._seasonLabel].map(seasonLabel).find(Boolean);
- return scope==='2026/27'||p._rosterOnly||/^bclq-/.test(String(p.id||''))||
+ return scope==='2026/27'||p._rosterOnly||/^bclq-(?:stat-)?/.test(String(p.id||''))||
   ((!p.g||Number(p.g)===0)&&seasonLabel(p.currentRosterSeason||p._officialRoster?.season)==='2026/27');
 }
 function seasonOf(p){
