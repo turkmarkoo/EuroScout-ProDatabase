@@ -27,6 +27,7 @@ function rosterPlayers(){return ['a','b'].flatMap(k=>liveRoster(STATE.scouting[k
 function posGroup(p){const t=String(p.role||p.pos||'');if(/big|cent|^c$|^pf|power|^c\//i.test(t))return 'B';if(/guard|^pg|^sg|^g$|bek/i.test(t))return 'G';if(/forw|wing|^sf|^f$|kril/i.test(t))return 'W';return '';}
 function posShort(p){const g=posGroup(p);return g==='W'?'F':g==='B'?'C':g||'–';}
 function shortName(n){const parts=String(n||'').trim().split(/\s+/);return parts.length<2?n:parts[0][0]+'. '+parts.slice(1).join(' ');}
+function rosterName(p,players){const short=shortName(p.name),collision=players.some(other=>other.id!==p.id&&fold(shortName(other.name))===fold(short)&&fold(other.name)!==fold(p.name));return collision?p.name:short;}
 function visible(p,slot){const f=filters[slot];return (!f.pos||posGroup(p)===f.pos)&&(!f.q||fold(p.name).includes(fold(f.q))||shirt(p)===f.q.trim());}
 /* The players the arrow keys walk through: what is on screen, left panel then right. */
 function walkList(){return ['a','b'].flatMap(k=>(liveRoster(STATE.scouting[k])?.players||[]).filter(p=>visible(p,k)));}
@@ -43,7 +44,7 @@ function otherSide(){if(document.activeElement?.classList.contains('rosterRow'))
 function columnHTML(key,slot){const r=liveRoster(key),f=filters[slot];
  return '<div class="rosterCol mx-col" data-slot="'+slot+'"><div class="mx-colhead">'+(r?clubBadge(r.club,26):'')+teamButton(key,slot)+'</div>'+
  (r?'<input class="mx-rsearch" type="search" data-slot="'+slot+'" value="'+escAttr(f.q)+'" placeholder="Search players…" aria-label="Search '+escAttr(r.t.name)+' players"><div class="mx-posfilter" role="group" aria-label="Position filter">'+[['','All'],['G','G'],['W','W'],['B','B']].map(([v,l])=>'<button type="button" class="mx-pos'+(f.pos===v?' on':'')+'" data-pos="'+v+'" data-slot="'+slot+'" aria-pressed="'+(f.pos===v)+'">'+l+'</button>').join('')+'</div><div class="rosterList">'+
-  r.players.map(p=>'<button type="button" class="rosterRow mx-row" data-id="'+escAttr(p.id)+'" title="'+escAttr(p.name)+'"'+(visible(p,slot)?'':' hidden')+'><span class="rrNum">'+esc(shirt(p)||'–')+'</span><span class="rrName">'+esc(shortName(p.name))+'</span><span class="mx-mark" data-mark="'+(SX?SX.markOf(p):'')+'"></span><span class="mx-rpos">'+posShort(p)+'</span></button>').join('')+
+  r.players.map(p=>'<button type="button" class="rosterRow mx-row" data-id="'+escAttr(p.id)+'" title="'+escAttr(p.name)+'"'+(visible(p,slot)?'':' hidden')+'><span class="rrNum">'+esc(shirt(p)||'–')+'</span><span class="rrName">'+esc(rosterName(p,r.players))+'</span><span class="mx-mark" data-mark="'+(SX?SX.markOf(p):'')+'"></span><span class="mx-rpos">'+posShort(p)+'</span></button>').join('')+
   (r.players.length?'':'<div class="empty">No confirmed 2026/27 assignments yet.</div>')+'</div>':'<div class="empty">Pick a team to see its roster.</div>')+'</div>';}
 
 function contextHTML(){const s=STATE.scouting,a=SX?.active(),ra=liveRoster(s.a),rb=liveRoster(s.b);

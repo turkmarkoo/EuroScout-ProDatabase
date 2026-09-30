@@ -51,7 +51,7 @@ assert.equal(api.key(raw.leagues[1].players[0]),'lnb|LEM');
 assert.equal(raw.season2627.comps.eurocup.teams.length,32);
 
 const html=fs.readFileSync('index.html','utf8');
-assert.match(html,/eurocup-rosters-2026\.js\?v=20260930-identities/);
+assert.match(html,/eurocup-rosters-2026\.js\?v=20260930-identity-audit/);
 assert.match(html,/euroscout-eurocup-rosters\.js\?v=20260930-identities/);
 assert.match(html,/EuroScoutEuroCup\?\.apply\(raw\)/);
 assert.match(html,/EuroScoutEuroCup\?\.key\(p\)/);

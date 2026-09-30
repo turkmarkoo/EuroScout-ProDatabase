@@ -15,8 +15,8 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  feed.quality_policy='accepted_live_boxscores_only';
 
  const directory={teams:[{code:'LEM',name:'Le Mans Sarthe Basket',aliases:['Le Mans Sarthe']}],roster:[{id:'014866',ids:['eurocup-014866','lnb-9352'],name:'Bastien Grasshoff',born:2007,height:198,position:'Guard',nationality:'France',teamCode:'LEM'}]};
- const live={schema:1,quality_policy:'accepted_live_boxscores_only',generated:'2026-09-30T09:00:00Z',fixtures:[],leagues:[
-  {meta:{id:'dragons-eurocup-26',name:'EuroCup',season:'2026/27',privateOwnerFeed:true},players:[{id:'dragons-eurocup-grasshoff',name:'B. Grasshoff',team:'dd-lem',teamName:'Le Mans',g:1,ppg:8,gameLog:[]}]},
+ const live={schema:1,quality_policy:'accepted_live_boxscores_only',generated:'2026-09-30T09:00:00Z',fixtures:[{home:{code:'dd-lem',name:'Le Mans Sarthe Basket'},away:{code:'dd-other',name:'Other Club'}}],leagues:[
+  {meta:{id:'dragons-eurocup-26',name:'EuroCup',season:'2026/27',privateOwnerFeed:true},players:[{id:'dragons-eurocup-grasshoff',name:'B. Grasshoff',team:'dd-lem',g:1,ppg:8,gameLog:[]}]},
   {meta:{id:'dragons-lnb-26',name:'Betclic Elite',season:'2026/27',privateOwnerFeed:true},players:[{id:'dragons-lnb-grasshoff',name:'Bastien Grasshoff',team:'dd-lem',teamName:'Le Mans',g:2,ppg:6,gameLog:[]}]}
  ]};
  const access={internal:true,user:{email:'markoturk.scouting@gmail.com'}};
@@ -29,7 +29,8 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  const linked=[];context.window.EuroScoutDragons.link((left,right)=>linked.push([left,right]));
  assert.equal(linked.some(pair=>pair[0]==='dragons-eurocup-grasshoff'&&pair[1]==='lnb-9352'),true);
  assert.equal(linked.some(pair=>pair[0]==='dragons-lnb-grasshoff'&&pair[1]==='lnb-9352'),true);
- assert.match(html,/euroscout-dragons\.js\?v=20260930-current-stats-fast/);
+ assert.equal(live.unresolvedPlayers,0);
+ assert.match(html,/euroscout-dragons\.js\?v=20260930-identity-audit/);
  assert.match(html,/raw=await window\.EuroScoutDragons\?\.apply\(raw\)\|\|raw/);
  assert.match(html,/window\.EuroScoutDragons\?\.link\(uni\)/);
 

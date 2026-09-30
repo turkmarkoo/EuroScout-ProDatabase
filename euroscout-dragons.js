@@ -19,7 +19,7 @@ function officialDirectory(){
  }
  return {teams,players};
 }
-function teamMatch(source,directory){
+function directTeamMatch(source,directory){
  const code=clean(source.team),name=clean(source.teamName),queries=[code,name].filter(Boolean);
  const cacheKey=code+'|'+name;if(directory.teamCache?.has(cacheKey))return directory.teamCache.get(cacheKey);
  let matches=directory.teams.filter(team=>[team.code,team.name,...team.aliases].some(alias=>queries.includes(clean(alias))));
@@ -28,6 +28,26 @@ function teamMatch(source,directory){
   const candidate=clean(alias);return query.length>=6&&candidate.length>=6&&(candidate.startsWith(query+' ')||query.startsWith(candidate+' '));
  })));
  const match=matches.length===1?matches[0]:null;directory.teamCache?.set(cacheKey,match);return match;
+}
+function teamMatch(source,directory){
+ const code=clean(source.team),name=clean(source.teamName);
+ const mapped=directory.feedTeams?.get(code)||directory.feedTeams?.get(name);return mapped||directTeamMatch(source,directory);
+}
+function feedTeamDirectory(data,directory){
+ const mapped=new Map();
+ const add=side=>{
+  if(!side)return;
+  if(typeof side==='string')side={name:side};
+  const code=side.code??side.id??side.key??side.teamId??side.team, name=side.name??side.teamName??side.clubName??side.label;
+  const match=directTeamMatch({team:code,teamName:name},directory);if(!match)return;
+  for(const value of [code,name])if(clean(value))mapped.set(clean(value),match);
+ };
+ for(const fixture of data.fixtures||[]){
+  for(const key of ['home','away','homeTeam','awayTeam','teamA','teamB','a','b'])add(fixture?.[key]);
+  for(const side of fixture?.teams||fixture?.participants||[])add(side);
+ }
+ for(const league of data.leagues||[])for(const team of league.teams||[])add(team);
+ return mapped;
 }
 function abbreviationMatches(shortName,fullName){
  const a=clean(shortName).split(' ').filter(Boolean),b=clean(fullName).split(' ').filter(Boolean);
@@ -38,12 +58,12 @@ function resolve(source,directory,raw){
  const byId=directory.byId||(directory.byId=new Map(allPlayers(raw).map(player=>[player.id,player])));
  if(!directory.playersByTeam){directory.playersByTeam=new Map();for(const item of directory.players){const roster=directory.playersByTeam.get(item.team)||[];roster.push(item);directory.playersByTeam.set(item.team,roster);}}
  if(source.linkedEuroScoutId&&byId.has(source.linkedEuroScoutId))return {id:source.linkedEuroScoutId,player:byId.get(source.linkedEuroScoutId)};
- const team=teamMatch(source,directory);if(!team)return null;
- const roster=directory.playersByTeam.get(team)||[];
- let candidates=roster.filter(item=>abbreviationMatches(source.name,item.name));
+ const team=teamMatch(source,directory),roster=team?(directory.playersByTeam.get(team)||[]):directory.players;
+ const born=Number(source.born||source.birthYear||0);
+ let candidates=roster.filter(item=>abbreviationMatches(source.name,item.name)&&(!born||!item.row?.born||Number(item.row.born)===born));
  if(!candidates.length){
   const words=clean(source.name).split(' ').filter(Boolean),surname=(words[0]?.length===1?words.slice(1):words.slice(-1)).join(' ');
-  if(surname)candidates=roster.filter(item=>{const full=clean(item.name).split(' ');return full.slice(1).join(' ')===surname||full[full.length-1]===surname;});
+  if(surname)candidates=roster.filter(item=>{const full=clean(item.name).split(' '),sameBirth=!born||!item.row?.born||Number(item.row.born)===born;return sameBirth&&(full.slice(1).join(' ')===surname||full[full.length-1]===surname);});
  }
  if(candidates.length!==1)return null;
  const item=candidates[0],id=item.ids.find(value=>byId.has(value))||item.ids[0];
@@ -58,6 +78,7 @@ function connectData(raw,data){
  const directory=officialDirectory(),resolved=[];links=[];
  directory.byId=new Map(allPlayers(result).map(player=>[player.id,player]));directory.teamCache=new Map();
  directory.playersByTeam=new Map();for(const item of directory.players){const roster=directory.playersByTeam.get(item.team)||[];roster.push(item);directory.playersByTeam.set(item.team,roster);}
+ directory.feedTeams=feedTeamDirectory(data,directory);
  const ids=new Set(data.leagues.map(league=>league.meta.id));
  result.leagues=result.leagues.filter(league=>!ids.has(league.meta.id));
  for(const sourceLeague of data.leagues){
@@ -73,7 +94,7 @@ function connectData(raw,data){
   }
   result.leagues.push(league);
  }
- feed=data;feed.resolvedPlayers=resolved.length;return result;
+ feed=data;feed.resolvedPlayers=resolved.length;feed.unresolvedPlayers=(data.leagues||[]).reduce((n,league)=>n+(league.players||[]).length,0)-resolved.length;return result;
 }
 async function apply(raw){
  if(!reader())return raw;
