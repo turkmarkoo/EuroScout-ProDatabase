@@ -21,12 +21,13 @@ function officialDirectory(){
 }
 function teamMatch(source,directory){
  const code=clean(source.team),name=clean(source.teamName),queries=[code,name].filter(Boolean);
+ const cacheKey=code+'|'+name;if(directory.teamCache?.has(cacheKey))return directory.teamCache.get(cacheKey);
  let matches=directory.teams.filter(team=>[team.code,team.name,...team.aliases].some(alias=>queries.includes(clean(alias))));
- if(matches.length===1)return matches[0];
+ if(matches.length===1){directory.teamCache?.set(cacheKey,matches[0]);return matches[0];}
  matches=directory.teams.filter(team=>[team.name,...team.aliases].some(alias=>queries.some(query=>{
   const candidate=clean(alias);return query.length>=6&&candidate.length>=6&&(candidate.startsWith(query+' ')||query.startsWith(candidate+' '));
  })));
- return matches.length===1?matches[0]:null;
+ const match=matches.length===1?matches[0]:null;directory.teamCache?.set(cacheKey,match);return match;
 }
 function abbreviationMatches(shortName,fullName){
  const a=clean(shortName).split(' ').filter(Boolean),b=clean(fullName).split(' ').filter(Boolean);
@@ -34,10 +35,11 @@ function abbreviationMatches(shortName,fullName){
  return a[0][0]===b[0][0]&&(a.slice(1).join(' ')===b.slice(1).join(' ')||a.slice(1).join(' ')===b[b.length-1]);
 }
 function resolve(source,directory,raw){
- const byId=new Map(allPlayers(raw).map(player=>[player.id,player]));
+ const byId=directory.byId||(directory.byId=new Map(allPlayers(raw).map(player=>[player.id,player])));
+ if(!directory.playersByTeam){directory.playersByTeam=new Map();for(const item of directory.players){const roster=directory.playersByTeam.get(item.team)||[];roster.push(item);directory.playersByTeam.set(item.team,roster);}}
  if(source.linkedEuroScoutId&&byId.has(source.linkedEuroScoutId))return {id:source.linkedEuroScoutId,player:byId.get(source.linkedEuroScoutId)};
  const team=teamMatch(source,directory);if(!team)return null;
- const roster=directory.players.filter(item=>item.team===team);
+ const roster=directory.playersByTeam.get(team)||[];
  let candidates=roster.filter(item=>abbreviationMatches(source.name,item.name));
  if(!candidates.length){
   const words=clean(source.name).split(' ').filter(Boolean),surname=(words[0]?.length===1?words.slice(1):words.slice(-1)).join(' ');
@@ -48,7 +50,14 @@ function resolve(source,directory,raw){
  return id?{id,player:byId.get(id),row:item.row,team}:null;
 }
 function connectData(raw,data){
- const result=structuredClone(raw),directory=officialDirectory(),resolved=[];links=[];
+ // Copy the data shell and league arrays so adding private lines cannot leak
+ // into the saved core. Player records are read-only here, so cloning millions
+ // of nested stat values only delays startup and wastes memory.
+ const result={...raw,leagues:(raw.leagues||[]).map(league=>({...league,players:[...(league.players||[])],teams:[...(league.teams||[])]}))};
+ if(raw.notes&&typeof raw.notes==='object')result.notes=structuredClone(raw.notes);
+ const directory=officialDirectory(),resolved=[];links=[];
+ directory.byId=new Map(allPlayers(result).map(player=>[player.id,player]));directory.teamCache=new Map();
+ directory.playersByTeam=new Map();for(const item of directory.players){const roster=directory.playersByTeam.get(item.team)||[];roster.push(item);directory.playersByTeam.set(item.team,roster);}
  const ids=new Set(data.leagues.map(league=>league.meta.id));
  result.leagues=result.leagues.filter(league=>!ids.has(league.meta.id));
  for(const sourceLeague of data.leagues){

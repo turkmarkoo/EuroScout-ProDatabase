@@ -29,8 +29,14 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  const linked=[];context.window.EuroScoutDragons.link((left,right)=>linked.push([left,right]));
  assert.equal(linked.some(pair=>pair[0]==='dragons-eurocup-grasshoff'&&pair[1]==='lnb-9352'),true);
  assert.equal(linked.some(pair=>pair[0]==='dragons-lnb-grasshoff'&&pair[1]==='lnb-9352'),true);
- assert.match(html,/euroscout-dragons\.js\?v=20260930-current-stats/);
+ assert.match(html,/euroscout-dragons\.js\?v=20260930-current-stats-fast/);
  assert.match(html,/raw=await window\.EuroScoutDragons\?\.apply\(raw\)\|\|raw/);
  assert.match(html,/window\.EuroScoutDragons\?\.link\(uni\)/);
+
+ const manyBase=Array.from({length:15000},(_,i)=>({id:'base-'+i,name:'Player '+i,league:'test'}));manyBase.push({id:'lnb-9352',name:'Bastien Grasshoff',league:'lnb'});
+ const manyStats=Array.from({length:3000},(_,i)=>({id:'dragons-speed-'+i,name:'B. Grasshoff',team:'dd-lem',teamName:'Le Mans',g:1,gameLog:[]}));
+ const speedFeed={...live,leagues:[{meta:{id:'dragons-speed',name:'EuroCup',season:'2026/27',privateOwnerFeed:true},players:manyStats}]};
+ const started=Date.now();context.window.EuroScoutDragons.connectData({leagues:[{meta:{id:'test'},players:manyBase}]},speedFeed);const elapsed=Date.now()-started;
+ assert(elapsed<2000,'DragonsData identity linking should use one shared player index; took '+elapsed+' ms');
  console.log('Approved reader access, blocked external access, snapshot isolation and rejected-feed tests passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
