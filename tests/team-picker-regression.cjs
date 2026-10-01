@@ -11,11 +11,15 @@ const picker = fs.readFileSync(path.join(root, 'team-selection-workspace.js'), '
 assert.match(html, /team-selection-workspace\.css\?v=20260930-1/);
 assert.match(html, /data\/competition-assets\.js\?v=20260930-1/);
 assert.match(html, /team-selection-workspace\.js\?v=20260930-logos/);
-assert.match(html, /euroscout-live-notes\.js\?v=20260930-identity-audit/);
+assert.match(html, /euroscout-live-notes\.js\?v=20261001-position-editor/);
 assert.ok(html.indexOf('team-selection-workspace.js') < html.indexOf('euroscout-live-notes.js'));
 assert.ok(html.indexOf('data/competition-assets.js') < html.indexOf('team-selection-workspace.js'));
 assert.match(notes, /class="scoutTeamButton"/);
 assert.match(notes, /ESTeamSelection\.open\(\{slot,currentKey:s\[slot\]/);
+assert.match(notes, /id="mxPosition"/);
+assert.match(notes, /\['Guard','Forward','Big'\]/);
+assert.match(notes, /Position saved to player profile/);
+assert.match(notes, /ovrSaveLocal\(\{bio:\{\[gid\(p\)\|\|p\.id\]:\{role,pos\}\}\}\)/);
 assert.doesNotMatch(notes, /class="scoutTeamSel"/);
 assert.match(picker, /1\. Select Competition/);
 assert.match(picker, /2\. Select Team/);
