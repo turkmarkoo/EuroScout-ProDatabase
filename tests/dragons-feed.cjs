@@ -14,6 +14,13 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  feed.quality_policy='offline';s=setup();assert.equal(await s.api.apply(raw),raw);
  feed.quality_policy='accepted_live_boxscores_only';
 
+ const localFeed={schema:1,quality_policy:'accepted_live_boxscores_only',generated:'2026-10-01T12:00:00Z',leagues:[{meta:{id:'dragons-local-current',privateOwnerFeed:true},players:[]}],fixtures:[]};
+ const cloudFeed={schema:1,quality_policy:'accepted_live_boxscores_only',generated:'2026-09-27T12:00:00Z',leagues:[{meta:{id:'dragons-cloud-old',privateOwnerFeed:true},players:[]}],fixtures:[]};
+ const localAccess={internal:true,user:{email:'markoturk.scouting@gmail.com'},get:async()=>({}),field:()=> 'a'.repeat(32),readPayload:async()=>JSON.stringify(cloudFeed)};
+ const localContext={window:{ESAccess:localAccess},ESAccess:localAccess,structuredClone,console,fetch:async()=>({ok:true,json:async()=>localFeed}),AbortController,setTimeout,clearTimeout};
+ vm.runInNewContext(code,localContext);const fresh=await localContext.window.EuroScoutDragons.apply(raw);
+ assert.equal(fresh.leagues.at(-1).meta.id,'dragons-local-current');
+
  const directory={teams:[{code:'LEM',name:'Le Mans Sarthe Basket',aliases:['Le Mans Sarthe']}],roster:[{id:'014866',ids:['eurocup-014866','lnb-9352'],name:'Bastien Grasshoff',born:2007,height:198,position:'Guard',nationality:'France',teamCode:'LEM'}]};
  const live={schema:1,quality_policy:'accepted_live_boxscores_only',generated:'2026-09-30T09:00:00Z',fixtures:[{home:{code:'dd-lem',name:'Le Mans Sarthe Basket'},away:{code:'dd-other',name:'Other Club'}}],leagues:[
   {meta:{id:'dragons-eurocup-26',name:'EuroCup',season:'2026/27',privateOwnerFeed:true},players:[{id:'dragons-eurocup-grasshoff',name:'B. Grasshoff',team:'dd-lem',g:1,ppg:8,gameLog:[]}]},
@@ -30,7 +37,7 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  assert.equal(linked.some(pair=>pair[0]==='dragons-eurocup-grasshoff'&&pair[1]==='lnb-9352'),true);
  assert.equal(linked.some(pair=>pair[0]==='dragons-lnb-grasshoff'&&pair[1]==='lnb-9352'),true);
  assert.equal(live.unresolvedPlayers,0);
- assert.match(html,/euroscout-dragons\.js\?v=20260930-identity-audit/);
+ assert.match(html,/euroscout-dragons\.js\?v=20261001-private-live/);
  assert.match(html,/raw=await window\.EuroScoutDragons\?\.apply\(raw\)\|\|raw/);
  assert.match(html,/window\.EuroScoutDragons\?\.link\(uni\)/);
 

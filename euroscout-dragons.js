@@ -98,21 +98,23 @@ function connectData(raw,data){
 }
 async function apply(raw){
  if(!reader())return raw;
- try{
-  const head=await ESAccess.get('dragonsDataState/current');if(!head)return raw;
-  const id=ESAccess.field(head,'snapshot');if(!/^[a-f0-9]{32}$/.test(id||''))throw Error('Invalid statistics snapshot pointer.');
-  const data=JSON.parse(await ESAccess.readPayload('dragonsDataSnapshots',id));
+ const valid=data=>{
   if(data.schema!==1||data.quality_policy!=='accepted_live_boxscores_only'||!Array.isArray(data.leagues)||!Array.isArray(data.fixtures))throw Error('Invalid Dragons Data feed.');
   if(data.leagues.some(league=>!league.meta?.privateOwnerFeed||!league.meta.id?.startsWith('dragons-')||!Array.isArray(league.players)))throw Error('Invalid owner-only league.');
-  return reader()?connectData(raw,data):raw;
- }catch(error){problem='Dragons Data could not load. Existing EuroScout data is unchanged.';console.warn(problem,error);return raw;}
+  return data;
+ };
+ const local=async()=>{if(typeof fetch!=='function')return null;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),1200);try{const response=await fetch('http://127.0.0.1:8767/api/v1/euroscout-feed',{cache:'no-store',signal:controller.signal});if(!response.ok)throw Error('Local Dragons Data returned '+response.status);return Object.assign(valid(await response.json()),{_sourceLabel:'fresh private page'});}finally{clearTimeout(timer);}};
+ const cloud=async()=>{const head=await ESAccess.get('dragonsDataState/current');if(!head)return null;const id=ESAccess.field(head,'snapshot');if(!/^[a-f0-9]{32}$/.test(id||''))throw Error('Invalid statistics snapshot pointer.');return Object.assign(valid(JSON.parse(await ESAccess.readPayload('dragonsDataSnapshots',id))),{_sourceLabel:'cloud snapshot'});};
+ const settled=await Promise.allSettled([local(),cloud()]),candidates=settled.filter(x=>x.status==='fulfilled'&&x.value).map(x=>x.value).sort((a,b)=>new Date(b.generated||0)-new Date(a.generated||0));
+ if(candidates.length)return reader()?connectData(raw,candidates[0]):raw;
+ const error=settled.find(x=>x.status==='rejected')?.reason;problem='Dragons Data could not load. Existing EuroScout data is unchanged.';if(error)console.warn(problem,error);return raw;
 }
 function link(unite){for(const [left,right] of links)unite(left,right);}
 function finish(raw){
  if(!reader())return;
  for(const league of raw.leagues||[])if(league.meta.privateOwnerFeed)for(const player of league.players||[])for(const [key,value] of Object.entries(player.dragonsTotals||{}))player['t_'+({p3m:'f3m',p3a:'f3a'}[key]||key)]=value;
  const badge=document.createElement('div');badge.id='dragonsDataStatus';badge.setAttribute('role','status');badge.style.cssText='padding:8px 16px;background:#edf8ee;color:#23462b;font:13px system-ui';
- badge.textContent=feed?'Dragons Data · updated '+new Date(feed.generated).toLocaleString()+' · '+feed.resolvedPlayers+' player lines linked.':problem||'Dragons Data is not synced yet.';
+ badge.textContent=feed?'Dragons Data · '+(feed._sourceLabel||'private feed')+' · updated '+new Date(feed.generated).toLocaleString()+' · '+feed.resolvedPlayers+' player lines linked.':problem||'Dragons Data is not synced yet.';
  document.querySelector('header')?.after(badge);
 }
 window.EuroScoutDragons={apply,link,finish,connectData,resolve,fixtures(){return reader()&&feed?feed.fixtures:[];},active(){return !!(reader()&&feed);}};
