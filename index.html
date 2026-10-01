@@ -2997,10 +2997,11 @@ async function boot(){
   });
   // 2026/27 transfers (from euroball-tracker) — loaded for manual review/approval only, never auto-committed
   loadTransfers().then(()=>{if(TRANSFERS_LOADED)render();});
-  // deep-link: open a player if the URL points at one (#p=<id>), e.g. a shared link
-  if(/^#p=(nba|gleague|ncaa)/i.test(__DEEPHASH))loadExtraLeagues().then(()=>openFromHash(__DEEPHASH)).catch(e=>toast(e.message));
+  // Deep links can open one player or prefill the existing 2–4 player comparison.
+  if(/^#(?:p|compare)=(nba|gleague|ncaa)/i.test(__DEEPHASH))loadExtraLeagues().then(()=>openFromHash(__DEEPHASH)).catch(e=>toast(e.message));
   else openFromHash(__DEEPHASH);
   window.addEventListener("popstate",()=>{
+    if(/^#compare=/.test(location.hash||"")){openFromHash(location.hash);return;}
     const m=/^#p=(.+)$/.exec(location.hash||"");
     if(m){const id=decodeURIComponent(m[1]);if(PROF_HIST.length&&PROF_HIST[PROF_HIST.length-1]===id)PROF_HIST.pop();openProfile(id,true);}
     else if(DRAWER_OPEN){PROF_HIST=[];closeDrawer(true);}
@@ -3158,6 +3159,13 @@ function parsePlayerHash(h){
   try{return decodeURIComponent(m[1]);}catch(e){return m[1];}
 }
 function openFromHash(h){
+  const compare=/^#compare=(.+)$/.exec(h||"");
+  if(compare){
+    const ids=compare[1].split("~").map(x=>{try{return decodeURIComponent(x);}catch(e){return x;}}).filter(Boolean).slice(0,4);
+    const apply=()=>{const available=ids.filter(id=>player(id));if(available.length<2){toast("At least two linked players are required for comparison.");return;}STATE.compare.slots=[available[0]||null,available[1]||null,available[2]||null,available[3]||null];goView("compare");};
+    if(ids.some(id=>!player(id))){loadExtraLeagues().then(apply).catch(e=>toast(e.message));}else apply();
+    return;
+  }
   const id=parsePlayerHash(h);
   if(!id){
     if(DRAWER_OPEN&&!/^#p=/.test(location.hash))closeDrawer();
