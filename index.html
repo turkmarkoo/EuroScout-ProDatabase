@@ -4739,13 +4739,18 @@ function addAgency(name){if(!Store.canEdit())return;name=(name||"").trim();if(!n
 function agentMap(){
   const base=Object.assign({},window.EUROSCOUT_AGENTS||{});
   let local={};try{local=(JSON.parse(localStorage.getItem("euroscout:agents")||"{}")||JSON.parse("{}"));}catch(e){}
-  return Object.assign(base,local);
+  const combined=Object.assign(base,local);if(combined["Daniel Moldovan"]==="Interperformances")combined["Daniel Moldovan"]="Lighthouse Sports Management";return combined;
 }
 function agentList(){return Object.keys(agentMap()).filter(a=>!window.EuroScoutMergeCenter||EuroScoutMergeCenter.canonicalAgent(a)===a).sort((a,b)=>a.localeCompare(b));}
 function agencyForAgent(agent){const m=agentMap();const canonical=window.EuroScoutMergeCenter?.canonicalAgent(agent)||agent;return canonical&&m[canonical]?normAgency(m[canonical]):"";}
 function addAgent(agent,agency){if(!Store.canEdit())return;agent=(agent||"").trim();if(!agent)return;
   let local={};try{local=(JSON.parse(localStorage.getItem("euroscout:agents")||"{}")||JSON.parse("{}"));}catch(e){}
   local[agent]=(agency||"").trim(); localStorage.setItem("euroscout:agents",JSON.stringify(local));try{Sync.stampKey("euroscout:agents");}catch(e){}try{Store.pushAppKey("euroscout:agents");}catch(e){}
+}
+function updateAgentAgency(agent,agency){if(!Store.canEdit())return false;agent=(agent||"").trim();agency=(agency||"").trim();if(!agent||!agency)return false;
+  addAgency(agency);let local={};try{local=(JSON.parse(localStorage.getItem("euroscout:agents")||"{}")||{});}catch(e){}
+  local[agent]=agency;localStorage.setItem("euroscout:agents",JSON.stringify(local));try{Sync.stampKey("euroscout:agents");}catch(e){}try{Store.pushAppKey("euroscout:agents");}catch(e){}
+  try{applyOverrides();}catch(e){}try{window.EuroScoutAgenciesV2?.clearCache();}catch(e){}return true;
 }
 function agentCellHTML(p){
   const agent=p.agent, agency=p.agency, url=p.agentUrl;
@@ -7257,9 +7262,9 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-market-records.js?v=16"></script>
 <script src="euroscout-market.js?v=20260921-fa-v2"></script>
 <script src="euroscout-freeagents-v2.js?v=20260921-filters-columns"></script>
-<script src="euroscout-country-picker.js?v=20260922-1"></script><script src="euroscout-edit-player-v2.js?v=20260930-free-agent"></script>
+<script src="euroscout-country-picker.js?v=20260922-1"></script><script src="euroscout-edit-player-v2.js?v=20261001-agency-fields"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
-<script src="euroscout-transfer-confirmations.js?v=20260915-verified"></script>
+<script src="euroscout-transfer-confirmations.js?v=20261001-dash-sem"></script>
 <script src="euroscout-transfer-verification.js?v=20260920-v1"></script>
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
 <script src="data/agency-research.js?v=20260907-13"></script>
@@ -7276,5 +7281,5 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"></script><script src="eurocup-rosters-2026.js?v=20260930-cowan-merge"></script><script src="euroscout-eurocup-rosters.js?v=20260930-identities"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260920-fix"></script><script src="data/kzs-pro-2026.js?v=20260930-1"></script><script src="euroscout-kzs-pro.js?v=20260930-1"></script>
 <script src="data/bclq-2026.js?v=20260921-final"></script><script src="euroscout-bclq-2026.js?v=20260930-profile-stats"></script>
 <link rel="stylesheet" href="euroscout-merge-center.css?v=20260921-1"><script src="euroscout-merge-center.js?v=20260922-3"></script>
-<link rel="stylesheet" href="euroscout-agencies-v2.css?v=20260923-rebuild"><script src="euroscout-agencies-v2.js?v=20260923-rebuild"></script><script src="global-command-palette.js?v=20260922-performance"></script><script src="euroscout-manual-players.js?v=20260929-nathan-soliman"></script><script src="euroscout-command-palette.js?v=20260922-performance"></script><script src="euroscout-dragons.js?v=20261001-private-live"></script><script>esSetup();boot().catch(function(error){console.error('EuroScout initialization failed',error);document.getElementById('app').textContent='EuroScout could not finish loading. Please reload.';}).finally(function(){var root=document.documentElement;root.classList.remove('es-preload');root.classList.add('es-ready');setTimeout(function(){document.getElementById('esSplash')?.remove();},300);});</script>
+<link rel="stylesheet" href="euroscout-agencies-v2.css?v=20261001-agent-edit"><script src="euroscout-agencies-v2.js?v=20261001-agent-edit"></script><script src="global-command-palette.js?v=20260922-performance"></script><script src="euroscout-manual-players.js?v=20260929-nathan-soliman"></script><script src="euroscout-command-palette.js?v=20260922-performance"></script><script src="euroscout-dragons.js?v=20261001-private-live"></script><script>esSetup();boot().catch(function(error){console.error('EuroScout initialization failed',error);document.getElementById('app').textContent='EuroScout could not finish loading. Please reload.';}).finally(function(){var root=document.documentElement;root.classList.remove('es-preload');root.classList.add('es-ready');setTimeout(function(){document.getElementById('esSplash')?.remove();},300);});</script>
 <script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-sessions.js?v=20260921-1"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20261001-position-editor"><link rel="stylesheet" href="team-selection-workspace.css?v=20260930-1"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260921-1"><script src="data/signal-origins.js?v=20260920-1"></script><script src="euroscout-signals.js?v=20260920-2"></script><script src="euroscout-quickstats.js?v=20260930-current-stats"></script><script src="data/competition-assets.js?v=20260930-1"></script><script src="team-selection-workspace.js?v=20260930-logos"></script><script src="euroscout-live-notes.js?v=20261001-position-nba2"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>

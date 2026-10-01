@@ -30,3 +30,6 @@
 @media(max-width:1640px){.av2-grid{grid-template-columns:repeat(3,minmax(300px,1fr))}}
 @media(max-width:980px){.av2-heading{align-items:start}.av2-heading>span{white-space:normal}.av2-grid{grid-template-columns:repeat(2,minmax(300px,1fr))}}
 @media(max-width:680px){.av2-page{box-sizing:border-box;width:100%;padding:16px}.av2-toolbar input[type=search]{width:100%}.av2-spacer{display:none}.av2-heading{display:block}.av2-heading>span{display:block;margin-top:6px}.av2-grid{grid-template-columns:minmax(300px,1fr)}.av2-card{width:100%}.av2-profile-head{flex-wrap:wrap}.av2-profile-head .btn.ghost{margin-left:0}.av2-profile-body{padding:14px}.av2-roster-filters label{flex:1 1 100%;min-width:0}.av2-roster-filters select{width:100%}.av2-player-table th:first-child,.av2-player-table td:first-child{width:270px;min-width:270px;max-width:270px}.av2-player-table .pname,.av2-player-club{max-width:205px}}
+
+.av2-profile-actions{display:flex;gap:8px;align-items:center;margin-left:auto}
+@media(max-width:700px){.av2-profile-actions{width:100%;margin-left:0}.av2-profile-actions .btn{flex:1}}

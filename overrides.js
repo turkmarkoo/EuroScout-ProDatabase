@@ -8,6 +8,7 @@ window.EUROSCOUT_OVERRIDES = {
     // ["euroleague-uros-trifunovic", "liga-acb-uros-trifunovic"]
   ],
   bio: {
+    "nbl-0162": { "height": 196, "weight": 90, "country": "AUS", "role": "Guard", "born": 2007, "birthDate": "2007-12-18", "agent": "Daniel Moldovan", "agency": "Lighthouse Sports Management" },
     // "euroleague-some-player": { "height": 206, "weight": 102, "country": "Greece", "pos": "F", "born": 1995,
     //   "hand": "R", "agent": "Jeffrey Abankwa", "agency": "Wasserman",
     //   "agentUrl": "https://basketball.realgm.com/info/agent-client-list/Jeffrey-Abankwa/1592",
@@ -22,7 +23,7 @@ window.EUROSCOUT_OVERRIDES = {
 window.EUROSCOUT_AGENCIES = [
   "The Team","Octagon","Excel Sports Management","CAA Sports","Roc Nation Sports","Priority Sports",
   "Klutch Sports","BDA Sports","WME Sports",
-  "Interperformances","BeoBasket","YouFirst Sports","Higher Vision Basketball","Base Sports",
+  "Interperformances","Lighthouse Sports Management","BeoBasket","YouFirst Sports","Higher Vision Basketball","Base Sports",
   "Sport1 Basketball","ProBasket","Court Side","Slash Sports","Pallas Sports","Mizrahi Sports",
   "Rebasa","Mészáros Sport","BeoBasket Adriatic","Life Sports Agency","U1st Sports",
   "LIFT Sports Management","Wolf Sports","Two Points","AENA Sports","Octagon Europe",
@@ -36,7 +37,7 @@ window.EUROSCOUT_AGENTS = {
   "Marko Naumović":"BeoBasket",
   "Jason Ranne":"Wasserman",
   "Bill Duffy":"WME Sports",
-  "Daniel Moldovan":"Interperformances",
+  "Daniel Moldovan":"Lighthouse Sports Management",
   "Luciano Capicchioni":"Interperformances",
   "Ivan Kutlešić":"Sport1 Basketball",
   "Miodrag Ražnatović":"BeoBasket",
