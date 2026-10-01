@@ -5,6 +5,7 @@ const path=require('path');
 const vm=require('vm');
 
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+const ui=fs.readFileSync(path.join(__dirname,'..','euroscout-ui.js'),'utf8');
 const quickstats=fs.readFileSync(path.join(__dirname,'..','euroscout-quickstats.js'),'utf8');
 
 test('2026/27 is the default database statistics season',()=>{
@@ -30,4 +31,13 @@ test('profiles prefer a linked 2026/27 statistics line',()=>{
   const currentB={id:'current-b',season:'2026/27',g:2,mpg:12};
   old._grp=[old,currentA,currentB];
   assert.equal(context.currentSeasonProfile(old).id,'current-b');
+});
+
+
+test('profile season cards discover and default to linked DragonsData 2026/27 lines',()=>{
+  assert.match(ui,/allPlayersFlat\(\)\.forEach/);
+  assert.match(ui,/r\._dragonsData/);
+  assert.match(ui,/seasons\.includes\('2026\/27'\)\?'2026\/27'/);
+  assert.match(ui,/const value=display\[key\]/);
+  assert.match(html,/euroscout-ui\.js\?v=20261001-current-stats/);
 });

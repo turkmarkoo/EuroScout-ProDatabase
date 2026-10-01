@@ -169,18 +169,20 @@ function esDossierFreshness(p){const card=esPanel('Data freshness');card.classLi
 function esOpenLeaderboardFor(p,key,label){const current=CURRENT,currentLeague=STATE.league;CURRENT=p.id;STATE.league=leagueOf(p);try{openLeaderboard(key,label);}finally{CURRENT=current;STATE.league=currentLeague;}}
 function esSwitchProfileStats(p){const scroller=$('#drawer .dr-scroll'),top=scroller?.scrollTop||0;$$('#drawer .es-dossier-stats').forEach(old=>old.replaceWith(esDossierStats(p)));const summaries=$$('#drawer .es-stat-summary'),summaryHTML=statSummaryPanelHTML(p);if(summaryHTML){const shell=document.createElement('div');shell.innerHTML=summaryHTML;const summary=shell.firstElementChild;summary.classList.add('es-stat-summary');summaries.forEach(old=>old.replaceWith(summary.cloneNode(true)));}else summaries.forEach(old=>old.remove());if(scroller)scroller.scrollTop=top;}
 function esStatsSeasonChoices(p){
- const records=p._grp&&p._grp.length?p._grp:[p];
- const selectedSeason=scoutSeason(p)||'Current season';
+ const records=(p._grp&&p._grp.length?p._grp:[p]).slice(),ids=new Set(records.map(r=>r.id));
+ allPlayersFlat().forEach(r=>{if(ids.has(r.id)||!r._dragonsData)return;const linked=String(r.linkedEuroScoutId||''),sameLinked=linked&&ids.has(linked),samePerson=Number(r.born||0)&&Number(r.born)===Number(p.born||0)&&normName(r.name)===normName(p.name);if(sameLinked||samePerson){records.push(r);ids.add(r.id);}});
+ const seasons=[...new Set(records.map(r=>scoutSeason(r)||'Current season'))].sort((a,b)=>b.localeCompare(a));
+ const selectedSeason=seasons.includes('2026/27')?'2026/27':(scoutSeason(p)||seasons[0]||'Current season');
  return {
    records,selectedSeason,
-   seasons:[...new Set(records.map(r=>scoutSeason(r)||'Current season'))].sort((a,b)=>b.localeCompare(a)),
+   seasons,
    competitions:records.filter(r=>(scoutSeason(r)||'Current season')===selectedSeason)
  };
 }
 function esDossierStats(p){
  const panel=esPanel('Season statistics');panel.classList.add('es-dossier-stats');
  const head=panel.querySelector('h3'),controls=esEl('div','es-dossier-stat-controls');
- const {records,selectedSeason,seasons,competitions}=esStatsSeasonChoices(p);
+ const {records,selectedSeason,seasons,competitions}=esStatsSeasonChoices(p),display=(competitions.includes(p)?p:competitions.slice().sort((a,b)=>Number(b.g||0)-Number(a.g||0))[0])||p;
  const season=esEl('select');
  seasons.forEach(label=>{const option=new Option(label,label);option.selected=label===selectedSeason;season.appendChild(option);});
  season.disabled=seasons.length<2;season.setAttribute('aria-label','Statistics season');
@@ -192,20 +194,20 @@ function esDossierStats(p){
  const competition=esEl('select');
  competitions.forEach(r=>{
    const league=leagueOf(r);const option=new Option(league?.meta?.name||r.league||'Competition',r.id);
-   option.selected=r.id===p.id;competition.appendChild(option);
+   option.selected=r.id===display.id;competition.appendChild(option);
  });
  competition.setAttribute('aria-label','Statistics competition');
  competition.onchange=()=>{const r=records.find(x=>x.id===competition.value);if(r)esSwitchProfileStats(r);};
  controls.append(competition,season);head.after(controls);
- const grid=esEl('div','es-dossier-statgrid'),pool=scopePool(p);
- [['PTS','ppg',1],['REB','rpg',1],['AST','apg',1],['STL','spg',1],['BLK','bpg',1],['2P','f2p',1],['3P','f3p',1],['FT','ftp',1],p.league==='bclq'?['EFF','eff',1]:['PIR','pir',1]].forEach(([label,key,d])=>{
-   const tile=esButton('',()=>esOpenLeaderboardFor(p,key,label),'es-dossier-stat');tile.title='Open the '+label+' league ranking';
-   const value=p[key];tile.appendChild(esEl('b',null,value==null?'—':fmt(value,d)+(key.startsWith('f')?'%':'')));
-   tile.appendChild(esEl('small',null,label));let rank=null;try{rank=rankOf(pool,key,p);}catch(e){}
+ const grid=esEl('div','es-dossier-statgrid'),pool=scopePool(display);
+ [['PTS','ppg',1],['REB','rpg',1],['AST','apg',1],['STL','spg',1],['BLK','bpg',1],['2P','f2p',1],['3P','f3p',1],['FT','ftp',1],display.league==='bclq'?['EFF','eff',1]:['PIR','pir',1]].forEach(([label,key,d])=>{
+   const tile=esButton('',()=>esOpenLeaderboardFor(display,key,label),'es-dossier-stat');tile.title='Open the '+label+' league ranking';
+   const value=display[key];tile.appendChild(esEl('b',null,value==null?'—':fmt(value,d)+(key.startsWith('f')?'%':'')));
+   tile.appendChild(esEl('small',null,label));let rank=null;try{rank=rankOf(pool,key,display);}catch(e){}
    tile.appendChild(esEl('span',null,rank?.rank?rank.rank+'/'+rank.total:'—'));grid.appendChild(tile);
  });
  panel.appendChild(grid);
- if(p.league==='bclq')panel.appendChild(esEl('p','hint','BCL Qualifiers 2026/27 · '+p.teamName+(p.jersey?' · #'+p.jersey:'')+(p.officialPosition?' · '+p.officialPosition:'')+(p.nationalities?.length>1?' · '+p.nationalities.join(' / '):'')+' · Small sample. EFF is FIBA efficiency, not PIR.'));
+ if(display.league==='bclq')panel.appendChild(esEl('p','hint','BCL Qualifiers 2026/27 · '+display.teamName+(display.jersey?' · #'+display.jersey:'')+(display.officialPosition?' · '+display.officialPosition:'')+(display.nationalities?.length>1?' · '+display.nationalities.join(' / '):'')+' · Small sample. EFF is FIBA efficiency, not PIR.'));
  return panel;
 }
 function esDossierSummary(p){const panel=esPanel('Scout summary'),rep=effectiveReport(p),cols=esEl('div','es-dossier-summary-grid');const block=(title,text,kind)=>{const box=esEl('section','es-dossier-summary-block '+kind);box.appendChild(esEl('h4',null,title));const items=bulletParse(text||'');if(items.length){const ul=esEl('ul');items.forEach(v=>ul.appendChild(esEl('li',null,v)));box.appendChild(ul);}else box.appendChild(esEl('p','hint','Nothing recorded yet.'));return box;};cols.append(block('Offense',rep.nOff,'offense'),block('Defense',rep.nDef,'defense'));panel.appendChild(cols);const projection=esEl('section','es-dossier-projection'),projLines=bulletParse(rep.nProj||rep.overall||'');projection.append(esEl('small',null,'Projection'),esEl('b',null,projLines.length?projLines.join(' '):(levelBand(p)?.label||'Not recorded')));panel.appendChild(projection);return panel;}
