@@ -9,6 +9,8 @@ window.EUROSCOUT_OVERRIDES = {
   ],
   bio: {
     "nbl-0162": { "height": 196, "weight": 90, "country": "AUS", "role": "Guard", "born": 2007, "birthDate": "2007-12-18", "agent": "Daniel Moldovan", "agency": "Lighthouse Sports Management" },
+    "aba-5213": { "name": "Cameron Houindo" },
+    "elite2-10859-61": { "name": "Matthys Mahop" },
     // "euroleague-some-player": { "height": 206, "weight": 102, "country": "Greece", "pos": "F", "born": 1995,
     //   "hand": "R", "agent": "Jeffrey Abankwa", "agency": "Wasserman",
     //   "agentUrl": "https://basketball.realgm.com/info/agent-client-list/Jeffrey-Abankwa/1592",
