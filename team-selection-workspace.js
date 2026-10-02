@@ -22,20 +22,28 @@ function competitionLogo(comp){
 }
 function clubLogo(club){if(typeof clubBadge==='function')return clubBadge(club,38);return'<span class="tsw-club-logo">'+safe(initialsOf(club.name))+'</span>';}
 function currentCompetitionIds(club){const ids=[];try{if(typeof nextCompsOf==='function')ids.push(...nextCompsOf(club).map(c=>c.id));if(typeof domCompsOf==='function')ids.push(...domCompsOf(club).map(c=>c.id));}catch(_){}return[...new Set(ids.filter(Boolean))];}
+const COMPETITION_ALIASES=[
+ ['euroleague','EuroLeague',/^(turkishairlines)?euroleague$/],['eurocup','EuroCup',/^(bkt)?eurocup$/],
+ ['aba2','ABA League 2',/^abaleague2$/],['aba','ABA League',/^(admiralbet)?abaleague$/],
+ ['bcl','Basketball Champions League',/^(basketball)?championsleague$/],['acb','Liga ACB',/^(ligaendesa|ligaacb|acb)$/],
+ ['lnb','Betclic Élite',/^(lnbproa|betclicelite|franceproa)$/],['lba','Lega A',/^(legabasketseriea|legaseriea|lba|legaa)$/]
+];
+function competitionIdentity(meta){const name=fold(meta.name).replace(/[^a-z0-9]/g,'').replace(/20\d{2}(20\d{2})?/g,'');const hit=COMPETITION_ALIASES.find(x=>x[2].test(name)||meta.id===x[0]);return hit?{key:hit[0],id:hit[0],name:hit[1]}:{key:'name:'+name,id:meta.id,name:meta.name};}
 function buildCompetitions(){
  if(typeof allClubs!=='function')return[];
  const clubs=allClubs(),defs=new Map(),data=window.STATE?.data||{};
- for(const L of data.leagues||[])if(L.meta.id!=='n2627'&&(typeof showsTeams!=='function'||showsTeams(L.meta)))defs.set(L.meta.id,{...L.meta});
+ const addDef=value=>{if(!value?.id||value.id==='n2627')return;const identity=competitionIdentity(value),old=defs.get(identity.key)||{};defs.set(identity.key,{...old,...value,id:identity.id,name:identity.name,_ids:[...new Set([...(old._ids||[]),value.id])],_teamKeys:[...new Set([...(old._teamKeys||[]),...(value._teamKeys||[])])]});};
+ for(const L of data.leagues||[])if(L.meta.id!=='n2627'&&(typeof showsTeams!=='function'||showsTeams(L.meta)))addDef({...L.meta});
  /* Authenticated payloads may retain registry clubs without the original
     league collection, so club memberships are a second competition source. */
- for(const club of clubs)for(const league of club.leagues||[]){if(!league?.id||league.id==='n2627')continue;const old=defs.get(league.id)||{};defs.set(league.id,{...old,id:league.id,name:league.name||old.name||league.id});}
- const addCurrent=source=>Object.entries(source||{}).forEach(([id,value])=>{const old=defs.get(id)||{};defs.set(id,{...old,id,name:value.name||old.name||id,_teamKeys:(value.teams||[]).map(t=>t.key).filter(Boolean)});});
+ for(const club of clubs)for(const league of club.leagues||[]){if(!league?.id||league.id==='n2627')continue;addDef({id:league.id,name:league.name||league.id});}
+ const addCurrent=source=>Object.entries(source||{}).forEach(([id,value])=>addDef({id,name:value.name||id,_teamKeys:(value.teams||[]).map(t=>t.key).filter(Boolean)}));
  addCurrent(data.season2627?.comps);addCurrent(data.domestic2627?.leagues);
  defs.delete('n2627');
  return[...defs.values()].map(meta=>{
    const keyed=(meta._teamKeys||[]).map(key=>typeof clubByKey==='function'?clubByKey(key):null).filter(Boolean),uniqueKeyed=[...new Map(keyed.map(c=>[c.key,c])).values()];
-   const current=clubs.filter(c=>currentCompetitionIds(c).includes(meta.id));
-   const teams=uniqueKeyed.length?uniqueKeyed:current.length?current:clubs.filter(c=>(c.leagues||[]).some(x=>x.id===meta.id));
+   const ids=meta._ids||[meta.id],current=clubs.filter(c=>currentCompetitionIds(c).some(id=>ids.includes(id)));
+   const teams=uniqueKeyed.length?uniqueKeyed:current.length?current:clubs.filter(c=>(c.leagues||[]).some(x=>ids.includes(x.id)));
    return{id:meta.id,name:meta.name,region:region(meta,teams),category:category(meta),logo:meta.logo||'',teams};
  }).filter(c=>c.teams.length).sort((a,b)=>a.name.localeCompare(b.name));
 }
