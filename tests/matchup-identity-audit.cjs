@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const context={window:{}};vm.createContext(context);
-for(const file of ['eurocup-rosters-2026.js','official-rosters-2026.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
-const sets=[context.window.EUROSCOUT_EUROCUP_ROSTERS,context.window.EUROSCOUT_OFFICIAL_ROSTERS].filter(Boolean);
+for(const file of ['eurocup-rosters-2026.js','official-rosters-2026.js','euroleague-rosters-2026.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
+const sets=[context.window.EUROSCOUT_EUROCUP_ROSTERS,context.window.EUROSCOUT_OFFICIAL_ROSTERS,context.window.EUROSCOUT_EUROLEAGUE_ROSTERS].filter(Boolean);
 const rows=sets.flatMap(set=>(set.roster||[]).map(row=>({...row,_set:set})));
 const owner=new Map(),conflicts=[];
 for(const row of rows)for(const id of row.ids||[row.id]){

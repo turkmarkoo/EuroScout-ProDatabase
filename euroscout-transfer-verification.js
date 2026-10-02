@@ -15,7 +15,11 @@
     const official=src.some(s=>s.kind==='official')?25:0, corroboration=src.filter(s=>s.kind!=='rumor').length>1?10:0;
     const conflict=tr.conflict||tr.status==='rumor'||src.some(s=>s.kind==='rumor'&&s.kind!=='official');
     const noConflict=conflict?0:5,score=Math.min(100,player+dest+origin+official+corroboration+noConflict);
-    const status=score>=90&&exact&&!!team?'auto_approved':score>=60?'needs_review':'rejected';
+    /* A single official club/league announcement is primary evidence of a signing.
+       Do not hold an otherwise exact move merely because the previous club is absent
+       or the same announcement has not been repeated by a second outlet. */
+    const officialSigning=exact&&!!team&&!conflict&&official>0&&tr.autoApply===true&&(tr.status==='signed'||tr.status==='extended');
+    const status=officialSigning||(score>=90&&exact&&!!team)?'auto_approved':score>=60?'needs_review':'rejected';
     return {id:tr.id,score,status,playerMatch:exact?'exact':p?'possible':'none',destinationMatch:!!team,originMatch:!!origin,evidence:src,conflict:!!conflict,checkedAt:new Date().toISOString()};
   }
   function label(v){return v.status==='auto_approved'?'Auto approved':v.status==='needs_review'?'Needs review':'Rejected';}

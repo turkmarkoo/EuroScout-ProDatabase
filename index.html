@@ -2038,11 +2038,18 @@ function sameClub(a,b){
  if(['plk|ETS','fec|ETS'].includes(a.key)&&['plk|ETS','fec|ETS'].includes(b.key))return true;
  if((window.EUROSCOUT_OFFICIAL_ROSTERS?.identityPairs||[]).some(pair=>pair.includes(a.key)&&pair.includes(b.key)))return true;
  if(VERIFIED_CLUB_PAIRS.has([a.key,b.key].sort().join('~')))return true;
- if(a.directoryOnly||b.directoryOnly)return false;
  const country=x=>String(window.EuroScoutCountries?.canonical(x)||x||'').toLowerCase();
  if(!a.country||!b.country||country(a.country)!==country(b.country))return false;
  const names=t=>[t.name,...(t.searchAliases||[])].map(normClub).map(clubCanon).filter(Boolean);
- return names(a).some(n=>names(b).includes(n));
+ if(names(a).some(n=>names(b).includes(n)))return true;
+ // Competition feeds often add a sponsor or city to the same club name. Merge only
+ // within the same country when every meaningful token in the shorter name is present.
+ const tokenMatch=(left,right)=>{
+   const x=clubTokens(left),y=clubTokens(right);if(!x.length||!y.length)return false;
+   const [short,long]=x.length<=y.length?[x,y]:[y,x];
+   return short.some(t=>t.length>=5)&&short.every(t=>long.some(u=>tokEq(t,u)));
+ };
+ return [a.name,...(a.searchAliases||[])].some(x=>[b.name,...(b.searchAliases||[])].some(y=>tokenMatch(x,y)));
 }
 function buildClubs(){
   const teams=DBTEAM_LIST;
@@ -7265,7 +7272,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-country-picker.js?v=20260922-1"></script><script src="euroscout-edit-player-v2.js?v=20261001-agency-fields"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
 <script src="euroscout-transfer-confirmations.js?v=20261001-dash-sem"></script>
-<script src="euroscout-transfer-verification.js?v=20260920-v1"></script>
+<script src="euroscout-transfer-verification.js?v=20261002-official-signings"></script>
 <script src="euroscout-roster-edit.js?v=20260907-13"></script>
 <script src="data/agency-research.js?v=20260907-13"></script>
 <script src="euroscout-agency-research.js?v=20260908-1"></script>
@@ -7278,7 +7285,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/realgm-representation.js?v=20260907-13"></script>
 <script src="euroscout-representation.js?v=20260907-13"></script>
 <script src="data/aba-rosters-2026.js?v=20260910-1"></script>
-<script src="euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"></script><script src="eurocup-rosters-2026.js?v=20260930-cowan-merge"></script><script src="euroscout-eurocup-rosters.js?v=20260930-identities"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroscout-official-rosters.js?v=20260920-fix"></script><script src="data/kzs-pro-2026.js?v=20260930-1"></script><script src="euroscout-kzs-pro.js?v=20260930-1"></script>
+<script src="euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"></script><script src="eurocup-rosters-2026.js?v=20260930-cowan-merge"></script><script src="euroscout-eurocup-rosters.js?v=20260930-identities"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroleague-rosters-2026.js?v=20261002-official"></script><script src="euroscout-official-rosters.js?v=20261002-euroleague"></script><script src="data/kzs-pro-2026.js?v=20260930-1"></script><script src="euroscout-kzs-pro.js?v=20260930-1"></script>
 <script src="data/bclq-2026.js?v=20260921-final"></script><script src="euroscout-bclq-2026.js?v=20260930-profile-stats"></script>
 <link rel="stylesheet" href="euroscout-merge-center.css?v=20260921-1"><script src="euroscout-merge-center.js?v=20260922-3"></script>
 <link rel="stylesheet" href="euroscout-agencies-v2.css?v=20261001-agent-edit"><script src="euroscout-agencies-v2.js?v=20261001-agent-edit"></script><script src="global-command-palette.js?v=20260922-performance"></script><script src="euroscout-manual-players.js?v=20260929-nathan-soliman"></script><script src="euroscout-command-palette.js?v=20260922-performance"></script><script src="euroscout-dragons.js?v=20261001-private-live"></script><script>esSetup();boot().catch(function(error){console.error('EuroScout initialization failed',error);document.getElementById('app').textContent='EuroScout could not finish loading. Please reload.';}).finally(function(){var root=document.documentElement;root.classList.remove('es-preload');root.classList.add('es-ready');setTimeout(function(){document.getElementById('esSplash')?.remove();},300);});</script>
