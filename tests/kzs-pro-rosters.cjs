@@ -21,4 +21,18 @@ assert.ok(imported&&imported._kzsPro&&imported.img);
 const pairs=[];context.window.EuroScoutKzsPro.link((a,b)=>pairs.push([a,b]));
 assert.ok(pairs.some(([a,b])=>a===imported.id&&b==='existing-taij'));
 assert.equal(context.window.EuroScoutKzsPro.key(imported),source.teams.find(t=>t.id===taij.teamId).key);
+const likar=source.roster.find(r=>r.name==='Arian Likar');
+assert.ok(likar&&likar.id==='kzs-85343');
+const likarLine=raw.leagues[0].players.find(p=>p.id==='slo-kzs-85343');
+context.window.EuroScoutKzsPro.hydrate(likarLine,{data:{phases:[{matches:[{
+ played:true,dateTime:'2026-10-03T15:30:00Z',firstTeamId:18649,secondTeamId:18651,
+ firstTeamName:'Gorica',secondTeamName:'Kansai Helios Domžale',firstTeamScore:88,secondTeamScore:69,
+ minutes:21.5,points:21,totalRebounds:5,assists:4,steals:1,blocksInFavor:0,turnovers:2,
+ fgM:8,fgA:12,twoPM:6,twoPA:6,threePM:2,threePA:6,fTM:3,fTA:3,efficiency:25,plusMinus:11
+}]}]}});
+assert.equal(likarLine.g,1);
+assert.equal(likarLine.ppg,21);
+assert.equal(likarLine.rpg,5);
+assert.deepEqual(Array.from(likarLine.gameLog[0]).slice(0,8),['2026-10-03','Kansai Helios Domžale','H',true,88,69,21.5,21]);
+assert.deepEqual(Array.from(raw.leagues[0].meta.gameLogCols).slice(0,4),['date','opp','ha','win']);
 console.log('KZS senior rosters are imported into the EuroScout Pro Database layer.');

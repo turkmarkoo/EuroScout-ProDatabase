@@ -15,7 +15,7 @@ test('2026/27 is the default database statistics season',()=>{
 test('played DragonsData lines replace empty current-roster shells in quick stats',()=>{
   assert.match(quickstats,/playedLines=seasonLines\.filter\(x=>Number\(x\.g\)>0\)/);
   assert.match(quickstats,/shown=playedLines\.length\?playedLines:seasonLines/);
-  assert.match(html,/euroscout-quickstats\.js\?v=20260930-current-stats/);
+  assert.match(html,/euroscout-quickstats\.js\?v=20261004-kzs-live-stats/);
 });
 
 test('profiles prefer a linked 2026/27 statistics line',()=>{

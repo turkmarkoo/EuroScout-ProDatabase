@@ -6,7 +6,7 @@
 'use strict';
 const TABS=[['overview','Overview'],['offense','Offense'],['defense','Defense'],['shooting','Shooting'],['playmaking','Playmaking'],['rebounding','Rebounding'],['advanced','Advanced'],['log','Game log']];
 const LOWER_IS_BETTER=new Set(['topg','tov40','tovp']);
-let tab='overview',current=null,line=null,seasonChoice='';
+let tab='overview',current=null,line=null,seasonChoice='',loading=false,loadError='',loadToken=0;
 const percentilePools=new Map();
 const n=(v,d)=>v==null||v===''||Number.isNaN(Number(v))?'—':Number(v).toFixed(d==null?1:d);
 const pc=v=>v==null||v===''?'—':n(v,1)+'%';
@@ -82,20 +82,24 @@ function paint(){
  const L=leagueOf(line);
  host.innerHTML='<header class="qs-head"><div><h2>'+esc(current.name)+'</h2><div class="qs-filters"><label>Season<select id="qsSeason" aria-label="Statistics season">'+seasons.map(s=>'<option'+(s===seasonChoice?' selected':'')+'>'+esc(s)+'</option>').join('')+'</select></label><label>Competition'+(shown.length>1?'<select id="qsLine" aria-label="Competition">'+shown.map((x,i)=>'<option value="'+i+'"'+(x===line?' selected':'')+'>'+esc((leagueOf(x)?.meta?.name||x.league)+' · '+(x.teamName||x.team)+' · '+(x.g||0)+' g')+'</option>').join('')+'</select>':'<span class="qs-single">'+esc((L?.meta?.name||line.league)+' · '+(line.teamName||line.team))+'</span>')+'</label></div></div>'+
   '<a class="btn ghost sm" href="'+escAttr(eurobasketURL(current))+'" target="_blank" rel="noopener">Eurobasket ↗</a><button type="button" class="qs-x" id="qsClose" aria-label="Close stats">✕</button></header>'+
-  '<div class="qs-body"><nav class="qs-side" role="tablist" aria-label="Stat categories">'+TABS.map(([k,l],i)=>'<button type="button" role="tab" aria-selected="'+(k===tab)+'" class="qs-tab'+(k===tab?' on':'')+'" data-qs="'+k+'"><span>'+l+'</span><kbd>'+(i+1)+'</kbd></button>').join('')+'</nav><section class="qs-main" tabindex="-1">'+(line.g?PAGES[tab](line):'<p class="qs-hint">No '+esc(seasonChoice)+' statistics for this player in the selected competition.</p>')+'</section></div>';
+  '<div class="qs-body"><nav class="qs-side" role="tablist" aria-label="Stat categories">'+TABS.map(([k,l],i)=>'<button type="button" role="tab" aria-selected="'+(k===tab)+'" class="qs-tab'+(k===tab?' on':'')+'" data-qs="'+k+'"><span>'+l+'</span><kbd>'+(i+1)+'</kbd></button>').join('')+'</nav><section class="qs-main" tabindex="-1">'+(loading?'<p class="qs-hint">Loading official KZS statistics…</p>':line.g?PAGES[tab](line):'<p class="qs-hint">'+(loadError?esc(loadError):'No '+esc(seasonChoice)+' statistics for this player in the selected competition.')+'</p>')+'</section></div>';
  host.querySelector('#qsClose').onclick=close;
  host.querySelectorAll('[data-qs]').forEach(b=>b.onclick=()=>{tab=b.dataset.qs;paint();});
  const season=host.querySelector('#qsSeason');if(season)season.onchange=()=>{seasonChoice=season.value;line=null;paint();};
  const sel=host.querySelector('#qsLine');if(sel)sel.onchange=()=>{line=shown[+sel.value];paint();};
 }
+function refreshOfficialStats(p){
+ if(!window.EuroScoutKzsPro?.needsStats(p))return;const token=++loadToken;loading=true;loadError='';paint();
+ EuroScoutKzsPro.loadStats(p).then(()=>{if(token!==loadToken)return;loading=false;line=null;percentilePools.clear();paint();}).catch(error=>{if(token!==loadToken)return;loading=false;loadError='Official KZS statistics could not be loaded. Please try again.';console.warn(loadError,error);paint();});
+}
 function open(p){
- if(!p)return;current=player(p.id)||p;line=null;seasonChoice='';percentilePools.clear();
+ if(!p)return;current=player(p.id)||p;line=null;seasonChoice='';loading=false;loadError='';percentilePools.clear();
  let mask=document.getElementById('qsMask');
  if(!mask){mask=document.createElement('div');mask.id='qsMask';mask.className='qs-mask';mask.innerHTML='<aside id="qsPanel" class="qs-panel" role="dialog" aria-modal="true" aria-label="Quick stats"></aside>';mask.addEventListener('mousedown',e=>{if(e.target===mask)close();});document.body.appendChild(mask);requestAnimationFrame(()=>mask.classList.add('open'));}
- paint();
+ paint();refreshOfficialStats(current);
 }
-function close(){const m=document.getElementById('qsMask');if(m)m.remove();current=null;}
+function close(){const m=document.getElementById('qsMask');if(m)m.remove();current=null;loading=false;loadError='';loadToken++;}
 const isOpen=()=>!!document.getElementById('qsMask');
 document.addEventListener('keydown',e=>{if(!isOpen()||document.getElementById('mtscMask'))return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return;}if(/^[1-8]$/.test(e.key)&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();tab=TABS[+e.key-1][0];paint();}},true);
-window.ESQuickStats={open,close,isOpen,seasonOf,follow(p){if(isOpen()&&p){current=player(p.id)||p;line=null;seasonChoice='';percentilePools.clear();paint();}}};
+window.ESQuickStats={open,close,isOpen,seasonOf,follow(p){if(isOpen()&&p){current=player(p.id)||p;line=null;seasonChoice='';loading=false;loadError='';percentilePools.clear();paint();refreshOfficialStats(current);}}};
 })();
