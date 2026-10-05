@@ -3,7 +3,7 @@
 const PROJECT='dragons-hub-65b1c',KEY='AIzaSyCrxdwD3-tVOUDkY-Cuqi3C7lCrWB_52Hw',HUB='https://dragonshub.mtscouting.com',BASE='https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents',OWNER='markoturk.scouting@gmail.com';
 const nonce=crypto.randomUUID(),embedded=parent!==window;let token='',refreshToken='',expires=0,version=null,seedSnapshot=null,saveQueue=Promise.resolve(),resolving=false,settled=false;
 let resolveReady;const ready=new Promise(r=>resolveReady=r);
-const api=window.ESAccess={ready,internal:false,owner:false,user:null,state:null,error:'',saveState,request,readPayload,writePayload,commit,field,get,authenticate};
+const api=window.ESAccess={ready,internal:false,owner:false,user:null,state:null,error:'',seedReady:Promise.resolve(null),saveState,request,readPayload,writePayload,commit,field,get,authenticate};
 function finish(){if(!settled){settled=true;resolveReady(api);}}
 function badge(){let el=document.getElementById('esAccessBadge');if(!el){el=document.createElement('span');el.id='esAccessBadge';el.style.cssText='position:fixed;right:12px;bottom:12px;z-index:10001;padding:5px 10px;border:1px solid #87978f;border-radius:20px;background:#f4f8f6;color:#21483b;font:12px system-ui';document.body.append(el);}el.textContent=api.internal?'● Internal':'🔒 External View';el.title=api.internal?'Access checked against DragonsHub permissions in Firebase.':'No internal data is available in this view.';}
 function lock(message){api.internal=false;api.owner=false;api.error=message;token='';api.state=null;badge();if(settled)location.reload();else finish();}
@@ -15,15 +15,20 @@ async function commit(path,fields,condition){const w={update:{name:'projects/'+P
 async function digest(bytes){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');}
 async function readPayload(root,id){const meta=await get(root+'/'+id),count=Number(field(meta,'chunks'));if(!meta||!Number.isInteger(count)||count<1||count>300)throw Error('Private data setup is incomplete.');const chunks=new Array(count);for(let i=0;i<count;i+=6)await Promise.all(Array.from({length:Math.min(6,count-i)},async(_,j)=>{const doc=await get(root+'/'+id+'/chunks/'+(i+j));if(!doc)throw Error('Protected data chunk missing.');chunks[i+j]=Uint8Array.from(atob(field(doc,'content')),x=>x.charCodeAt(0));}));const bytes=new Uint8Array(chunks.reduce((n,x)=>n+x.length,0));let pos=0;chunks.forEach(x=>{bytes.set(x,pos);pos+=x.length;});if(await digest(bytes)!==field(meta,'sha256'))throw Error('Protected data integrity check failed.');return new TextDecoder().decode(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());}
 async function writePayload(root,id,data){const bytes=new Uint8Array(await new Response(new Blob([JSON.stringify(data)]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()),size=300000,count=Math.max(1,Math.ceil(bytes.length/size));for(let i=0;i<count;i++){const part=bytes.subarray(i*size,(i+1)*size);let text='';for(let k=0;k<part.length;k+=8192)text+=String.fromCharCode(...part.subarray(k,k+8192));await commit(root+'/'+id+'/chunks/'+i,{content:btoa(text)},{exists:false});}await commit(root+'/'+id,{chunks:count,sha256:await digest(bytes)},{exists:false});}
-async function hydrate(snapshot){
+async function hydrate(snapshot,lazySeed=false){
  if(snapshot.schema!==1||!snapshot.records||!snapshot.appData)throw Error('Invalid private snapshot.');
  if(snapshot.seedSnapshot){
-  const seed=JSON.parse(await readPayload('euroscoutSnapshots',snapshot.seedSnapshot));
-  if(seed.schema!==1||!seed.seeds||!seed.core)throw Error('Invalid private seed snapshot.');
   seedSnapshot=snapshot.seedSnapshot;
+  const load=async()=>{const seed=JSON.parse(await readPayload('euroscoutSnapshots',snapshot.seedSnapshot));if(seed.schema!==1||!seed.seeds||!seed.core)throw Error('Invalid private seed snapshot.');return seed;};
+  if(lazySeed){
+   const ref=snapshot.seedSnapshot;
+   api.seedReady=load().then(seed=>{if(api.state&&api.state.seedSnapshot===ref)api.state={...api.state,seeds:seed.seeds,core:seed.core};window.dispatchEvent(new CustomEvent('es-seed-ready',{detail:seed}));return seed;});
+   return snapshot;
+  }
+  const seed=await load();api.seedReady=Promise.resolve(seed);
   return {...snapshot,seeds:seed.seeds,core:seed.core};
  }
- seedSnapshot=null;return snapshot;
+ seedSnapshot=null;api.seedReady=Promise.resolve(null);return snapshot;
 }
 api.refresh=async()=>{
  if(!api.internal)return false;
@@ -37,7 +42,7 @@ api.refresh=async()=>{
 function saveState(next){saveQueue=saveQueue.catch(()=>{}).then(async()=>{if(!api.owner)throw Error('Only an authorized administrator can save.');if(!seedSnapshot&&(next.seeds||next.core)){const newSeed=crypto.randomUUID();await writePayload('euroscoutSnapshots',newSeed,{schema:1,seeds:next.seeds||{},core:next.core||{}});seedSnapshot=newSeed;}const id=crypto.randomUUID(),stored={...next};if(seedSnapshot){stored.seedSnapshot=seedSnapshot;delete stored.seeds;delete stored.core;}await writePayload('euroscoutSnapshots',id,stored);await commit('euroscoutState/current',{snapshot:id},version?{updateTime:version}:{exists:false});const head=await get('euroscoutState/current');if(field(head,'snapshot')!==id)throw Error('Another device saved newer data. Reload before editing.');version=head.updateTime;api.state=next;return true;});return saveQueue;}
 async function authenticate(){if(resolving)return;resolving=true;try{const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:token})});if(!r.ok)throw Error('Your DragonsHub session expired.');const u=(await r.json()).users?.[0];if(!u)throw Error('Session unavailable.');const doc=await get('users/'+u.localId),role=field(doc,'role');if(!doc||doc.fields?.active?.booleanValue===false||!['admin','front_office','pro_coach','viewer','coach','scout'].includes(role))throw Error('Your DragonsHub role does not grant internal EuroScout access.');if(api.internal&&api.user?.uid===u.localId){api.owner=role==='admin';await get('euroscoutState/current');badge();window.dispatchEvent(new Event('es-access-role'));return;}api.owner=role==='admin';api.user={email:u.email,uid:u.localId};
 if(window.ES_MIGRATION){if(!api.owner||u.email.toLowerCase()!==OWNER)throw Error('Only the owner can migrate data.');api.internal=true;finish();badge();window.dispatchEvent(new Event('euroscout-authenticated'));return;}
-const head=await get('euroscoutState/current');if(!head)throw Error('EuroScout private data migration is not complete.');const snapshot=await hydrate(JSON.parse(await readPayload('euroscoutSnapshots',field(head,'snapshot'))));if(snapshot.schema!==1||!snapshot.records||!snapshot.appData)throw Error('Invalid private snapshot.');version=head.updateTime;api.state=snapshot;api.internal=true;badge();if(settled)location.reload();else finish();
+const head=await get('euroscoutState/current');if(!head)throw Error('EuroScout private data migration is not complete.');const snapshot=await hydrate(JSON.parse(await readPayload('euroscoutSnapshots',field(head,'snapshot'))),true);if(snapshot.schema!==1||!snapshot.records||!snapshot.appData)throw Error('Invalid private snapshot.');version=head.updateTime;api.state=snapshot;api.internal=true;badge();if(settled)location.reload();else finish();
 }catch(e){if(api.internal){lock(e.message);return;}api.error=e.message;api.internal=false;badge();finish();if(window.ES_MIGRATION)window.dispatchEvent(new CustomEvent('euroscout-auth-error',{detail:e.message}));}finally{resolving=false;}}
 window.addEventListener('message',e=>{if(!embedded||e.origin!==HUB||e.source!==parent||e.data?.nonce!==nonce)return;if(e.data.type==='euroscout:session'&&typeof e.data.token==='string'){token=e.data.token;expires=Date.now()+3500000;authenticate();}if(e.data.type==='euroscout:denied')lock('DragonsHub access ended or is not authorized.');});
 api.signIn=async(email,password)=>{const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,returnSecureToken:true})});if(!r.ok)throw Error('Sign-in failed. Use your DragonsHub account.');const j=await r.json();token=j.idToken;refreshToken=j.refreshToken;expires=Date.now()+Number(j.expiresIn)*1000;await authenticate();};

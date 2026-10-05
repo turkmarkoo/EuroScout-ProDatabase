@@ -2888,18 +2888,18 @@ const Sync = (()=>{
   return {stampRecord,stampKey,pull,push,renderPill,bootPull,openSettings,get configured(){return configured();}};
 })();
 
+let CORE_FULL_PROMISE=null,CORE_UPGRADE_STARTED=false;
+async function fetchCoreFile(path,timeout){
+  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),timeout);
+  try{const response=await fetch(path,{cache:"no-cache",signal:ctl.signal});if(!response.ok)throw new Error("Core data HTTP "+response.status);const raw=await response.json();if(!Array.isArray(raw.leagues))throw new Error("Invalid core data");return raw;}
+  finally{clearTimeout(timer);}
+}
 async function loadCoreData(){
-  // Fetch one copy over HTTP. Load the inline bundle only for file:// or a failed request.
+  // Paint from a compact player sample while the complete game-log database
+  // downloads quietly. The complete data replaces it without another reload.
   if(location.protocol!=="file:"){
-    const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),15000);
-    try{
-      const response=await fetch("data/data.json",{cache:"no-cache",signal:ctl.signal});
-      if(!response.ok)throw new Error("Core data HTTP "+response.status);
-      const raw=await response.json();
-      if(!Array.isArray(raw.leagues))throw new Error("Invalid core data");
-      return raw;
-    }catch(e){console.warn("Using bundled core data",e);}
-    finally{clearTimeout(timer);}
+    try{return await fetchCoreFile("data/data-start.json",10000);}
+    catch(e){console.warn("Compact core unavailable; waiting for complete data",e);CORE_FULL_PROMISE=fetchCoreFile("data/data.json",30000).catch(error=>{console.warn("Complete core data is delayed",error);return null;});const full=await CORE_FULL_PROMISE;if(full)return full;}
   }
   if(window.EUROSCOUT_INLINE)return window.EUROSCOUT_INLINE;
   return new Promise(resolve=>{
@@ -2909,6 +2909,32 @@ async function loadCoreData(){
     script.onload=()=>finish(window.EUROSCOUT_INLINE||null);
     script.onerror=()=>finish(null);document.head.appendChild(script);
   });
+}
+async function prepareCoreData(raw,includePrivate){
+  for(const L of raw?.leagues||[])for(const p of L.players||[])if(p.img&&!isPlayerPhoto(p.img))p.img=null;
+  window.EuroScoutABA?.apply(raw);
+  window.EuroScoutFEB?.apply(raw);window.EuroScoutFEB?.applyCurrentRoster(raw);
+  window.EuroScoutElite2?.apply(raw);window.EuroScoutExpansion?.apply(raw);window.EuroScoutMemberships?.apply(raw);
+  window.EuroScoutEuroCup?.apply(raw);window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutKzsPro?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
+  const privateCore=includePrivate&&window.ESAccess?.internal?ESAccess.state?.core:null;
+  if(privateCore&&Array.isArray(privateCore.leagues)&&privateCore.leagues.length)Object.assign(raw,privateCore);
+  window.EuroScoutABA?.apply(raw);
+  window.EuroScoutFEB?.apply(raw);window.EuroScoutFEB?.applyCurrentRoster(raw);
+  window.EuroScoutElite2?.apply(raw);window.EuroScoutExpansion?.apply(raw);window.EuroScoutMemberships?.apply(raw);
+  window.EuroScoutEuroCup?.apply(raw);window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutKzsPro?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
+  window.EuroScoutManualPlayers?.apply(raw);raw=await window.EuroScoutDragons?.apply(raw)||raw;injectExhibitions(raw);
+  raw.leagues.forEach(L=>L.players.forEach(p=>{const g=p.gameLog||[];if(!g.length){p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);return;}const t={min:0,pts:0,fgm:0,fga:0,f3m:0,f3a:0,ftm:0,fta:0,reb:0,ast:0,stl:0,blk:0,tov:0,pir:0};for(const r of g){t.min+=r[6]||0;t.pts+=r[7]||0;t.fgm+=r[8]||0;t.fga+=r[9]||0;t.f3m+=r[10]||0;t.f3a+=r[11]||0;t.ftm+=r[12]||0;t.fta+=r[13]||0;t.reb+=r[14]||0;t.ast+=r[15]||0;t.stl+=r[16]||0;t.blk+=r[17]||0;t.tov+=r[18]||0;t.pir+=r[19]||0;}p.t_min=Math.round(t.min);p.t_pts=t.pts;p.t_reb=t.reb;p.t_ast=t.ast;p.t_stl=t.stl;p.t_blk=t.blk;p.t_tov=t.tov;p.t_fgm=t.fgm;p.t_fga=t.fga;p.t_f3m=t.f3m;p.t_f3a=t.f3a;p.t_ftm=t.ftm;p.t_fta=t.fta;p.t_pir=Math.round(t.pir);p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);}));
+  window.EuroScoutDragons?.finish(raw);return raw;
+}
+async function loadRemainingCore(){
+  if(CORE_UPGRADE_STARTED)return;CORE_UPGRADE_STARTED=true;
+  try{
+    let full=null;
+    if(window.ESAccess?.internal){const seed=await ESAccess.seedReady.catch(e=>{console.warn("Private player detail is delayed",e);return null;});if(seed){for(const [k,v] of Object.entries(seed.seeds||{}))if(/^EUROSCOUT_[A-Z_]+$/.test(k)){if(k==='EUROSCOUT_AGENTS')window[k]={...(window[k]||{}),...v};else if(k==='EUROSCOUT_AGENCIES')window[k]=[...new Set([...(window[k]||[]),...v])];else window[k]=v;}full=seed.core;}}
+    if(!full){CORE_FULL_PROMISE=CORE_FULL_PROMISE||fetchCoreFile("data/data.json",30000).catch(e=>{console.warn("Complete core data is delayed",e);return null;});full=await CORE_FULL_PROMISE;}
+    if(!full||!Array.isArray(full.leagues)||!full.leagues.length)return;
+    const leagueId=STATE.league?.meta?.id;full=await prepareCoreData(full,false);STATE.data=full;STATE.league=full.leagues.find(l=>l.meta.id===leagueId)||full.leagues[0];STATE._idx=null;seasonPoolCache=null;OVR=ovrMerged();applyOverrides();rebuildLinks();window.EuroScoutEditPlayerV2?.prune(full);mergeGroupRecords();render();if(CURRENT)renderProfile();
+  }catch(e){console.warn("Complete player database remains unavailable",e);}
 }
 async function boot(){
   if(!window.ESAccess){$('#app').textContent='Access verification could not load. Reload the page or reopen Pro Database from DragonsHub.';return;}
@@ -2928,37 +2954,10 @@ async function boot(){
   }
   if(!raw || !Array.isArray(raw.leagues) || !raw.leagues.length){ $("#app").innerHTML='<div class="empty"><strong>EuroScout data could not be loaded.</strong><br>'+
     'Check that <code>data/data.json</code> or <code>data/data.js</code> is present in the repository, then reload.</div>'; return; }
-  for(const L of raw?.leagues||[])for(const p of L.players||[])if(p.img&&!isPlayerPhoto(p.img))p.img=null;
-  window.EuroScoutABA?.apply(raw);
-  window.EuroScoutFEB?.apply(raw);window.EuroScoutFEB?.applyCurrentRoster(raw);
-  window.EuroScoutElite2?.apply(raw);
-  window.EuroScoutExpansion?.apply(raw);
-  window.EuroScoutMemberships?.apply(raw);
-  window.EuroScoutEuroCup?.apply(raw);window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutKzsPro?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
   if(window.ESAccess&&!ESAccess.internal){ESAccess.external(raw);return;}
-  // A partially migrated private snapshot must never replace a valid public core.
-  // Only apply it when it contains a complete, non-empty league collection.
-  const privateCore=window.ESAccess?.internal ? ESAccess.state?.core : null;
-  if(privateCore && Array.isArray(privateCore.leagues) && privateCore.leagues.length)Object.assign(raw,privateCore);
-  window.EuroScoutABA?.apply(raw);
-  window.EuroScoutFEB?.apply(raw);window.EuroScoutFEB?.applyCurrentRoster(raw);
-  window.EuroScoutElite2?.apply(raw);
-  window.EuroScoutExpansion?.apply(raw);
-  window.EuroScoutMemberships?.apply(raw);
-  window.EuroScoutEuroCup?.apply(raw);window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutKzsPro?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
-  window.EuroScoutManualPlayers?.apply(raw);
-  raw=await window.EuroScoutDragons?.apply(raw)||raw;
+  raw=await prepareCoreData(raw,true);
   STATE.data = raw;
   window.EuroScoutEditPlayerV2?.prune(raw);
-  injectExhibitions(raw);
-  raw.leagues.forEach(L=>L.players.forEach(p=>{
-    const g=p.gameLog||[]; if(!g.length){p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);return;} const t={min:0,pts:0,fgm:0,fga:0,f3m:0,f3a:0,ftm:0,fta:0,reb:0,ast:0,stl:0,blk:0,tov:0,pir:0};
-    for(const r of g){t.min+=r[6]||0;t.pts+=r[7]||0;t.fgm+=r[8]||0;t.fga+=r[9]||0;t.f3m+=r[10]||0;t.f3a+=r[11]||0;t.ftm+=r[12]||0;t.fta+=r[13]||0;t.reb+=r[14]||0;t.ast+=r[15]||0;t.stl+=r[16]||0;t.blk+=r[17]||0;t.tov+=r[18]||0;t.pir+=r[19]||0;}
-    p.t_min=Math.round(t.min);p.t_pts=t.pts;p.t_reb=t.reb;p.t_ast=t.ast;p.t_stl=t.stl;p.t_blk=t.blk;p.t_tov=t.tov;
-    p.t_fgm=t.fgm;p.t_fga=t.fga;p.t_f3m=t.f3m;p.t_f3a=t.f3a;p.t_ftm=t.ftm;p.t_fta=t.fta;p.t_pir=Math.round(t.pir);
-    p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);
-  }));
-  window.EuroScoutDragons?.finish(raw);
   OVR=ovrMerged(); applyOverrides(); rebuildLinks();
   muInit();
   await Store.load();
@@ -2992,6 +2991,7 @@ async function boot(){
       if(g&&g!==k){if(!m[g])m[g]=m[k];delete m[k];changed=true;}});
     if(changed)next26Set(m);}catch(e){}})();
   try{ render(); }catch(e){ console.error("initial render failed",e); }
+  setTimeout(loadRemainingCore,80);
   // keep other open tabs in step: roster/transfer edits made elsewhere refresh this view
   window.addEventListener("storage",e=>{
     if(!e.key)return;
