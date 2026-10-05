@@ -1833,7 +1833,7 @@ body.drawer-lock{overflow:hidden}
 <script src="euroscout-clubs.js?v=20260914-virtus-merge"></script>
 <script src="euroscout-countries.js?v=20260921-bclq-codes"></script>
 <script src="config.js"></script>
-<script src="euroscout-access.js?v=20260913-batch"></script>
+<script src="euroscout-access.js?v=20261005-fast-start"></script>
 <!-- Manual overrides are loaded from the authorized snapshot. -->
 <script src="data/exhibitions.js"></script>
 <!-- Scouting seeds are loaded from the authorized snapshot. -->
@@ -2910,7 +2910,7 @@ async function loadCoreData(){
     script.onerror=()=>finish(null);document.head.appendChild(script);
   });
 }
-async function prepareCoreData(raw,includePrivate){
+async function prepareCoreData(raw,includePrivate,includeLiveStats=true){
   for(const L of raw?.leagues||[])for(const p of L.players||[])if(p.img&&!isPlayerPhoto(p.img))p.img=null;
   window.EuroScoutABA?.apply(raw);
   window.EuroScoutFEB?.apply(raw);window.EuroScoutFEB?.applyCurrentRoster(raw);
@@ -2922,9 +2922,11 @@ async function prepareCoreData(raw,includePrivate){
   window.EuroScoutFEB?.apply(raw);window.EuroScoutFEB?.applyCurrentRoster(raw);
   window.EuroScoutElite2?.apply(raw);window.EuroScoutExpansion?.apply(raw);window.EuroScoutMemberships?.apply(raw);
   window.EuroScoutEuroCup?.apply(raw);window.EuroScoutBBL?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);window.EuroScoutKzsPro?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
-  window.EuroScoutManualPlayers?.apply(raw);raw=await window.EuroScoutDragons?.apply(raw)||raw;injectExhibitions(raw);
+  window.EuroScoutManualPlayers?.apply(raw);
+  if(includeLiveStats)raw=await window.EuroScoutDragons?.apply(raw)||raw;
+  injectExhibitions(raw);
   raw.leagues.forEach(L=>L.players.forEach(p=>{const g=p.gameLog||[];if(!g.length){p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);return;}const t={min:0,pts:0,fgm:0,fga:0,f3m:0,f3a:0,ftm:0,fta:0,reb:0,ast:0,stl:0,blk:0,tov:0,pir:0};for(const r of g){t.min+=r[6]||0;t.pts+=r[7]||0;t.fgm+=r[8]||0;t.fga+=r[9]||0;t.f3m+=r[10]||0;t.f3a+=r[11]||0;t.ftm+=r[12]||0;t.fta+=r[13]||0;t.reb+=r[14]||0;t.ast+=r[15]||0;t.stl+=r[16]||0;t.blk+=r[17]||0;t.tov+=r[18]||0;t.pir+=r[19]||0;}p.t_min=Math.round(t.min);p.t_pts=t.pts;p.t_reb=t.reb;p.t_ast=t.ast;p.t_stl=t.stl;p.t_blk=t.blk;p.t_tov=t.tov;p.t_fgm=t.fgm;p.t_fga=t.fga;p.t_f3m=t.f3m;p.t_f3a=t.f3a;p.t_ftm=t.ftm;p.t_fta=t.fta;p.t_pir=Math.round(t.pir);p.astto=(p.topg>0)?Math.round(p.apg/p.topg*100)/100:(p.apg>0?p.apg:0);}));
-  window.EuroScoutDragons?.finish(raw);return raw;
+  if(includeLiveStats)window.EuroScoutDragons?.finish(raw);return raw;
 }
 async function loadRemainingCore(){
   if(CORE_UPGRADE_STARTED)return;CORE_UPGRADE_STARTED=true;
@@ -2933,7 +2935,7 @@ async function loadRemainingCore(){
     if(window.ESAccess?.internal){const seed=await ESAccess.seedReady.catch(e=>{console.warn("Private player detail is delayed",e);return null;});if(seed){for(const [k,v] of Object.entries(seed.seeds||{}))if(/^EUROSCOUT_[A-Z_]+$/.test(k)){if(k==='EUROSCOUT_AGENTS')window[k]={...(window[k]||{}),...v};else if(k==='EUROSCOUT_AGENCIES')window[k]=[...new Set([...(window[k]||[]),...v])];else window[k]=v;}full=seed.core;}}
     if(!full){CORE_FULL_PROMISE=CORE_FULL_PROMISE||fetchCoreFile("data/data.json",30000).catch(e=>{console.warn("Complete core data is delayed",e);return null;});full=await CORE_FULL_PROMISE;}
     if(!full||!Array.isArray(full.leagues)||!full.leagues.length)return;
-    const leagueId=STATE.league?.meta?.id;full=await prepareCoreData(full,false);STATE.data=full;STATE.league=full.leagues.find(l=>l.meta.id===leagueId)||full.leagues[0];STATE._idx=null;seasonPoolCache=null;OVR=ovrMerged();applyOverrides();rebuildLinks();window.EuroScoutEditPlayerV2?.prune(full);mergeGroupRecords();render();if(CURRENT)renderProfile();
+    const leagueId=STATE.league?.meta?.id;full=await prepareCoreData(full,false,true);STATE.data=full;STATE.league=full.leagues.find(l=>l.meta.id===leagueId)||full.leagues[0];STATE._idx=null;seasonPoolCache=null;OVR=ovrMerged();applyOverrides();rebuildLinks();window.EuroScoutEditPlayerV2?.prune(full);mergeGroupRecords();render();if(CURRENT)renderProfile();
   }catch(e){console.warn("Complete player database remains unavailable",e);}
 }
 async function boot(){
@@ -2955,7 +2957,9 @@ async function boot(){
   if(!raw || !Array.isArray(raw.leagues) || !raw.leagues.length){ $("#app").innerHTML='<div class="empty"><strong>EuroScout data could not be loaded.</strong><br>'+
     'Check that <code>data/data.json</code> or <code>data/data.js</code> is present in the repository, then reload.</div>'; return; }
   if(window.ESAccess&&!ESAccess.internal){ESAccess.external(raw);return;}
-  raw=await prepareCoreData(raw,true);
+  // Paint the compact database immediately. Current statistics and the full
+  // player catalogue are merged by loadRemainingCore after the first screen.
+  raw=await prepareCoreData(raw,true,false);
   STATE.data = raw;
   window.EuroScoutEditPlayerV2?.prune(raw);
   OVR=ovrMerged(); applyOverrides(); rebuildLinks();
@@ -7285,8 +7289,8 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="data/realgm-representation.js?v=20260907-13"></script>
 <script src="euroscout-representation.js?v=20260907-13"></script>
 <script src="data/aba-rosters-2026.js?v=20260910-1"></script>
-<script src="euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"></script><script src="eurocup-rosters-2026.js?v=20260930-cowan-merge"></script><script src="euroscout-eurocup-rosters.js?v=20260930-identities"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroleague-rosters-2026.js?v=20261002-official"></script><script src="euroscout-official-rosters.js?v=20261002-euroleague"></script><script src="data/kzs-pro-2026.js?v=20260930-1"></script><script src="euroscout-kzs-pro.js?v=20261004-live-stats"></script>
+<script src="euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"></script><script src="eurocup-rosters-2026.js?v=20260930-cowan-merge"></script><script src="euroscout-eurocup-rosters.js?v=20260930-identities"></script><script src="official-rosters-2026.js?v=20260914-bclq-release"></script><script src="euroleague-rosters-2026.js?v=20261002-official"></script><script src="euroscout-official-rosters.js?v=20261002-euroleague"></script><script src="data/kzs-pro-2026.js?v=20261005-gorica-logo"></script><script src="euroscout-kzs-pro.js?v=20261004-live-stats"></script>
 <script src="data/bclq-2026.js?v=20260921-final"></script><script src="euroscout-bclq-2026.js?v=20260930-profile-stats"></script>
 <link rel="stylesheet" href="euroscout-merge-center.css?v=20260921-1"><script src="euroscout-merge-center.js?v=20260922-3"></script>
-<link rel="stylesheet" href="euroscout-agencies-v2.css?v=20261001-agent-edit"><script src="euroscout-agencies-v2.js?v=20261001-agent-edit"></script><script src="global-command-palette.js?v=20260922-performance"></script><script src="euroscout-manual-players.js?v=20260929-nathan-soliman"></script><script src="euroscout-command-palette.js?v=20260922-performance"></script><script src="euroscout-dragons.js?v=20261001-private-live"></script><script>esSetup();boot().catch(function(error){console.error('EuroScout initialization failed',error);document.getElementById('app').textContent='EuroScout could not finish loading. Please reload.';}).finally(function(){var root=document.documentElement;root.classList.remove('es-preload');root.classList.add('es-ready');setTimeout(function(){document.getElementById('esSplash')?.remove();},300);});</script>
+<link rel="stylesheet" href="euroscout-agencies-v2.css?v=20261001-agent-edit"><script src="euroscout-agencies-v2.js?v=20261001-agent-edit"></script><script src="global-command-palette.js?v=20260922-performance"></script><script src="euroscout-manual-players.js?v=20260929-nathan-soliman"></script><script src="euroscout-command-palette.js?v=20260922-performance"></script><script src="euroscout-dragons.js?v=20261005-background-sync"></script><script>esSetup();boot().catch(function(error){console.error('EuroScout initialization failed',error);document.getElementById('app').textContent='EuroScout could not finish loading. Please reload.';}).finally(function(){var root=document.documentElement;root.classList.remove('es-preload');root.classList.add('es-ready');setTimeout(function(){document.getElementById('esSplash')?.remove();},300);});</script>
 <script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20260914-countries"></script><script src="euroscout-export.js?v=23"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20260919-1"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20260918-1"></script><script src="euroscout-fixtures.js?v=20260919-1"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-sessions.js?v=20260921-1"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20261001-position-editor"><link rel="stylesheet" href="team-selection-workspace.css?v=20260930-1"><link rel="stylesheet" href="euroscout-quickstats.css?v=20260921-1"><script src="data/signal-origins.js?v=20260920-1"></script><script src="euroscout-signals.js?v=20260920-2"></script><script src="euroscout-quickstats.js?v=20261004-kzs-live-stats"></script><script src="data/competition-assets.js?v=20260930-1"></script><script src="team-selection-workspace.js?v=20260930-logos"></script><script src="euroscout-live-notes.js?v=20261001-position-nba2"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script></body></html>

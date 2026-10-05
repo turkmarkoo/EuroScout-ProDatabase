@@ -1,6 +1,6 @@
 /* DragonsHub statistics. Never cache or copy this feed into scouting snapshots. */
 (function(){'use strict';
-let feed=null,problem='',links=[];
+let feed=null,problem='',links=[],syncing=null,lastSynced='';
 const clean=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const reader=()=>window.ESAccess?.internal&&!!ESAccess.user;
 const allPlayers=raw=>(raw.leagues||[]).flatMap(league=>league.players||[]);
@@ -103,11 +103,24 @@ async function apply(raw){
   if(data.leagues.some(league=>!league.meta?.privateOwnerFeed||!league.meta.id?.startsWith('dragons-')||!Array.isArray(league.players)))throw Error('Invalid owner-only league.');
   return data;
  };
- const local=async()=>{if(typeof fetch!=='function')return null;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),1200);try{const response=await fetch('http://127.0.0.1:8767/api/v1/euroscout-feed',{cache:'no-store',signal:controller.signal});if(!response.ok)throw Error('Local Dragons Data returned '+response.status);return Object.assign(valid(await response.json()),{_sourceLabel:'fresh private page'});}finally{clearTimeout(timer);}};
+ const local=async()=>{if(typeof fetch!=='function')return null;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);try{const response=await fetch('http://127.0.0.1:8767/api/v1/euroscout-feed',{cache:'no-store',signal:controller.signal});if(!response.ok)throw Error('Local Dragons Data returned '+response.status);return Object.assign(valid(await response.json()),{_sourceLabel:'fresh private page'});}finally{clearTimeout(timer);}};
  const cloud=async()=>{const head=await ESAccess.get('dragonsDataState/current');if(!head)return null;const id=ESAccess.field(head,'snapshot');if(!/^[a-f0-9]{32}$/.test(id||''))throw Error('Invalid statistics snapshot pointer.');return Object.assign(valid(JSON.parse(await ESAccess.readPayload('dragonsDataSnapshots',id))),{_sourceLabel:'cloud snapshot'});};
  const settled=await Promise.allSettled([local(),cloud()]),candidates=settled.filter(x=>x.status==='fulfilled'&&x.value).map(x=>x.value).sort((a,b)=>new Date(b.generated||0)-new Date(a.generated||0));
+ const localData=settled[0].status==='fulfilled'?settled[0].value:null,cloudData=settled[1].status==='fulfilled'?settled[1].value:null;
+ if(localData&&window.ESAccess?.owner&&new Date(localData.generated||0)>new Date(cloudData?.generated||0))syncNewestLocal(localData);
  if(candidates.length)return reader()?connectData(raw,candidates[0]):raw;
  const error=settled.find(x=>x.status==='rejected')?.reason;problem='Dragons Data could not load. Existing EuroScout data is unchanged.';if(error)console.warn(problem,error);return raw;
+}
+function syncNewestLocal(data){
+ if(syncing||lastSynced===data.generated)return syncing;
+ lastSynced=data.generated;syncing=(async()=>{
+  const payload={...data};delete payload._sourceLabel;delete payload.resolvedPlayers;delete payload.unresolvedPlayers;
+  const id=crypto.randomUUID().replaceAll('-','');
+  await ESAccess.writePayload('dragonsDataSnapshots',id,payload);
+  const head=await ESAccess.get('dragonsDataState/current');
+  await ESAccess.commit('dragonsDataState/current',{snapshot:id},head?.updateTime?{updateTime:head.updateTime}:{exists:false});
+ })().catch(error=>{lastSynced='';console.warn('Fresh Dragons Data stayed local; cloud sync is delayed.',error);}).finally(()=>{syncing=null;});
+ return syncing;
 }
 function link(unite){for(const [left,right] of links)unite(left,right);}
 function finish(raw){

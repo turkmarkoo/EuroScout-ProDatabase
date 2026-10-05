@@ -37,8 +37,9 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  assert.equal(linked.some(pair=>pair[0]==='dragons-eurocup-grasshoff'&&pair[1]==='lnb-9352'),true);
  assert.equal(linked.some(pair=>pair[0]==='dragons-lnb-grasshoff'&&pair[1]==='lnb-9352'),true);
  assert.equal(live.unresolvedPlayers,0);
- assert.match(html,/euroscout-dragons\.js\?v=20261001-private-live/);
+ assert.match(html,/euroscout-dragons\.js\?v=20261005-background-sync/);
  assert.match(html,/raw=await window\.EuroScoutDragons\?\.apply\(raw\)\|\|raw/);
+ assert.match(html,/prepareCoreData\(raw,true,false\)/);
  assert.match(html,/window\.EuroScoutDragons\?\.link\(uni\)/);
 
  const manyBase=Array.from({length:15000},(_,i)=>({id:'base-'+i,name:'Player '+i,league:'test'}));manyBase.push({id:'lnb-9352',name:'Bastien Grasshoff',league:'lnb'});

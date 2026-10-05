@@ -10,6 +10,7 @@ const source=context.window.EUROSCOUT_KZS_PRO_2026;
 assert.equal(source.teams.length,11);
 assert.equal(source.roster.length,171);
 assert.ok(source.teams.every(t=>t.key.startsWith('slo|')&&t.logo));
+assert.equal(source.teams.find(t=>t.id==='kzs:18649').logo,'https://api.kzs.si/public/images/2b272b00-f297-42e6-92d3-90885a50b5e2');
 const taij=source.roster.find(r=>r.name==='Taij Pesjak'||r.name==='Taij Pešjak');
 assert.ok(taij);
 const raw={leagues:[{meta:{id:'slo',name:'Liga OTP banka',season:'2025-26'},teams:[],players:[{id:'existing-taij',name:taij.name,born:taij.born,league:'slo',team:'LAS'}]}]};
