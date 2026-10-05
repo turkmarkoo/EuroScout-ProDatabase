@@ -98,6 +98,7 @@ function connectData(raw,data){
 }
 async function apply(raw){
  if(!reader())return raw;
+ if(feed)return connectData(raw,feed);
  const valid=data=>{
   if(data.schema!==1||data.quality_policy!=='accepted_live_boxscores_only'||!Array.isArray(data.leagues)||!Array.isArray(data.fixtures))throw Error('Invalid Dragons Data feed.');
   if(data.leagues.some(league=>!league.meta?.privateOwnerFeed||!league.meta.id?.startsWith('dragons-')||!Array.isArray(league.players)))throw Error('Invalid owner-only league.');
@@ -128,7 +129,9 @@ function finish(raw){
  for(const league of raw.leagues||[])if(league.meta.privateOwnerFeed)for(const player of league.players||[])for(const [key,value] of Object.entries(player.dragonsTotals||{}))player['t_'+({p3m:'f3m',p3a:'f3a'}[key]||key)]=value;
  const badge=document.createElement('div');badge.id='dragonsDataStatus';badge.setAttribute('role','status');badge.style.cssText='padding:8px 16px;background:#edf8ee;color:#23462b;font:13px system-ui';
  badge.textContent=feed?'Dragons Data · '+(feed._sourceLabel||'private feed')+' · updated '+new Date(feed.generated).toLocaleString()+' · '+feed.resolvedPlayers+' player lines linked.':problem||'Dragons Data is not synced yet.';
- document.querySelector('header')?.after(badge);
+ document.getElementById('dragonsDataStatus')?.remove();
+ const header=document.querySelector('header'),app=document.getElementById('app');
+ if(header)header.after(badge);else if(app)app.before(badge);
 }
 window.EuroScoutDragons={apply,link,finish,connectData,resolve,fixtures(){return reader()&&feed?feed.fixtures:[];},active(){return !!(reader()&&feed);}};
 })();
