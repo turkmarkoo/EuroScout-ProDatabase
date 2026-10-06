@@ -39,5 +39,28 @@ test('profile season cards discover and default to linked DragonsData 2026/27 li
   assert.match(ui,/r\._dragonsData/);
   assert.match(ui,/seasons\.includes\('2026\/27'\)\?'2026\/27'/);
   assert.match(ui,/const value=display\[key\]/);
-  assert.match(html,/euroscout-ui\.js\?v=20261001-current-stats/);
+  assert.match(html,/euroscout-ui\.js\?v=20261006-dashboard-season/);
+});
+
+test('dashboard defaults to played 2026/27 statistics before qualification thresholds are met',()=>{
+  assert.match(ui,/const currentSeason='2026\/27'/);
+  assert.match(ui,/esDashboardHasPlayedSeason\(currentVariant,currentSeason\)/);
+  assert.match(ui,/ES\.dashboardSeason=currentSeason/);
+  assert.match(ui,/ES\.dashboardSeason===currentSeason\?Number\(p\.g\)>0:p\.qualified/);
+  assert.match(ui,/new Set\(\[currentSeason,/);
+  assert.match(html,/euroscout-ui\.js\?v=20261006-dashboard-season/);
+});
+
+test('dashboard groups historical and current feeds under one competition choice',()=>{
+  assert.match(ui,/function esDashboardCompetitionKey\(league\)/);
+  assert.match(ui,/for\(const \[key,items\] of groups\)/);
+  assert.match(ui,/esDashboardLeagueForSeason\(group,ES\.dashboardSeason\)/);
+  const source=ui.slice(ui.indexOf('function esDashboardCompetitionKey('),ui.indexOf('function renderDashboard('));
+  const context={scoutSeason:player=>String(player.statsSeason||player.season||'').replace('-','/')};
+  vm.createContext(context);vm.runInContext(source,context);
+  const historical={meta:{id:'eurocup',name:'EuroCup',season:'2025/26'},players:[{season:'2025/26',g:30}]};
+  const current={meta:{id:'dragons-eurocup',name:'EuroCup',season:'2026/27'},players:[{statsSeason:'2026/27',g:1}]};
+  assert.equal(context.esDashboardCompetitionKey(historical),context.esDashboardCompetitionKey(current));
+  assert.equal(context.esDashboardLeagueForSeason([historical,current],'2026/27'),current);
+  assert.equal(context.esDashboardLeagueForSeason([historical,current],'2025/26'),historical);
 });
