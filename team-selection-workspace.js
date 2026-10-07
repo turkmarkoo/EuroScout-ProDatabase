@@ -25,10 +25,10 @@ function currentCompetitionIds(club){const ids=[];try{if(typeof nextCompsOf==='f
 const COMPETITION_ALIASES=[
  ['euroleague','EuroLeague',/^(turkishairlines)?euroleague$/],['eurocup','EuroCup',/^(bkt)?eurocup$/],
  ['aba2','ABA League 2',/^abaleague2$/],['aba','ABA League',/^(admiralbet)?abaleague$/],
- ['bcl','Basketball Champions League',/^(basketball)?championsleague$/],['acb','Liga ACB',/^(ligaendesa|ligaacb|acb)$/],
+ ['bcl','Basketball Champions League',/^(basketball)?championsleague$/],['fec','FIBA Europe Cup',/^fibaeuropecup$/],['acb','Liga ACB',/^(ligaendesa|ligaacb|acb)$/],
  ['lnb','Betclic Élite',/^(lnbproa|betclicelite|franceproa)$/],['lba','Lega A',/^(legabasketseriea|legaseriea|lba|legaa)$/]
 ];
-function competitionIdentity(meta){const name=fold(meta.name).replace(/[^a-z0-9]/g,'').replace(/20\d{2}(20\d{2})?/g,'');const hit=COMPETITION_ALIASES.find(x=>x[2].test(name)||meta.id===x[0]);return hit?{key:hit[0],id:hit[0],name:hit[1]}:{key:'name:'+name,id:meta.id,name:meta.name};}
+function competitionIdentity(meta){const name=fold(meta.name).replace(/20\d{2}\s*[\/-]\s*(?:20)?\d{2}/g,'').replace(/[^a-z0-9]/g,'');const baseId=String(meta.id||'').replace(/26$/,'');const hit=COMPETITION_ALIASES.find(x=>x[2].test(name)||baseId===x[0]);return hit?{key:hit[0],id:hit[0],name:hit[1]}:{key:'name:'+name,id:meta.id,name:meta.name};}
 function buildCompetitions(){
  if(typeof allClubs!=='function')return[];
  const clubs=allClubs(),defs=new Map(),data=window.STATE?.data||{};

@@ -40,7 +40,7 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  assert.equal(live.fixtures[1].home.key,'hun|NHS');
  assert.equal(live.fixtures[1].away.key,'plk|OZZ');
  assert(events.includes('euroscout-dragons'));
- assert.match(html,/euroscout-dragons\.js\?v=20261007-fiba-legal-names/);
+assert.match(html,/euroscout-dragons\.js\?v=20261007-registry-repair/);
  assert.match(html,/raw=await window\.EuroScoutDragons\?\.apply\(raw\)\|\|raw/);
  assert.match(html,/prepareCoreData\(raw,false,false,false\)/);
  assert.match(html,/Never let a large private snapshot win the first-paint race/);

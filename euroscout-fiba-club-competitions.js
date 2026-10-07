@@ -3,9 +3,10 @@
 const data=window.EUROSCOUT_FIBA_CLUB_2026;if(!data)return;
 if(data.format==='compact-v1'){
  const teamById=new Map(data.teams.map(team=>[team.id,team]));
- data.roster=data.roster.map(row=>{const [competition,fibaId,ids,name,teamId,born,dob,height,number,img,finalRoster,position,country]=row,team=teamById.get(teamId),prefix=team.key.split('|')[0],league=prefix==='directory'?'n2627':prefix;
+ for(const team of data.teams){team.canonicalKey=team.key;team.currentKey=team.competition+'26|'+team.officialCode;}
+ data.roster=data.roster.map(row=>{const [competition,fibaId,ids,name,teamId,born,dob,height,number,img,finalRoster,position,country]=row,team=teamById.get(teamId),league=competition+'26';
   return{id:`fiba-${competition}-${fibaId}`,ids,name,teamId,teamName:team.name,league,born,dob,height,number,img,source:team.source,profile:team.source,existing:ids.length>1,fibaId,competition,competitionId:team.competitionId,finalRoster,position,country};});
- data.players=data.roster.map(row=>{const team=teamById.get(row.teamId),prefix=team.key.split('|')[0],code=prefix==='directory'?team.code:team.key.split('|')[1],role=/center|centre/i.test(row.position)?'Big':/forward/i.test(row.position)?'Forward':'Guard';
+ data.players=data.roster.map(row=>{const team=teamById.get(row.teamId),code=team.officialCode,role=/center|centre/i.test(row.position)?'Big':/forward/i.test(row.position)?'Forward':'Guard';
   return{id:row.id,code:String(row.fibaId),fibaId:row.fibaId,name:row.name,league:row.league,team:code,teamName:row.teamName,born:row.born,dob:row.dob,height:row.height,country:row.country,pos:row.position||'',role,jersey:row.number,img:row.img,_rosterOnly:true,_strictIdentity:true,qualified:false,g:null,gameLog:[],pct:{},z:{},arch:[]};});
  const rosterByCompetitionId=new Map(data.roster.map(row=>[row.competition+'|'+row.fibaId,row]));
  for(const competition of Object.values(data.competitions)){
@@ -20,6 +21,11 @@ const base=window.EUROSCOUT_OFFICIAL_ROSTERS;if(!base)return;
 const merge=(target,rows,key)=>{const seen=new Set(target.map(key));for(const row of rows||[]){const id=key(row);if(!seen.has(id)){target.push(row);seen.add(id);}}};
 base.teams=base.teams||[];base.roster=base.roster||[];base.players=base.players||[];
 merge(base.teams,data.teams,t=>t.id);merge(base.roster,data.roster,r=>r.id);merge(base.players,data.players,p=>p.id);
+base.identityPairs=base.identityPairs||[];
+for(const team of data.teams){
+ const pair=[team.currentKey,team.canonicalKey];
+ if(pair[0]!==pair[1]&&!base.identityPairs.some(row=>pair.every(key=>row.includes(key))))base.identityPairs.push(pair);
+}
 if(!base.checked||String(base.checked)<String(data.checked))base.checked=data.checked;
 
 const directory=window.EUROSCOUT_CLUB_DIRECTORY||(window.EUROSCOUT_CLUB_DIRECTORY=[]);
@@ -32,7 +38,7 @@ const memberships=window.EUROSCOUT_MEMBERSHIPS?.leagues;
 if(memberships)for(const [id,competition] of Object.entries(data.competitions)){
  const previous=memberships[id]||{};
  memberships[id]={...previous,id,name:competition.name,season:data.season,checked:String(data.checked).slice(0,10),confirmed:true,complete:true,international:true,source:competition.source,
-  note:'Current official competition field and team registrations from FIBA team pages.',teams:competition.teams.map(team=>({key:team.key,name:team.name,stage:'RS'}))};
+  note:'Current official competition field and team registrations from FIBA team pages.',teams:competition.teams.map(team=>({key:team.currentKey,name:team.name,stage:'RS'}))};
 }
 
 const posMap={'Point Guard':['PG','Guard'],'Shooting Guard':['SG','Guard'],'Guard':['G','Guard'],'Small Forward':['SF','Forward'],'Power Forward':['PF','Forward'],'Forward':['F','Forward'],'Center':['C','Big'],'Centre':['C','Big'],'Big':['C','Big']};
@@ -59,7 +65,7 @@ function apply(raw){
  if(!raw?.leagues)return;
  for(const competition of Object.values(data.competitions)){
   if(raw.season2627?.comps){const current=window.EUROSCOUT_MEMBERSHIPS?.leagues?.[competition.id];if(current)raw.season2627.comps[competition.id]=JSON.parse(JSON.stringify(current));}
-  const leagueId=competition.id+'26',teams=competition.teams.map(team=>({code:team.officialCode,name:team.name,source:team.source,logo:team.logo||null,country:team.country||''}));
+  const leagueId=competition.id+'26',teams=competition.teams.map(team=>({code:team.officialCode,name:team.name,source:team.source,logo:team.logo||null,country:team.country||'',canonicalKey:team.canonicalKey}));
   let league=raw.leagues.find(item=>item.meta.id===leagueId);
   if(!league){league={meta:{id:leagueId,name:competition.name+' 2026/27',season:data.season,source:competition.source,checked:data.checked,current:true},teams,players:[]};raw.leagues.push(league);}
   Object.assign(league.meta,{id:leagueId,name:competition.name+' 2026/27',season:data.season,source:competition.source,checked:data.checked,current:true});

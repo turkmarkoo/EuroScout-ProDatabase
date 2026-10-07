@@ -14,12 +14,12 @@ function officialDirectory(){
  }
  const official=window.EUROSCOUT_OFFICIAL_ROSTERS;
  if(official)for(const team of official.teams||[]){
-  const entry={key:'official:'+team.id,dbKey:team.key||'',code:team.code||team.id,officialCode:team.code||'',name:team.name,aliases:team.aliases||[]};teams.push(entry);
+  const entry={key:'official:'+team.id,dbKey:team.currentKey||team.key||'',code:team.code||team.id,officialCode:team.code||'',name:team.name,aliases:team.aliases||[]};teams.push(entry);
   for(const row of (official.roster||[]).filter(player=>player.teamId===team.id))players.push({team:entry,name:row.name,ids:row.ids||[row.id],row});
  }
  const fiba=window.EUROSCOUT_FIBA_CLUB_2026;
  if(fiba)for(const team of fiba.teams||[]){
-  const entry={key:'fiba:'+team.id,dbKey:team.key||'',code:team.code||team.id,officialCode:team.officialCode||team.code||'',name:team.name,aliases:team.aliases||[]};teams.push(entry);
+  const entry={key:'fiba:'+team.id,dbKey:team.currentKey||team.key||'',code:team.code||team.id,officialCode:team.officialCode||team.code||'',name:team.name,aliases:team.aliases||[]};teams.push(entry);
   for(const row of (fiba.roster||[]).filter(player=>player.teamId===team.id))players.push({team:entry,name:row.name,ids:row.ids||[row.id],row});
  }
  return {teams,players};
@@ -72,6 +72,13 @@ function resolve(source,directory,raw){
  if(!candidates.length){
   const words=clean(source.name).split(' ').filter(Boolean),surname=(words[0]?.length===1?words.slice(1):words.slice(-1)).join(' ');
   if(surname)candidates=roster.filter(item=>{const full=clean(item.name).split(' '),sameBirth=!born||!item.row?.born||Number(item.row.born)===born;return sameBirth&&(full.slice(1).join(' ')===surname||full[full.length-1]===surname);});
+ }
+ if(candidates.length!==1&&team?.dbKey){
+  const [league,code]=String(team.dbKey).split('|');
+  const core=(raw.leagues||[]).filter(item=>item.meta?.id===league).flatMap(item=>item.players||[])
+   .filter(player=>String(player.team)===String(code)&&abbreviationMatches(source.name,player.name)&&(!born||!player.born||Number(player.born)===born));
+  const people=new Map(core.map(player=>[player.id,player]));
+  if(people.size===1){const player=[...people.values()][0];return{id:player.id,player,team};}
  }
  if(candidates.length!==1)return null;
  const item=candidates[0],id=item.ids.find(value=>byId.has(value))||item.ids[0];
