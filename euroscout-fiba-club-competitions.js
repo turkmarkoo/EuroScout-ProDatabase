@@ -43,6 +43,37 @@ if(memberships)for(const [id,competition] of Object.entries(data.competitions)){
 
 const posMap={'Point Guard':['PG','Guard'],'Shooting Guard':['SG','Guard'],'Guard':['G','Guard'],'Small Forward':['SF','Forward'],'Power Forward':['PF','Forward'],'Forward':['F','Forward'],'Center':['C','Big'],'Centre':['C','Big'],'Big':['C','Big']};
 const round=(n,d=1)=>n==null?null:Number(Number(n).toFixed(d));
+const bioName=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const verifiedCountryByFibaId=new Map(Object.entries({
+ 389876:'United States',323950:'United States',238002:'Hungary',220769:'United States',399164:'United States',198132:'Hungary',204851:'Hungary',423674:'Hungary',217602:'Hungary',342379:'Hungary',423673:'Hungary',189591:'Finland',
+ 325199:'United States',346133:'Poland',231269:'Poland',346231:'Poland',156476:'Poland',175845:'Poland',204509:'France',400910:'United States',221183:'Serbia',258124:'United States',218279:'Poland'
+}).map(([id,country])=>[Number(id),country]));
+function enrichPlayerNationalities(raw){
+ const byName=new Map();
+ for(const league of raw?.leagues||[])for(const player of league.players||[]){
+  if(player._fibaCurrent||String(player.id||'').startsWith('fiba-fec-')||String(player.id||'').startsWith('fiba-bcl-'))continue;
+  const country=window.EuroScoutCountries?.canonical(player.country||player.nationality)||player.country||player.nationality||null;
+  if(!country)continue;
+  const key=bioName(player.name);if(!key)continue;
+  const born=Number(player.born||String(player.dob||player.birthdate||'').slice(0,4))||null;
+  if(!byName.has(key))byName.set(key,[]);byName.get(key).push({country,born});
+ }
+ const resolve=player=>{
+  const verified=verifiedCountryByFibaId.get(Number(player.fibaId));if(verified)return verified;
+  const candidates=byName.get(bioName(player.name))||[];if(!candidates.length)return null;
+  const born=Number(player.born||String(player.dob||'').slice(0,4))||null;
+  const yearMatches=born?candidates.filter(item=>item.born===born):[];
+  const pool=yearMatches.length?yearMatches:candidates;
+  const countries=[...new Set(pool.map(item=>item.country).filter(Boolean))];
+  return countries.length===1?countries[0]:null;
+ };
+ for(const player of data.roster){const country=resolve(player);player.country=country||null;}
+ const rosterById=new Map(data.roster.map(row=>[row.id,row]));
+ for(const player of data.players){const source=rosterById.get(player.id);player.country=source?.country||null;}
+ for(const competition of Object.values(data.competitions))for(const player of competition.statsPlayers){
+  const source=rosterById.get(player.primary);player.nationality=source?.country||null;
+ }
+}
 function record(raw,competition){
  const [pos,role]=posMap[raw.position]||[raw.position||'',raw.position||''];
  const country=window.EuroScoutCountries?.canonical(raw.nationality)||raw.nationality||null,g=raw.g||0,min=raw.min??null;
@@ -63,6 +94,7 @@ function record(raw,competition){
 }
 function apply(raw){
  if(!raw?.leagues)return;
+ enrichPlayerNationalities(raw);
  for(const competition of Object.values(data.competitions)){
   if(raw.season2627?.comps){const current=window.EUROSCOUT_MEMBERSHIPS?.leagues?.[competition.id];if(current)raw.season2627.comps[competition.id]=JSON.parse(JSON.stringify(current));}
   const leagueId=competition.id+'26',teams=competition.teams.map(team=>({code:team.officialCode,name:team.name,source:team.source,logo:team.logo||null,country:team.country||'',canonicalKey:team.canonicalKey}));
