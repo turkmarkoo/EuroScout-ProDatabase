@@ -9,6 +9,8 @@ html.es-preload:not([data-hub-embed="1"]) #app{visibility:hidden}
 #esSplash span{font-size:15px;color:#66766f}
 #esSplash small{font-size:13px;color:#66766f}
 #esSplash .es-splash-spinner{width:26px;height:26px;border:3px solid #dbe8e1;border-top-color:#007a50;border-radius:50%;animation:es-spin .8s linear infinite}
+.core-load-status{position:fixed;right:18px;bottom:18px;z-index:9000;display:flex;align-items:center;gap:9px;max-width:min(420px,calc(100vw - 36px));padding:10px 14px;border:1px solid #cfe2d8;border-radius:999px;background:rgba(255,255,255,.96);box-shadow:0 8px 28px rgba(18,55,44,.14);color:#315b4d;font:600 12px/1.25 system-ui,sans-serif}
+.core-load-status .es-splash-spinner{width:15px;height:15px;flex:0 0 15px;border:2px solid #dbe8e1;border-top-color:#007a50;border-radius:50%;animation:es-spin .8s linear infinite}
 @keyframes es-spin{to{transform:rotate(360deg)}}
 html[data-hub-embed="1"] #esSplash{display:none!important}
 html.es-preload[data-hub-embed="1"] #app>.empty{min-height:55vh;color:transparent!important;background:linear-gradient(90deg,#f2f6f3 25%,#e9f0eb 45%,#f2f6f3 65%);background-size:200% 100%;animation:es-skeleton 1.4s ease-in-out infinite;border-radius:12px;margin:24px}

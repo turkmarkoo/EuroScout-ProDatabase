@@ -40,7 +40,8 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  assert(events.includes('euroscout-dragons'));
  assert.match(html,/euroscout-dragons\.js\?v=20261007-fixture-ready/);
  assert.match(html,/raw=await window\.EuroScoutDragons\?\.apply\(raw\)\|\|raw/);
- assert.match(html,/prepareCoreData\(raw,true,false\)/);
+ assert.match(html,/prepareCoreData\(raw,false,false,false\)/);
+ assert.match(html,/Never let a large private snapshot win the first-paint race/);
  assert.match(html,/setTimeout\(\(\)=>loadCurrentStatsThenFullCore\(raw\),80\)/);
  assert.match(html,/window\.EuroScoutDragons\?\.link\(uni\)/);
 

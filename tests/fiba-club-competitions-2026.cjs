@@ -44,6 +44,8 @@ assert.ok(links.some(([a,b])=>a.startsWith('fiba-stat-bcl-')&&b.startsWith('fiba
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 assert.ok(html.indexOf('data/fiba-club-competitions-2026.js')<html.indexOf('euroscout-fiba-club-competitions.js'));
 assert.ok(html.indexOf('euroscout-fiba-club-competitions.js')<html.indexOf('euroscout-official-rosters.js'));
-assert.ok((html.match(/EuroScoutFIBAClub\?\.apply/g)||[]).length>=3);
+assert.ok(html.includes('function applyCoreRosterModules(raw)'));
+assert.ok(html.includes('window.EuroScoutFIBAClub?.apply(raw)'));
+assert.ok((html.match(/applyCoreRosterModules\(raw\)/g)||[]).length>=3);
 assert.ok(html.includes('EuroScoutFIBAClub?.link'));
 console.log('Official BCL and FIBA Europe Cup rosters, shirt numbers, portraits, memberships and statistics are wired.');
