@@ -22,12 +22,12 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  assert.equal(fresh.leagues.at(-1).meta.id,'dragons-local-current');
 
  const directory={teams:[{code:'LEM',name:'Le Mans Sarthe Basket',aliases:['Le Mans Sarthe']}],roster:[{id:'014866',ids:['eurocup-014866','lnb-9352'],name:'Bastien Grasshoff',born:2007,height:198,position:'Guard',nationality:'France',teamCode:'LEM'}]};
- const live={schema:1,quality_policy:'accepted_live_boxscores_only',generated:'2026-09-30T09:00:00Z',fixtures:[{home:{code:'dd-lem',name:'Le Mans Sarthe Basket'},away:{code:'dd-other',name:'Other Club'}}],leagues:[
+ const live={schema:1,quality_policy:'accepted_live_boxscores_only',generated:'2026-09-30T09:00:00Z',fixtures:[{home:{code:'dd-lem',name:'Le Mans Sarthe Basket'},away:{code:'dd-other',name:'Other Club'}},{comp:'fec',source_url:'https://www.fiba.basketball/en/events/fiba-europe-cup-26-27/games/135695-OLAJ-ZIE',home:{code:'dragons-team-73',name:'NHSZ-Szolnoki Olajbányász'},away:{code:'dragons-team-262',name:'Grono Sportowa Spolka Akcyjna W Restrukturyzacji'}}],leagues:[
   {meta:{id:'dragons-eurocup-26',name:'EuroCup',season:'2026/27',privateOwnerFeed:true},players:[{id:'dragons-eurocup-grasshoff',name:'B. Grasshoff',team:'dd-lem',g:1,ppg:8,gameLog:[]}]},
   {meta:{id:'dragons-lnb-26',name:'Betclic Elite',season:'2026/27',privateOwnerFeed:true},players:[{id:'dragons-lnb-grasshoff',name:'Bastien Grasshoff',team:'dd-lem',teamName:'Le Mans',g:2,ppg:6,gameLog:[]}]}
  ]};
  const access={internal:true,user:{email:'markoturk.scouting@gmail.com'}},events=[];
- const context={window:{ESAccess:access,EUROSCOUT_EUROCUP_ROSTERS:directory,dispatchEvent:event=>events.push(event.type)},ESAccess:access,structuredClone,console,Event:class Event{constructor(type){this.type=type;}}};vm.runInNewContext(code,context);
+ const context={window:{ESAccess:access,EUROSCOUT_EUROCUP_ROSTERS:directory,EUROSCOUT_FIBA_CLUB_2026:{teams:[{id:'szolnok',key:'hun|NHS',code:'NHS',officialCode:'OLAJ',name:'NHSZ-Szolnoki Olajbanyasz',aliases:[]},{id:'zastal',key:'plk|OZZ',code:'OZZ',officialCode:'ZIE',name:'Zastal Zielona Gora',aliases:[]}],roster:[]},dispatchEvent:event=>events.push(event.type)},ESAccess:access,structuredClone,console,Event:class Event{constructor(type){this.type=type;}}};vm.runInNewContext(code,context);
  const connected=context.window.EuroScoutDragons.connectData({leagues:[{meta:{id:'lnb'},players:[{id:'lnb-9352',name:'Bastien Grasshoff',league:'lnb'}]}]},live);
  const statLines=connected.leagues.filter(league=>league.meta.privateOwnerFeed).flatMap(league=>league.players);
  assert.equal(statLines.length,2);
@@ -37,8 +37,10 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  assert.equal(linked.some(pair=>pair[0]==='dragons-eurocup-grasshoff'&&pair[1]==='lnb-9352'),true);
  assert.equal(linked.some(pair=>pair[0]==='dragons-lnb-grasshoff'&&pair[1]==='lnb-9352'),true);
  assert.equal(live.unresolvedPlayers,0);
+ assert.equal(live.fixtures[1].home.key,'hun|NHS');
+ assert.equal(live.fixtures[1].away.key,'plk|OZZ');
  assert(events.includes('euroscout-dragons'));
- assert.match(html,/euroscout-dragons\.js\?v=20261007-fixture-ready/);
+ assert.match(html,/euroscout-dragons\.js\?v=20261007-fiba-legal-names/);
  assert.match(html,/raw=await window\.EuroScoutDragons\?\.apply\(raw\)\|\|raw/);
  assert.match(html,/prepareCoreData\(raw,false,false,false\)/);
  assert.match(html,/Never let a large private snapshot win the first-paint race/);

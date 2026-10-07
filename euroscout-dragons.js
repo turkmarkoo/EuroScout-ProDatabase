@@ -9,13 +9,18 @@ function officialDirectory(){
  const teams=[],players=[];
  const euro=window.EUROSCOUT_EUROCUP_ROSTERS;
  if(euro)for(const team of euro.teams||[]){
-  const entry={key:'eurocup:'+team.code,code:team.code,name:team.name,aliases:team.aliases||[]};teams.push(entry);
+  const entry={key:'eurocup:'+team.code,dbKey:'eurocup|'+team.code,code:team.code,officialCode:team.code,name:team.name,aliases:team.aliases||[]};teams.push(entry);
   for(const row of (euro.roster||[]).filter(player=>player.teamCode===team.code))players.push({team:entry,name:row.name,ids:row.ids||[],row});
  }
  const official=window.EUROSCOUT_OFFICIAL_ROSTERS;
  if(official)for(const team of official.teams||[]){
-  const entry={key:'official:'+team.id,code:team.code||team.id,name:team.name,aliases:team.aliases||[]};teams.push(entry);
+  const entry={key:'official:'+team.id,dbKey:team.key||'',code:team.code||team.id,officialCode:team.code||'',name:team.name,aliases:team.aliases||[]};teams.push(entry);
   for(const row of (official.roster||[]).filter(player=>player.teamId===team.id))players.push({team:entry,name:row.name,ids:row.ids||[row.id],row});
+ }
+ const fiba=window.EUROSCOUT_FIBA_CLUB_2026;
+ if(fiba)for(const team of fiba.teams||[]){
+  const entry={key:'fiba:'+team.id,dbKey:team.key||'',code:team.code||team.id,officialCode:team.officialCode||team.code||'',name:team.name,aliases:team.aliases||[]};teams.push(entry);
+  for(const row of (fiba.roster||[]).filter(player=>player.teamId===team.id))players.push({team:entry,name:row.name,ids:row.ids||[row.id],row});
  }
  return {teams,players};
 }
@@ -35,15 +40,18 @@ function teamMatch(source,directory){
 }
 function feedTeamDirectory(data,directory){
  const mapped=new Map();
- const add=side=>{
+ const add=(side,officialCode)=>{
   if(!side)return;
   if(typeof side==='string')side={name:side};
   const code=side.code??side.id??side.key??side.teamId??side.team, name=side.name??side.teamName??side.clubName??side.label;
-  const match=directTeamMatch({team:code,teamName:name},directory);if(!match)return;
+  const hinted=officialCode&&directory.teams.filter(team=>clean(team.officialCode)===clean(officialCode));
+  const match=hinted?.length===1?hinted[0]:directTeamMatch({team:code,teamName:name},directory);if(!match)return;
   for(const value of [code,name])if(clean(value))mapped.set(clean(value),match);
  };
  for(const fixture of data.fixtures||[]){
-  for(const key of ['home','away','homeTeam','awayTeam','teamA','teamB','a','b'])add(fixture?.[key]);
+  const slug=String(fixture.source_url||'').split('/').filter(Boolean).pop()||'',codes=/^\d+-([A-Za-z0-9]+)-([A-Za-z0-9]+)$/.exec(slug);
+  add(fixture.home,codes?.[1]);add(fixture.away,codes?.[2]);
+  for(const key of ['homeTeam','awayTeam','teamA','teamB','a','b'])add(fixture?.[key]);
   for(const side of fixture?.teams||fixture?.participants||[])add(side);
  }
  for(const league of data.leagues||[])for(const team of league.teams||[])add(team);
@@ -79,6 +87,10 @@ function connectData(raw,data){
  directory.byId=new Map(allPlayers(result).map(player=>[player.id,player]));directory.teamCache=new Map();
  directory.playersByTeam=new Map();for(const item of directory.players){const roster=directory.playersByTeam.get(item.team)||[];roster.push(item);directory.playersByTeam.set(item.team,roster);}
  directory.feedTeams=feedTeamDirectory(data,directory);
+ for(const fixture of data.fixtures||[])for(const key of ['home','away','homeTeam','awayTeam','teamA','teamB','a','b']){
+  const side=fixture?.[key];if(!side||typeof side==='string')continue;const code=side.code??side.id??side.key??side.teamId??side.team,name=side.name??side.teamName??side.clubName??side.label;
+  const team=directory.feedTeams.get(clean(code))||directory.feedTeams.get(clean(name));if(team?.dbKey)side.key=team.dbKey;
+ }
  const ids=new Set(data.leagues.map(league=>league.meta.id));
  result.leagues=result.leagues.filter(league=>!ids.has(league.meta.id));
  for(const sourceLeague of data.leagues){

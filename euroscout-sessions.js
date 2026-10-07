@@ -341,13 +341,16 @@ function openStart(preset, done) {
     $1('#sxCompOtherWrap', box).hidden = el.comp.value !== '__other';
     games = knownGames(el.a.value, el.b.value);
     $1('#sxKnownWrap', box).hidden = !games.length;
-    el.known.innerHTML = '<option value="">— not listed · enter by hand —</option>' + games.map((g, i) => '<option value="' + i + '">' + fmtDate(g.date) + (g.time ? ' ' + esc(g.time) : '') + ' · ' + esc(g.comp.name) + (g.round ? ' · R' + esc(g.round) : '') + ' · ' + (g.scoreA !== '' && g.scoreB !== '' ? g.scoreA + '–' + g.scoreB : 'not played yet') + '</option>').join('');
+    el.known.innerHTML = '<option value="">— not listed · enter by hand —</option>' + games.map((g, i) => '<option value="' + i + '">' + fmtDate(g.date) + (g.time ? ' ' + esc(g.time) : '') + ' · ' + esc(g.comp.name) + (g.round ? ' · ' + (/^\d+$/.test(String(g.round)) ? 'R' : '') + esc(g.round) : '') + ' · ' + (g.scoreA !== '' && g.scoreB !== '' ? g.scoreA + '–' + g.scoreB : 'not played yet') + '</option>').join('');
     if (preset.game) { const i = games.findIndex(g => g.date === preset.game.date && g.comp.id === preset.game.comp); if (i >= 0) { el.known.value = String(i); el.known.onchange(); } }
   }
   el.a.onchange = el.b.onchange = paint;
   el.comp.onchange = () => { $1('#sxCompOtherWrap', box).hidden = el.comp.value !== '__other'; };
-  el.known.onchange = () => { const g = games[+el.known.value]; if (!el.known.value || !g) return; el.gameDate.value = g.date; el.scoreA.value = g.scoreA; el.scoreB.value = g.scoreB; if ([...el.comp.options].some(o => o.value === g.comp.id)) el.comp.value = g.comp.id; if (g.round) el.stage.value = (g.group ? 'Group ' + g.group + ' · ' : '') + 'Round ' + g.round; if (g.venue) el.venue.value = g.venue; $1('#sxCompOtherWrap', box).hidden = true; };
+  el.known.onchange = () => { const g = games[+el.known.value]; if (!el.known.value || !g) return; el.gameDate.value = g.date; el.scoreA.value = g.scoreA; el.scoreB.value = g.scoreB; if ([...el.comp.options].some(o => o.value === g.comp.id)) el.comp.value = g.comp.id; if (g.round) el.stage.value = (g.group ? 'Group ' + g.group + ' · ' : '') + (/^\d+$/.test(String(g.round)) ? 'Round ' : '') + g.round; if (g.venue) el.venue.value = g.venue; $1('#sxCompOtherWrap', box).hidden = true; };
   paint();
+  /* Feeds can arrive before deferred FIBA aliases. Re-resolve this pair when
+     the dialog opens so a legal company name cannot hide a known game. */
+  window.ESFixtures?.refresh(true).then(()=>{if(document.getElementById('sxStart')===f)paint();}).catch(()=>{});
   $1('#sxCancel', box).onclick = closeModal;
   f.onsubmit = e => {
     e.preventDefault();

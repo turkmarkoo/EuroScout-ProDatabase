@@ -14,7 +14,7 @@ const fixture = {
   date: '2026-10-07',
   time: '18:00',
   home: { code: 'OLAJ', name: 'NHSZ-Szolnoki Olajbanyasz' },
-  away: { code: 'ZIE', name: 'Zastal Zielona Gora' },
+  away: { key: 'plk|OZZ', code: 'dragons-team-262', name: 'Grono Sportowa Spolka Akcyjna W Restrukturyzacji' },
   hs: '',
   as: '',
   played: false,
@@ -57,4 +57,5 @@ assert.equal(games[0].venue, 'Tiszaligeti Sportcsarnok');
 
 const html = fs.readFileSync('index.html', 'utf8');
 assert.match(html, /euroscout-fixtures\.js\?v=20261007-dragons-club-ids/);
+assert.match(html, /euroscout-sessions\.js\?v=20261007-fixture-refresh/);
 console.log('DragonsData FIBA Europe Cup fixtures resolve to canonical club IDs.');
