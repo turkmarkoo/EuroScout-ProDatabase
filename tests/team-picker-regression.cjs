@@ -6,14 +6,14 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const notes = fs.readFileSync(path.join(root, 'euroscout-live-notes.js'), 'utf8');
-const picker = fs.readFileSync(path.join(root, 'team-selection-workspace-20261007c.js'), 'utf8');
+const picker = fs.readFileSync(path.join(root, 'team-selection-workspace-20261007d.js'), 'utf8');
 
 assert.match(html, /team-selection-workspace\.css\?v=20260930-1/);
 assert.match(html, /data\/competition-assets\.js\?v=20261007-picker-leagues/);
-assert.match(html, /team-selection-workspace-20261007c\.js\?v=current-fields-regional/);
+assert.match(html, /team-selection-workspace-20261007d\.js\?v=domestic-teams-logos/);
 assert.match(html, /euroscout-live-notes\.js\?v=20261001-position-nba2/);
-assert.ok(html.indexOf('team-selection-workspace-20261007c.js') < html.indexOf('euroscout-live-notes.js'));
-assert.ok(html.indexOf('data/competition-assets.js') < html.indexOf('team-selection-workspace-20261007c.js'));
+assert.ok(html.indexOf('team-selection-workspace-20261007d.js') < html.indexOf('euroscout-live-notes.js'));
+assert.ok(html.indexOf('data/competition-assets.js') < html.indexOf('team-selection-workspace-20261007d.js'));
 assert.match(notes, /class="scoutTeamButton"/);
 assert.match(notes, /ESTeamSelection\.open\(\{slot,currentKey:s\[slot\]/);
 assert.match(notes, /id="mxPosition"/);
@@ -39,7 +39,7 @@ const clubs=[
  {key:'directory|france-a',name:'Denain Voltaire',country:'France',leagues:[{id:'directory',name:'France · Élite 2'}],teams:[{lg:'directory',lgName:'France · Élite 2'}]},
  {key:'directory|germany-a',name:'Artland Dragons',country:'Germany',leagues:[{id:'directory',name:'Germany · ProA'}],teams:[{lg:'directory',lgName:'Germany · ProA'}]}
 ];
-const context={window:{STATE:{data:{leagues:[{meta:{id:'fec',name:'FIBA Europe Cup'},teams:[]},{meta:{id:'eurocup',name:'EuroCup'},teams:[{code:'OLD',name:'Legacy Club',country:'Spain',logo:'legacy.png'}]},{meta:{id:'aba2',name:'ABA League 2',country:'Croatia'},teams:[]},{meta:{id:'bclq',name:'BCL Qualifiers'},teams:[]}],season2627:{comps:{fec:{name:'FIBA Europe Cup',teams:[{key:'fec|BAT'},{key:'fec|PAR'},{key:'fec|OLD'}]},eurocup:{name:'EuroCup',teams:[{key:'eurocup|OLD',name:'Legacy Club'},{key:'new|ONE',name:'New Club One',country:'France'},{key:'new|TWO',name:'New Club Two',logo:'two.png'}]}}}}},EuroScoutFIBAClub:{data:{competitions:{fec:{name:'FIBA Europe Cup',teams:[{currentKey:'fec26|BAT',name:'BC Batumi 2010',country:'Georgia',logo:'batumi.png'},{currentKey:'fec26|PAR',name:'BC Pärnu',country:'Estonia',logo:'parnu.png'}]}}}},EUROSCOUT_ABA_ROSTERS:{teams:[]},EUROSCOUT_BCLQ_2026:{teams:[{code:'BAT',name:'BC Batumi 2010',country:'Georgia',logo:'batumi.png'},{code:'PAR',name:'BC Pärnu',country:'Estonia',logo:'parnu.png'}]}},allClubs:()=>clubs,clubByKey:key=>clubs.find(c=>c.key===key)||null,showsTeams:()=>true,console};
+const context={window:{STATE:{data:{leagues:[{meta:{id:'fec',name:'FIBA Europe Cup'},teams:[]},{meta:{id:'eurocup',name:'EuroCup'},teams:[{code:'OLD',name:'Legacy Club',country:'Spain',logo:'legacy.png'}]},{meta:{id:'aba2',name:'ABA League 2',country:'Croatia'},teams:[]},{meta:{id:'bclq',name:'BCL Qualifiers'},teams:[]},{meta:{id:'bbl',name:'German BBL'},teams:[{code:'BER',name:'ALBA Berlin',country:'Germany',logo:'alba.png'},{code:'BAM',name:'Bamberg Baskets',country:'Germany',logo:'bamberg.png'}]},{meta:{id:'lnb',name:'Betclic Elite'},teams:[{code:'PAR',name:'Paris Basketball',country:'France',logo:'paris.png'},{code:'LEM',name:'Le Mans Sarthe Basket',country:'France',logo:'lemans.png'}]},{meta:{id:'bnxt',name:'BNXT League'},teams:[{code:'ANT',name:'Giants Antwerp',country:'Belgium',logo:'antwerp.png'},{code:'OOS',name:'Filou Oostende',country:'Belgium',logo:'oostende.png'}]},{meta:{id:'gleague',name:'NBA G League',region:'International'},teams:[{code:'CAP',name:'Capital City Go-Go',country:'United States',logo:'cap.png'}]},{meta:{id:'seriea2',name:'Serie A2 (Italy)'},teams:[]}],season2627:{comps:{fec:{name:'FIBA Europe Cup',teams:[{key:'fec|BAT'},{key:'fec|PAR'},{key:'fec|OLD'}]},eurocup:{name:'EuroCup',teams:[{key:'eurocup|OLD',name:'Legacy Club'},{key:'new|ONE',name:'New Club One',country:'France'},{key:'new|TWO',name:'New Club Two',logo:'two.png'}]}}}}},EuroScoutFIBAClub:{data:{competitions:{fec:{name:'FIBA Europe Cup',teams:[{currentKey:'fec26|BAT',name:'BC Batumi 2010',country:'Georgia',logo:'batumi.png'},{currentKey:'fec26|PAR',name:'BC Pärnu',country:'Estonia',logo:'parnu.png'}]}}}},EUROSCOUT_ABA_ROSTERS:{teams:[]},EUROSCOUT_BCLQ_2026:{teams:[{code:'BAT',name:'BC Batumi 2010',country:'Georgia',logo:'batumi.png'},{code:'PAR',name:'BC Pärnu',country:'Estonia',logo:'parnu.png'}]}},allClubs:()=>clubs,clubByKey:key=>clubs.find(c=>c.key===key)||null,showsTeams:()=>true,console};
 context.window.window=context.window;Object.assign(context,context.window);vm.createContext(context);vm.runInContext(picker,context);
 const competitions=context.window.ESTeamSelection._buildCompetitions();
 const fec=competitions.find(c=>c.id==='fec');
@@ -54,5 +54,15 @@ assert.equal(competitions.find(c=>c.id==='bclq').teams.length,2,'official qualif
 assert.equal(competitions.find(c=>c.name==='Bahrain · Premier League').teams.length,2);
 assert.equal(competitions.find(c=>c.name==='France · Élite 2').teams.length,1);
 assert.equal(competitions.find(c=>c.name==='Germany · ProA').teams.length,1);
+assert.equal(competitions.find(c=>c.id==='bbl').teams.length,2,'domestic league feed supplies its complete team list');
+assert.ok(competitions.find(c=>c.id==='bbl').teams.every(team=>team.logo),'domestic league badges survive club consolidation');
+assert.equal(competitions.find(c=>c.id==='lnb').teams.length,2,'Betclic Élite clubs come from the loaded league feed');
+assert.ok(competitions.find(c=>c.id==='lnb').teams.every(team=>team.logo));
+assert.equal(competitions.find(c=>c.id==='bnxt').teams.length,2,'BNXT teams come from the loaded league feed');
+assert.ok(competitions.find(c=>c.id==='bnxt').teams.every(team=>team.logo));
+assert.equal(competitions.find(c=>c.id==='gleague').region,'United States','NBA G League is labelled as a US competition');
+assert.equal(competitions.filter(c=>c.id==='seriea2').length,1,'Serie A2 aliases merge into one competition');
+assert.equal(competitions.find(c=>c.id==='seriea2').teams.length,20,'Serie A2 uses the official 2026/27 field');
+assert.ok(competitions.find(c=>c.id==='seriea2').teams.every(team=>team.logo),'official Serie A2 badges are retained');
 assert.ok(fs.existsSync(path.join(root,'assets','competitions','fiba-europe-cup.png')));
 console.log('Competition-first scouting matchup team picker checks passed.');

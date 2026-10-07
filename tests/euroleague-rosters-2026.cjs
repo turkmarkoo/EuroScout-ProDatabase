@@ -14,7 +14,7 @@ assert.equal(new Set(data.roster.map(row=>row.id)).size,data.roster.length,'Rost
 assert.equal(new Set(data.players.map(row=>row.id)).size,data.players.length,'Player IDs must be unique');
 const html=fs.readFileSync('index.html','utf8');
 assert.ok(html.indexOf('euroleague-rosters-2026.js')<html.indexOf('euroscout-official-rosters.js'),'Roster data must load before the roster adapter');
-const picker=fs.readFileSync('team-selection-workspace-20261007c.js','utf8');
+const picker=fs.readFileSync('team-selection-workspace-20261007d.js','utf8');
 for(const id of ['euroleague','eurocup','aba','bcl','acb','lnb','lba'])assert.ok(picker.includes(`['${id}'`),`${id} needs a canonical competition identity`);
 const runtime={window:{},searchFold:s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),canonKey:s=>s,structuredClone};vm.createContext(runtime);
 for(const file of ['official-rosters-2026.js','euroleague-rosters-2026.js','euroscout-official-rosters.js'])vm.runInContext(fs.readFileSync(file,'utf8'),runtime);
