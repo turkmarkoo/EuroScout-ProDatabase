@@ -2982,7 +2982,12 @@ async function loadRemainingCore(){
     if(window.ESAccess?.internal){const seed=await ESAccess.seedReady.catch(e=>{console.warn("Private player detail is delayed",e);return null;});if(seed){for(const [k,v] of Object.entries(seed.seeds||{}))if(/^EUROSCOUT_[A-Z_]+$/.test(k)){if(k==='EUROSCOUT_AGENTS')window[k]={...(window[k]||{}),...v};else if(k==='EUROSCOUT_AGENCIES')window[k]=[...new Set([...(window[k]||[]),...v])];else window[k]=v;}full=seed.core;}}
     if(!full){CORE_FULL_PROMISE=CORE_FULL_PROMISE||fetchCoreFile("data/data.json",30000).catch(e=>{console.warn("Complete core data is delayed",e);return null;});full=await CORE_FULL_PROMISE;}
     if(!full||!Array.isArray(full.leagues)||!full.leagues.length)return;
-    const leagueId=STATE.league?.meta?.id;full=await prepareCoreData(full,false,true);STATE.data=full;STATE.league=full.leagues.find(l=>l.meta.id===leagueId)||full.leagues[0];STATE._idx=null;seasonPoolCache=null;OVR=ovrMerged();applyOverrides();rebuildLinks();window.EuroScoutEditPlayerV2?.prune(full);mergeGroupRecords();wireLeagueSelector();await window.ESFixtures?.refresh(true);render();if(CURRENT)renderProfile();
+    const leagueId=STATE.league?.meta?.id;full=await prepareCoreData(full,false,true);STATE.data=full;STATE.league=full.leagues.find(l=>l.meta.id===leagueId)||full.leagues[0];
+    // The first-paint catalogue contains only EuroLeague. Rebuild every team
+    // index after swapping in the full catalogue or active FIBA sessions keep
+    // the stale one-league club map and cannot resolve their rosters.
+    DBTEAM_LIST=null;DBTEAM_BYKEY=null;CLUBS=null;CLUB_BY_TEAMKEY=null;DOM27=null;NEXTCOMP=null;PLAYER_BY_NAME=null;
+    STATE._idx=null;seasonPoolCache=null;OVR=ovrMerged();applyOverrides();rebuildLinks();window.EuroScoutEditPlayerV2?.prune(full);mergeGroupRecords();wireLeagueSelector();await window.ESFixtures?.refresh(true);render();if(CURRENT)renderProfile();
   }catch(e){console.warn("Complete player database remains unavailable",e);}
   finally{clearCoreLoadStage();}
 }
@@ -6011,7 +6016,7 @@ async function loadExtraPack(label){
     window.EuroScoutNCAA?.apply(STATE.data);
     window.EuroScoutExpansion?.apply(STATE.data);
     window.EuroScoutMemberships?.apply(STATE.data);
-    window.EuroScoutEuroCup?.apply(STATE.data);window.EuroScoutBBL?.apply(STATE.data);window.EuroScoutOfficialRosters?.apply(STATE.data);window.EuroScoutKzsPro?.apply(STATE.data);window.EuroScoutBCLQ?.apply(STATE.data);window.EuroScoutFIBAClub?.apply(STATE.data);
+    applyCoreRosterModules(STATE.data);
     window.EuroScoutEditPlayerV2?.prune(STATE.data);
     // derived per-player fields the core boot computes (astto etc.) for the new leagues
     pack.leagues.forEach(L=>L.players.forEach(p=>{
@@ -7332,7 +7337,9 @@ function showModal(html,wide){let m=$("#modal");if(!m){m=document.createElement(
 function hideModal(){const m=$("#modal");if(m)m.remove();}
 
 // expose for inline event handlers (which run in global scope)
-Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,setScopeMode,switchComp,openTeam,openTeamIn,openTeamRoster,openTeamFromProfile,setScope,glToggle,wireProfileNav,openGlobal,openLeaguePlayers,openEditModal,showPhoto,toggleTheme,openAgentRoster,openAgencyRoster,setSimRef,clearSimRef,refreshSimPanel,simBoardWeight,simClearRecruit,setTrajMetric,renderFitFinder,fitW,fitReset,toggleCompare,clearCompare,openCompare,openArchFilter,addFilter,removeFilter,clearFilters,drLive,goView,renderAgencies,openAgencyPage,backToAgencies,openTeamPickerProfile,profileBack,addToScoutBoard,$,$$});
+// The agencies renderer is supplied by euroscout-agencies-v2.js below. Referencing
+// it here before that script loads aborts the entire boot sequence.
+Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,setScopeMode,switchComp,openTeam,openTeamIn,openTeamRoster,openTeamFromProfile,setScope,glToggle,wireProfileNav,openGlobal,openLeaguePlayers,openEditModal,showPhoto,toggleTheme,openAgentRoster,openAgencyRoster,setSimRef,clearSimRef,refreshSimPanel,simBoardWeight,simClearRecruit,setTrajMetric,renderFitFinder,fitW,fitReset,toggleCompare,clearCompare,openCompare,openArchFilter,addFilter,removeFilter,clearFilters,drLive,goView,openAgencyPage,backToAgencies,openTeamPickerProfile,profileBack,addToScoutBoard,$,$$});
 
 </script>
 <div class="scrim" id="scrim"></div>

@@ -65,4 +65,7 @@ assert.ok(html.includes('window.EuroScoutFIBAClub?.apply(raw)'));
 assert.ok(html.indexOf('window.EuroScoutFIBAClub?.apply(raw)')<html.indexOf('window.EuroScoutOfficialRosters?.apply(raw)'));
 assert.ok((html.match(/applyCoreRosterModules\(raw\)/g)||[]).length>=3);
 assert.ok(html.includes('EuroScoutFIBAClub?.link'));
+assert.ok(html.includes('applyCoreRosterModules(STATE.data)'),'late league loads must preserve FIBA-before-official roster order');
+assert.ok(!/goView,renderAgencies,openAgencyPage/.test(html),'boot must not reference the agencies renderer before its script loads');
+assert.ok(/STATE\.data=full[\s\S]{0,700}DBTEAM_LIST=null;DBTEAM_BYKEY=null;CLUBS=null;CLUB_BY_TEAMKEY=null/.test(html),'full catalogue swap must invalidate the first-paint club index');
 console.log('Official BCL and FIBA Europe Cup rosters, shirt numbers, portraits, memberships and statistics are wired.');
