@@ -9,8 +9,8 @@ const notes = fs.readFileSync(path.join(root, 'euroscout-live-notes.js'), 'utf8'
 const picker = fs.readFileSync(path.join(root, 'team-selection-workspace.js'), 'utf8');
 
 assert.match(html, /team-selection-workspace\.css\?v=20260930-1/);
-assert.match(html, /data\/competition-assets\.js\?v=20260930-1/);
-assert.match(html, /team-selection-workspace\.js\?v=20261007-registry-repair/);
+assert.match(html, /data\/competition-assets\.js\?v=20261007-picker-leagues/);
+assert.match(html, /team-selection-workspace\.js\?v=20261007-picker-leagues/);
 assert.match(html, /euroscout-live-notes\.js\?v=20261001-position-nba2/);
 assert.ok(html.indexOf('team-selection-workspace.js') < html.indexOf('euroscout-live-notes.js'));
 assert.ok(html.indexOf('data/competition-assets.js') < html.indexOf('team-selection-workspace.js'));
@@ -27,4 +27,25 @@ assert.match(picker, /selectedComp\.teams\.filter/);
 
 new vm.Script(notes);
 new vm.Script(picker);
+
+const clubs=[
+ {key:'fec|BAT',name:'BC Batumi 2010',country:'Georgia',leagues:[{id:'fec',name:'FIBA Europe Cup'}],teams:[{lg:'fec',name:'BC Batumi 2010'}]},
+ {key:'fec26|BAT',name:'BC Batumi 2010',country:'Georgia',leagues:[{id:'fec26',name:'FIBA Europe Cup 2026/27'}],teams:[{lg:'fec26',name:'BC Batumi 2010',logo:'batumi.png'}]},
+ {key:'fec|PAR',name:'BC Parnu',country:'Estonia',leagues:[{id:'fec',name:'FIBA Europe Cup'}],teams:[{lg:'fec',name:'BC Parnu'}]},
+ {key:'fec26|PAR',name:'BC Pärnu',country:'Estonia',leagues:[{id:'fec26',name:'FIBA Europe Cup 2026/27'}],teams:[{lg:'fec26',name:'BC Pärnu',logo:'parnu.png'}]},
+ {key:'directory|bahrain-a',name:'Al Manama',country:'Bahrain',leagues:[{id:'directory',name:'Bahrain · Premier League'}],teams:[{lg:'directory',lgName:'Bahrain · Premier League'}]},
+ {key:'directory|bahrain-b',name:'Al Muharraq',country:'Bahrain',leagues:[{id:'directory',name:'Bahrain · Premier League'}],teams:[{lg:'directory',lgName:'Bahrain · Premier League'}]},
+ {key:'directory|france-a',name:'Denain Voltaire',country:'France',leagues:[{id:'directory',name:'France · Élite 2'}],teams:[{lg:'directory',lgName:'France · Élite 2'}]},
+ {key:'directory|germany-a',name:'Artland Dragons',country:'Germany',leagues:[{id:'directory',name:'Germany · ProA'}],teams:[{lg:'directory',lgName:'Germany · ProA'}]}
+];
+const context={window:{STATE:{data:{leagues:[{meta:{id:'fec',name:'FIBA Europe Cup'},teams:[]}],season2627:{comps:{fec:{name:'FIBA Europe Cup',teams:[{key:'fec26|BAT'},{key:'fec26|PAR'}]}}}}}},allClubs:()=>clubs,clubByKey:key=>clubs.find(c=>c.key===key)||null,showsTeams:()=>true,console};
+context.window.window=context.window;Object.assign(context,context.window);vm.createContext(context);vm.runInContext(picker,context);
+const competitions=context.window.ESTeamSelection._buildCompetitions();
+const fec=competitions.find(c=>c.id==='fec');
+assert.equal(fec.teams.length,2,'current FIBA field replaces historical keys instead of doubling it');
+assert.ok(fec.teams.every(team=>team.teams.some(row=>row.logo)),'current FIBA teams retain their official logos');
+assert.equal(competitions.find(c=>c.name==='Bahrain · Premier League').teams.length,2);
+assert.equal(competitions.find(c=>c.name==='France · Élite 2').teams.length,1);
+assert.equal(competitions.find(c=>c.name==='Germany · ProA').teams.length,1);
+assert.ok(fs.existsSync(path.join(root,'assets','competitions','fiba-europe-cup.png')));
 console.log('Competition-first scouting matchup team picker checks passed.');

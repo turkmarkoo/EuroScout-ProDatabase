@@ -26,24 +26,41 @@ const COMPETITION_ALIASES=[
  ['euroleague','EuroLeague',/^(turkishairlines)?euroleague$/],['eurocup','EuroCup',/^(bkt)?eurocup$/],
  ['aba2','ABA League 2',/^abaleague2$/],['aba','ABA League',/^(admiralbet)?abaleague$/],
  ['bcl','Basketball Champions League',/^(basketball)?championsleague$/],['fec','FIBA Europe Cup',/^fibaeuropecup$/],['acb','Liga ACB',/^(ligaendesa|ligaacb|acb)$/],
- ['lnb','Betclic Élite',/^(lnbproa|betclicelite|franceproa)$/],['lba','Lega A',/^(legabasketseriea|legaseriea|lba|legaa)$/]
+ ['lnb','Betclic Élite',/^(lnbproa|betclicelite|francebetclicelite|franceproa)$/],['proa','Germany · ProA',/^(german|germany)?proa$/],['lba','Lega A',/^(legabasketseriea|legaseriea|lba|legaa)$/]
 ];
 function competitionIdentity(meta){const name=fold(meta.name).replace(/20\d{2}\s*[\/-]\s*(?:20)?\d{2}/g,'').replace(/[^a-z0-9]/g,'');const baseId=String(meta.id||'').replace(/26$/,'');const hit=COMPETITION_ALIASES.find(x=>x[2].test(name)||baseId===x[0]);return hit?{key:hit[0],id:hit[0],name:hit[1]}:{key:'name:'+name,id:meta.id,name:meta.name};}
+function directoryCompetitionId(name){return'directory:'+fold(name).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+function clubLogoUrl(club){if(!club)return'';if(club.logo)return club.logo;const team=(club.teams||[]).find(row=>row.logo);return team?.logo||'';}
+function uniqueCompetitionTeams(teams){
+ const byIdentity=new Map();
+ for(const club of teams||[]){
+  const country=fold(club.country||'').replace(/[^a-z0-9]/g,''),name=fold(club.name).replace(/[^a-z0-9]/g,''),identity=country+'|'+name;
+  const old=byIdentity.get(identity);
+  if(!old){byIdentity.set(identity,club);continue;}
+  const score=value=>(clubLogoUrl(value)?4:0)+(value.country?2:0)+(String(value.key||'').includes('26|')?1:0);
+  if(score(club)>score(old))byIdentity.set(identity,club);
+ }
+ return[...byIdentity.values()].sort((a,b)=>a.name.localeCompare(b.name));
+}
 function buildCompetitions(){
  if(typeof allClubs!=='function')return[];
  const clubs=allClubs(),defs=new Map(),data=window.STATE?.data||{};
- const addDef=value=>{if(!value?.id||value.id==='n2627')return;const identity=competitionIdentity(value),old=defs.get(identity.key)||{};defs.set(identity.key,{...old,...value,id:identity.id,name:identity.name,_ids:[...new Set([...(old._ids||[]),value.id])],_teamKeys:[...new Set([...(old._teamKeys||[]),...(value._teamKeys||[])])]});};
+ const addDef=(value,replaceTeams=false)=>{if(!value?.id||value.id==='n2627'||value.id==='directory')return;const identity=competitionIdentity(value),old=defs.get(identity.key)||{},incoming=value._teamKeys||[],teamKeys=replaceTeams&&incoming.length?incoming:[...(old._teamKeys||[]),...incoming];defs.set(identity.key,{...old,...value,id:identity.id,name:identity.name,_ids:[...new Set([...(old._ids||[]),value.id])],_teamKeys:[...new Set(teamKeys)]});};
  for(const L of data.leagues||[])if(L.meta.id!=='n2627'&&(typeof showsTeams!=='function'||showsTeams(L.meta)))addDef({...L.meta});
  /* Authenticated payloads may retain registry clubs without the original
     league collection, so club memberships are a second competition source. */
- for(const club of clubs)for(const league of club.leagues||[]){if(!league?.id||league.id==='n2627')continue;addDef({id:league.id,name:league.name||league.id});}
- const addCurrent=source=>Object.entries(source||{}).forEach(([id,value])=>addDef({id,name:value.name||id,_teamKeys:(value.teams||[]).map(t=>t.key).filter(Boolean)}));
+ for(const club of clubs)for(const league of club.leagues||[]){if(!league?.id||league.id==='n2627'||league.id==='directory')continue;addDef({id:league.id,name:league.name||league.id});}
+ const directoryGroups=new Map();
+ for(const club of clubs)for(const team of club.teams||[]){if(team.lg!=='directory'||!team.lgName)continue;const id=directoryCompetitionId(team.lgName),group=directoryGroups.get(id)||{id,name:team.lgName,_clubs:[]};group._clubs.push(club);directoryGroups.set(id,group);}
+ for(const group of directoryGroups.values()){const identity=competitionIdentity(group);if(!defs.has(identity.key))defs.set(identity.key,{...group,id:identity.id,name:identity.name,_ids:[group.id],_teamKeys:[]});}
+ const addCurrent=source=>Object.entries(source||{}).forEach(([id,value])=>addDef({id,name:value.name||id,_teamKeys:(value.teams||[]).map(t=>t.key).filter(Boolean)},true));
  addCurrent(data.season2627?.comps);addCurrent(data.domestic2627?.leagues);
  defs.delete('n2627');
  return[...defs.values()].map(meta=>{
    const keyed=(meta._teamKeys||[]).map(key=>typeof clubByKey==='function'?clubByKey(key):null).filter(Boolean),uniqueKeyed=[...new Map(keyed.map(c=>[c.key,c])).values()];
    const ids=meta._ids||[meta.id],current=clubs.filter(c=>currentCompetitionIds(c).some(id=>ids.includes(id)));
-   const teams=uniqueKeyed.length?uniqueKeyed:current.length?current:clubs.filter(c=>(c.leagues||[]).some(x=>ids.includes(x.id)));
+   const rawTeams=meta._clubs?meta._clubs:uniqueKeyed.length?uniqueKeyed:current.length?current:clubs.filter(c=>(c.leagues||[]).some(x=>ids.includes(x.id)));
+   const teams=uniqueCompetitionTeams(rawTeams);
    return{id:meta.id,name:meta.name,region:region(meta,teams),category:category(meta),logo:meta.logo||'',teams};
  }).filter(c=>c.teams.length).sort((a,b)=>a.name.localeCompare(b.name));
 }
@@ -91,5 +108,5 @@ function open(options={}){
  renderRecent();renderCompetitions();renderTeams();renderSummary();setTimeout(()=>$('#tswCompSearch').focus(),0);
 }
 function close(){document.querySelector('#teamSelectionWorkspace')?.remove();}
-window.ESTeamSelection={open,close};
+window.ESTeamSelection={open,close,_buildCompetitions:buildCompetitions};
 })();

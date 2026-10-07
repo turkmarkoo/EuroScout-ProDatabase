@@ -3,6 +3,8 @@ window.EUROSCOUT_COMPETITION_ASSETS={
   aba:"assets/competitions/aba-league.jpg",
   bcl:"assets/competitions/bcl.png",
   bclq:"assets/competitions/bcl.png",
+  fec:"assets/competitions/fiba-europe-cup.png",
+  fec26:"assets/competitions/fiba-europe-cup.png",
   lnb:"assets/competitions/betclic-elite.png",
   eurocup:"assets/competitions/eurocup.jpg",
   euroleague:"assets/competitions/euroleague.png",
