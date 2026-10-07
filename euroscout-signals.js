@@ -9,7 +9,8 @@ const SEASON_START=2026, MAX=3;
 const COLLEGE=new Set(['ncaam','ncaabridge','ncaa','naia','juco']);
 const NOT_EUROPE=new Set(['nba','gleague','cebl','bsn','cba','jbl','kbl','pba','arg','nbb','nbl','sl',...COLLEGE]);
 const seasonLabel=value=>{const m=String(value||'').match(/(20\d{2})\s*[/–-]\s*((?:20)?\d{2})/);return m?m[1]+'/'+m[2].slice(-2):'';};
-const currentRosterOnly=x=>seasonLabel(x.statsScope)==='2026/27'||x._rosterOnly||/^bclq-/.test(String(x.id||''))||
+const playerSeason=x=>seasonLabel(x.statsScope||x.statsSeason||x.season||(typeof leagueOf==='function'?leagueOf(x)?.meta?.season:''));
+const currentRosterOnly=x=>playerSeason(x)==='2026/27'||x._fibaCurrent||x._rosterOnly||/^bclq-/.test(String(x.id||''))||
  ((!x.g||Number(x.g)===0)&&seasonLabel(x.currentRosterSeason||x._officialRoster?.season)==='2026/27');
 const lines=p=>{const g=gid(p);return allPlayersEvery().filter(x=>gid(x)===g&&x.league!=='sl'&&!currentRosterOnly(x));};
 function next(p){try{return effective26keys(p,next26Get(),next26bGet()).map(canonKey).filter(k=>k&&!String(k).startsWith('__'));}catch(e){return [];}}
@@ -33,11 +34,11 @@ function origin(p){
  return '';
 }
 const RULES=[
- {key:'college',label:'Coming out of NCAA',title:'Played college basketball in 2025/26 and signed in Europe for 2026/27',
-  test:(p,c)=>c.origin==='college'||(!c.europe&&c.lines.length>0&&c.lines.every(x=>COLLEGE.has(x.league))&&c.next.some(isEuropeClub))},
- {key:'rookie',label:'EU rookie',title:'Arrives from the NBA, G League or another league outside Europe, with no European club in 2025/26. Limited to players 26 or younger — the database cannot see earlier European seasons.',
-  test:(p,c)=>{if(c.origin==='college')return false;const born=Number(p.born)||0;if(born&&born<SEASON_START-26)return false;if(c.origin==='overseas')return true;if(c.europe)return false;const overseasLine=c.lines.length>0&&c.lines.every(x=>NOT_EUROPE.has(x.league))&&!c.lines.every(x=>COLLEGE.has(x.league))&&c.next.some(isEuropeClub);return overseasLine;}},
- {key:'newteam',label:'New team',title:'Signed for 2026/27 with a club he did not play for in 2025/26',
+ {key:'college',label:'Out of college',title:'Played college basketball in 2025/26 and has a confirmed European club for 2026/27',
+  test:(p,c)=>c.next.some(isEuropeClub)&&(c.origin==='college'||(!c.europe&&c.lines.length>0&&c.lines.every(x=>COLLEGE.has(x.league))))},
+ {key:'rookie',label:'Rookie in Europe',title:'Moves to Europe for 2026/27 after a verified 2025/26 season outside Europe, with no European club found in the available career evidence.',
+  test:(p,c)=>{const born=Number(p.born)||0;if(born&&born<SEASON_START-26)return false;if(c.europe||!c.next.some(isEuropeClub))return false;return c.origin==='college'||c.origin==='overseas'||(c.lines.length>0&&c.lines.every(x=>NOT_EUROPE.has(x.league)));}},
+ {key:'newteam',label:'New club',title:'Signed for 2026/27 with a club he did not play for in 2025/26',
   test:(p,c)=>c.next.length>0&&c.lines.some(x=>!NOT_EUROPE.has(x.league))&&!c.next.some(k=>c.current.has(k))},
  {key:'breakout',label:'Breakout season',title:'Production jumped compared with the previous season',
   /* Needs a previous-season line (p.prev) — the database holds 2025/26 only, so this stays silent until earlier seasons are imported. */
