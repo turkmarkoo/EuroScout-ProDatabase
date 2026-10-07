@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 
 const html=fs.readFileSync('index.html','utf8');
-const picker=fs.readFileSync('team-selection-workspace-20261007b.js','utf8');
+const picker=fs.readFileSync('team-selection-workspace-20261007c.js','utf8');
 
 assert.match(html,/if\(\[\.\.\.lgSet\[a\]\]\.some\(l=>lgSet\[b\]\.has\(l\)\)\)return false/);
 assert.match(html,/buducnost/);
