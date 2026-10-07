@@ -55,6 +55,13 @@ function buildCompetitions(){
  for(const group of directoryGroups.values()){const identity=competitionIdentity(group);if(!defs.has(identity.key))defs.set(identity.key,{...group,id:identity.id,name:identity.name,_ids:[group.id],_teamKeys:[]});}
  const addCurrent=source=>Object.entries(source||{}).forEach(([id,value])=>addDef({id,name:value.name||id,_teamKeys:(value.teams||[]).map(t=>t.key).filter(Boolean)},true));
  addCurrent(data.season2627?.comps);addCurrent(data.domestic2627?.leagues);
+ /* FIBA's current event payload is authoritative. Club membership maps also
+    contain historical entries and can otherwise double the field. */
+ for(const [id,competition] of Object.entries(window.EuroScoutFIBAClub?.data?.competitions||{})){
+  const identity=competitionIdentity({id,name:competition.name||id}),old=defs.get(identity.key)||{};
+  const teams=(competition.teams||[]).map(team=>typeof clubByKey==='function'?clubByKey(team.currentKey):null).map((club,index)=>club||(()=>{const team=competition.teams[index];return{key:team.currentKey,name:team.name,country:team.country||'',logo:team.logo||'',leagues:[{id:id+'26',name:competition.name}],teams:[{lg:id+'26',name:team.name,country:team.country||'',logo:team.logo||''}]};})());
+  defs.set(identity.key,{...old,id:identity.id,name:identity.name,_ids:[...new Set([...(old._ids||[]),id,id+'26'])],_teamKeys:[],_clubs:teams,_officialFiba:true});
+ }
  defs.delete('n2627');
  return[...defs.values()].map(meta=>{
    const keyed=(meta._teamKeys||[]).map(key=>typeof clubByKey==='function'?clubByKey(key):null).filter(Boolean),uniqueKeyed=[...new Map(keyed.map(c=>[c.key,c])).values()];

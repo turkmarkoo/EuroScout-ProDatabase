@@ -6,14 +6,14 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const notes = fs.readFileSync(path.join(root, 'euroscout-live-notes.js'), 'utf8');
-const picker = fs.readFileSync(path.join(root, 'team-selection-workspace-20261007.js'), 'utf8');
+const picker = fs.readFileSync(path.join(root, 'team-selection-workspace-20261007b.js'), 'utf8');
 
 assert.match(html, /team-selection-workspace\.css\?v=20260930-1/);
 assert.match(html, /data\/competition-assets\.js\?v=20261007-picker-leagues/);
-assert.match(html, /team-selection-workspace-20261007\.js\?v=39a2375/);
+assert.match(html, /team-selection-workspace-20261007b\.js\?v=official-fiba/);
 assert.match(html, /euroscout-live-notes\.js\?v=20261001-position-nba2/);
-assert.ok(html.indexOf('team-selection-workspace-20261007.js') < html.indexOf('euroscout-live-notes.js'));
-assert.ok(html.indexOf('data/competition-assets.js') < html.indexOf('team-selection-workspace-20261007.js'));
+assert.ok(html.indexOf('team-selection-workspace-20261007b.js') < html.indexOf('euroscout-live-notes.js'));
+assert.ok(html.indexOf('data/competition-assets.js') < html.indexOf('team-selection-workspace-20261007b.js'));
 assert.match(notes, /class="scoutTeamButton"/);
 assert.match(notes, /ESTeamSelection\.open\(\{slot,currentKey:s\[slot\]/);
 assert.match(notes, /id="mxPosition"/);
@@ -38,7 +38,7 @@ const clubs=[
  {key:'directory|france-a',name:'Denain Voltaire',country:'France',leagues:[{id:'directory',name:'France · Élite 2'}],teams:[{lg:'directory',lgName:'France · Élite 2'}]},
  {key:'directory|germany-a',name:'Artland Dragons',country:'Germany',leagues:[{id:'directory',name:'Germany · ProA'}],teams:[{lg:'directory',lgName:'Germany · ProA'}]}
 ];
-const context={window:{STATE:{data:{leagues:[{meta:{id:'fec',name:'FIBA Europe Cup'},teams:[]}],season2627:{comps:{fec:{name:'FIBA Europe Cup',teams:[{key:'fec26|BAT'},{key:'fec26|PAR'}]}}}}}},allClubs:()=>clubs,clubByKey:key=>clubs.find(c=>c.key===key)||null,showsTeams:()=>true,console};
+const context={window:{STATE:{data:{leagues:[{meta:{id:'fec',name:'FIBA Europe Cup'},teams:[]}],season2627:{comps:{fec:{name:'FIBA Europe Cup',teams:[{key:'fec|BAT'},{key:'fec|PAR'},{key:'fec|OLD'}]}}}}},EuroScoutFIBAClub:{data:{competitions:{fec:{name:'FIBA Europe Cup',teams:[{currentKey:'fec26|BAT',name:'BC Batumi 2010',country:'Georgia',logo:'batumi.png'},{currentKey:'fec26|PAR',name:'BC Pärnu',country:'Estonia',logo:'parnu.png'}]}}}}},allClubs:()=>clubs,clubByKey:key=>clubs.find(c=>c.key===key)||null,showsTeams:()=>true,console};
 context.window.window=context.window;Object.assign(context,context.window);vm.createContext(context);vm.runInContext(picker,context);
 const competitions=context.window.ESTeamSelection._buildCompetitions();
 const fec=competitions.find(c=>c.id==='fec');
