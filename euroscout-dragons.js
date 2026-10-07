@@ -94,7 +94,9 @@ function connectData(raw,data){
   }
   result.leagues.push(league);
  }
- feed=data;feed.resolvedPlayers=resolved.length;feed.unresolvedPlayers=(data.leagues||[]).reduce((n,league)=>n+(league.players||[]).length,0)-resolved.length;return result;
+ feed=data;feed.resolvedPlayers=resolved.length;feed.unresolvedPlayers=(data.leagues||[]).reduce((n,league)=>n+(league.players||[]).length,0)-resolved.length;
+ window.dispatchEvent?.(new Event('euroscout-dragons'));
+ return result;
 }
 async function apply(raw){
  if(!reader())return raw;

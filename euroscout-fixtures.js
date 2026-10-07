@@ -56,14 +56,27 @@ function fromFile(){
  const raw=window.EUROSCOUT_FIXTURES_2627;if(!raw||!raw.comps)return [];
  return Object.entries(raw.comps).flatMap(([comp,c])=>build(comp,c.name||comp,String(c.games||'').split(/\r?\n/).map(l=>l.trim()).filter(l=>l&&l[0]!=='#').map(l=>{const f=l.split('|');return {id:f[0],round:f[1]||'',date:f[2],h:f[3],hs:f[4]||'',a:f[5],as:f[6]||'',time:f[7]||'',venue:f[8]||'',hn:(c.teams||{})[f[3]],an:(c.teams||{})[f[5]]};}).filter(r=>r.date&&r.h&&r.a)));
 }
+function fromDragons(rows){
+ const grouped=new Map();
+ for(const g of rows||[]){const comp=g.comp||g.league_id||'',list=grouped.get(comp)||[];list.push(g);grouped.set(comp,list);}
+ return [...grouped.entries()].flatMap(([comp,list])=>{
+  const teams=new Map();
+  for(const g of list)for(const side of [g.home,g.away])if(side?.code)teams.set(side.code,{code:side.code,name:side.name||side.code});
+  const keyOf=resolver(comp,[...teams.values()]);
+  return list.map(g=>{
+   const side=s=>{const explicit=s?.key&&typeof clubByKey==='function'&&clubByKey(canonKey(s.key))?canonKey(s.key):'',raw=g.league_id&&s?.code?canonKey(g.league_id+'|'+s.code):'',direct=raw&&typeof clubByKey==='function'&&clubByKey(raw)?raw:'',key=explicit||direct||keyOf.get(s?.code)||'',c=key&&typeof clubByKey==='function'?clubByKey(key):null;return {...s,key,name:c?.name||s?.name||s?.code||''};};
+   return {...g,comp,home:side(g.home),away:side(g.away)};
+  });
+ });
+}
 function restore(){try{const c=JSON.parse(localStorage.getItem(CACHE)||'null');if(c&&c.season===SEASON&&Array.isArray(c.rows))return c;}catch(e){}return null;}
 function assemble(rowsByComp){problems=[];games=LIVE.flatMap(s=>build(s.id,s.name,rowsByComp[s.id]||[])).concat(fromFile()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));}
 
 function refresh(force){
  if(window.EuroScoutDragons?.active()){
   const rows=EuroScoutDragons.fixtures();
-  const covered=new Set(rows.map(g=>g.comp));
-  problems=[];games=rows.map(g=>({...g,home:{...g.home,key:g.league_id+'|'+g.home.code},away:{...g.away,key:g.league_id+'|'+g.away.code}})).concat(fromFile().filter(g=>!covered.has(g.comp))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
+  const covered=new Set(rows.map(g=>g.comp||g.league_id));
+  problems=[];games=fromDragons(rows).concat(fromFile().filter(g=>!covered.has(g.comp))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
   loadedAt=Date.now();state='ready';window.dispatchEvent(new Event('euroscout-fixtures'));return Promise.resolve(games);
  }
 
@@ -92,6 +105,7 @@ const api=window.ESFixtures={
  recent(days,comp){const to=todayStr(),from=new Date(Date.now()-days*86400000).toISOString().slice(0,10);return games.filter(g=>g.date>=from&&g.date<=to&&(!comp||g.comp===comp)).reverse();},
  upcoming(days,comp){const from=todayStr(),to=new Date(Date.now()+days*86400000).toISOString().slice(0,10);return games.filter(g=>g.date>=from&&g.date<=to&&(!comp||g.comp===comp));}
 };
+window.addEventListener?.('euroscout-dragons',()=>{const load=()=>refresh(true);if(pending)pending.finally(load);else load();});
 /* Wait for the database before matching teams, then load quietly in the background. */
 (function wait(n){if(typeof STATE!=='undefined'&&STATE.data&&typeof allClubs==='function'){try{allClubs();refresh(false);}catch(e){console.warn('Fixtures unavailable',e);}}else if(n<240)setTimeout(()=>wait(n+1),500);})(0);
 })();

@@ -26,8 +26,8 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
   {meta:{id:'dragons-eurocup-26',name:'EuroCup',season:'2026/27',privateOwnerFeed:true},players:[{id:'dragons-eurocup-grasshoff',name:'B. Grasshoff',team:'dd-lem',g:1,ppg:8,gameLog:[]}]},
   {meta:{id:'dragons-lnb-26',name:'Betclic Elite',season:'2026/27',privateOwnerFeed:true},players:[{id:'dragons-lnb-grasshoff',name:'Bastien Grasshoff',team:'dd-lem',teamName:'Le Mans',g:2,ppg:6,gameLog:[]}]}
  ]};
- const access={internal:true,user:{email:'markoturk.scouting@gmail.com'}};
- const context={window:{ESAccess:access,EUROSCOUT_EUROCUP_ROSTERS:directory},ESAccess:access,structuredClone,console};vm.runInNewContext(code,context);
+ const access={internal:true,user:{email:'markoturk.scouting@gmail.com'}},events=[];
+ const context={window:{ESAccess:access,EUROSCOUT_EUROCUP_ROSTERS:directory,dispatchEvent:event=>events.push(event.type)},ESAccess:access,structuredClone,console,Event:class Event{constructor(type){this.type=type;}}};vm.runInNewContext(code,context);
  const connected=context.window.EuroScoutDragons.connectData({leagues:[{meta:{id:'lnb'},players:[{id:'lnb-9352',name:'Bastien Grasshoff',league:'lnb'}]}]},live);
  const statLines=connected.leagues.filter(league=>league.meta.privateOwnerFeed).flatMap(league=>league.players);
  assert.equal(statLines.length,2);
@@ -37,7 +37,8 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  assert.equal(linked.some(pair=>pair[0]==='dragons-eurocup-grasshoff'&&pair[1]==='lnb-9352'),true);
  assert.equal(linked.some(pair=>pair[0]==='dragons-lnb-grasshoff'&&pair[1]==='lnb-9352'),true);
  assert.equal(live.unresolvedPlayers,0);
- assert.match(html,/euroscout-dragons\.js\?v=20261005-stats-first/);
+ assert(events.includes('euroscout-dragons'));
+ assert.match(html,/euroscout-dragons\.js\?v=20261007-fixture-ready/);
  assert.match(html,/raw=await window\.EuroScoutDragons\?\.apply\(raw\)\|\|raw/);
  assert.match(html,/prepareCoreData\(raw,true,false\)/);
  assert.match(html,/setTimeout\(\(\)=>loadCurrentStatsThenFullCore\(raw\),80\)/);
