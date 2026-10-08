@@ -2561,6 +2561,7 @@ function ovrSaveLocal(patch){
   OVR=ovrMerged(); rebuildLinks(); applyOverrides(); STATE._tagg=null;
 }
 function applyOverrides(){
+  window.EuroScoutIdentityBio?.apply(STATE.data);
   EuroScoutClubs.refresh();
   window.EuroScoutAgencyResearch?.prepare();
   // bio/ext overrides are keyed per-person (shared across all their competitions), so look up
