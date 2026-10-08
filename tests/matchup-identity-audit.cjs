@@ -29,6 +29,7 @@ const rosterContext={
  window:{EUROSCOUT_EUROCUP_ROSTERS:eurocup},
  canonKey:key=>key,gid:p=>p._gid||p.id,next26Get:()=>({}),next26bGet:()=>({}),
  assignPool:()=>eurocup.players,allPlayersEvery:()=>eurocup.players,player:()=>null,
+ allClubs:()=>[{key:'eurocup|DER',name:'Baglietto Derthona Tortona',teams:[{key:'eurocup|DER',name:'Baglietto Derthona Tortona'},{key:'lba|BDBT',name:'Derthona Basket'}]},{key:'bcl|MSB',name:'Le Mans Sarthe Basket',teams:[{key:'bcl|MSB',name:'Le Mans Sarthe Basket'},{key:'lnb|LEM',name:'Le Mans Sarthe Basket'}]}],
  effective26keys:()=>['stale|OLD'],effective26:()=> 'stale|OLD',isStatus:()=>false,fold:s=>String(s||'').toLowerCase(),officialRosterRow:()=>null,Map,Set
 };
 vm.createContext(rosterContext);
@@ -37,7 +38,9 @@ assert.equal(rosterContext.sameRosterPerson({name:'D. Maddox',jersey:'21'},{name
 assert.equal(rosterContext.sameRosterPerson({name:'G. Gazzotti',born:1999},{name:'G. Gazzotti',born:1999}),true,'same-name feed rows merge');
 assert.equal(rosterContext.sameRosterPerson({name:'Alex Smith',born:1998},{name:'Alex Smith',born:2001}),false,'same-name players with conflicting birth years remain separate');
 assert.equal(rosterContext.clubIndex.get('lnb|LEM').length,leMans.length,'Le Mans official registrations must populate its matchup roster');
-assert.equal(rosterContext.clubIndex.get('lba|BDBT').length,tortona.length,'Tortona official registrations must populate its matchup roster');
+assert.equal(rosterContext.clubIndex.get('lba|BDBT').length,tortona.length,'Tortona official registrations must populate its domestic-key matchup roster');
+assert.equal(rosterContext.clubIndex.get('eurocup|DER').length,tortona.length,'Tortona official registrations must populate its competition-key matchup roster');
+assert.equal(rosterContext.clubIndex.get('bcl|MSB').length,leMans.length,'Le Mans official registrations must populate its competition-key matchup roster');
 assert.equal(rosterContext.clubIndex.get('stale|OLD')?.length||0,0,'stale cloud assignments must not override official current registrations');
 const lietkabelis=sets[0].roster.filter(row=>row.teamCode==='LKB');
 const ilic=lietkabelis.filter(row=>['Milos Ilic','Veljko Ilic'].includes(row.name));

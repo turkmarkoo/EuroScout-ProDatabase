@@ -42,13 +42,15 @@ function buildClubIndex(){
  const index=new Map(),seen=new Map(),m=next26Get(),mb=next26bGet(),pool=assignPool(),directories=officialDirectories();
  const byId=new Map(),sources=[...pool,...(typeof allPlayersEvery==='function'?allPlayersEvery():[]),...directories.flatMap(d=>d.players||[])];
  for(const p of sources)for(const id of [p.id,gid(p),...(p._grp||[]).map(x=>x.id)])if(id&&!byId.has(id))byId.set(id,p);
- const officialRows=[],officialKeys=new Map(),mark=(id,key)=>{if(!id)return;if(!officialKeys.has(id))officialKeys.set(id,new Set());officialKeys.get(id).add(key);};
+ const clubKeysByName=new Map(),rememberClubName=(name,keys)=>{const n=fold(name);if(!n)return;if(!clubKeysByName.has(n))clubKeysByName.set(n,new Set());for(const key of keys)if(key)clubKeysByName.get(n).add(key);};
+ for(const club of allClubs()){const keys=new Set([club.key,...(club.teams||[]).map(t=>t.key)].filter(Boolean));rememberClubName(club.name,keys);for(const team of club.teams||[]){rememberClubName(team.name,keys);for(const name of team.searchAliases||[])rememberClubName(name,keys);}}
+ const officialRows=[],officialKeys=new Map(),mark=(id,key)=>{if(!id||!key)return;if(!officialKeys.has(id))officialKeys.set(id,new Set());officialKeys.get(id).add(key);};
  for(const directory of directories){
-  const teams=new Map();for(const team of directory.teams||[]){const key=canonKey(team.currentKey||team.key);for(const id of [team.id,team.code])if(id)teams.set(id,key);}
-  for(const row of directory.roster||[]){const key=teams.get(row.teamId||row.teamCode);if(!key)continue;const ids=row.ids||[row.id],p=ids.map(id=>(typeof player==='function'?player(id):null)||byId.get(id)).find(Boolean);if(!p)continue;officialRows.push({key,p});for(const id of [...ids,p.id,gid(p),...(p._grp||[]).map(x=>x.id)])mark(id,key);}
+  const teams=new Map();for(const team of directory.teams||[]){const base=team.currentKey||team.key,keys=new Set([base,canonKey(base),team.key,team.currentKey].filter(Boolean));for(const name of [team.name,...(team.aliases||[])])for(const key of clubKeysByName.get(fold(name))||[])keys.add(key);for(const id of [team.id,team.code])if(id)teams.set(id,keys);}
+  for(const row of directory.roster||[]){const keys=teams.get(row.teamId||row.teamCode);if(!keys?.size)continue;const ids=row.ids||[row.id],p=ids.map(id=>(typeof player==='function'?player(id):null)||byId.get(id)).find(Boolean);if(!p)continue;officialRows.push({keys,p});for(const id of [...ids,p.id,gid(p),...(p._grp||[]).map(x=>x.id)])for(const key of keys)mark(id,key);}
  }
  for(const p of pool){const registered=new Set();for(const id of [p.id,gid(p),...(p._grp||[]).map(x=>x.id)])for(const key of officialKeys.get(id)||[])registered.add(key);for(const key of registered.size?registered:effective26keys(p,m,mb))addClubPlayer(index,seen,key,p);}
- for(const {key,p} of officialRows)addClubPlayer(index,seen,key,p);
+ for(const {keys,p} of officialRows)for(const key of keys)addClubPlayer(index,seen,key,p);
  return index;
 }
 function liveRoster(key){if(!key)return null;key=canonKey(key);if(rosters.has(key))return rosters.get(key);const club=allClubs().find(c=>c.key===key)||window.ESTeamSelection?.teamForKey?.(key);if(!club)return null;
