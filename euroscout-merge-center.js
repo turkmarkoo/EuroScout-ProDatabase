@@ -400,6 +400,7 @@
   function combinedPlayerRecord(target,other,options=AUTO_OPTIONS) {
     const merged={...target};
     merged.report=mergeReport(target.report,other.report,options);
+    if(merged.board==null&&other.board!=null)merged.board=other.board;
     merged.watch=!!(target.watch||other.watch);
     merged.rating=Math.max(target.rating||0,other.rating||0);
     merged.tags=[...new Set([...(target.tags||[]),...(other.tags||[])])];
@@ -427,10 +428,15 @@
     const batchMerges=next.merges.filter(item=>item.batchId===batchId);
     if(!batchMerges.length)return 0;
     const recordsBefore={},recordsAfter={};
-    for(const item of batchMerges){
-      if(!recordsBefore[item.survivor])recordsBefore[item.survivor]=structuredClone(Store.get(item.survivor)||{report:'{}'});
-      const current=recordsAfter[item.survivor]||recordsBefore[item.survivor];
-      recordsAfter[item.survivor]=combinedPlayerRecord(current,Store.get(item.source)||{report:'{}'},AUTO_OPTIONS);
+    // Resolve the entire batch before combining records: a statistics alias
+    // may join a domestic profile that itself joins a European profile.
+    const parents=new Map(batchMerges.map(item=>[item.source,item.survivor]));
+    const root=id=>{const seen=new Set();while(parents.has(id)&&!seen.has(id)){seen.add(id);id=parents.get(id);}return id;};
+    const groups=new Map();for(const item of batchMerges)for(const id of [item.survivor,item.source]){const survivor=root(id);if(!groups.has(survivor))groups.set(survivor,new Set());groups.get(survivor).add(id);}
+    for(const [survivor,members] of groups){
+      recordsBefore[survivor]=structuredClone(Store.get(survivor)||{report:'{}'});let merged=recordsBefore[survivor];
+      for(const id of members)if(id!==survivor)merged=combinedPlayerRecord(merged,Store.get(id)||{report:'{}'},AUTO_OPTIONS);
+      recordsAfter[survivor]=merged;
     }
     try{
       localStorage.setItem('euroscout:overrides',JSON.stringify(override));
@@ -626,10 +632,21 @@
   function invalidateCatalogue(){detectionCache={};entityCache={};view.detectionReady={};automaticAttempted='';}
   function scheduleAutomatic(){if(automaticTimer!==null)clearTimeout(automaticTimer);automaticTimer=setTimeout(()=>{automaticTimer=null;if(window.ESSessions?.active?.()){scheduleAutomaticDeferred();return;}runAutomatic().catch(error=>console.warn('Automatic identity consolidation delayed',error));},250);}
   function scheduleAutomaticDeferred(){if(automaticTimer!==null)return;automaticTimer=setTimeout(()=>{automaticTimer=null;scheduleAutomatic();},30000);}
+  function linkedRecordPlan(){
+    const pairs=window.EuroScoutDragons?.recordLinks?.()||[],out=[],seen=new Set();
+    const add=(id,survivor)=>{const source=canonicalPlayer([id])||id;if(source===survivor||seen.has(source))return;const rec=Store.get(source)||{};if(!rec.rating&&!rec.watch&&rec.board==null&&!rec.tags?.length&&!Object.keys(rec.eye||{}).length&&!Object.keys(rec.jerseyNumbers||{}).length&&(!rec.report||['{}',''].includes(String(rec.report).trim())))return;
+      seen.add(source);const a=canonicalPlayerEntity(survivor,player(survivor)),b=canonicalPlayerEntity(source,player(source));out.push({candidate:{id:pairKey('player',survivor,source),type:'player',a,b,score:100,reason:'Resolved official statistics identity'},survivor,source});
+    };
+    for(const [source,target] of pairs){const p=player(target),survivor=canonicalPlayer([target])||(p?gid(p):null)||target;add(source,survivor);
+      // Preserve records on every catalogue alias before adding a persistent
+      // statistics link. Previously merged backups resolve to their live root.
+      for(const alias of p?._grp||[])add(alias.id,survivor);
+    }return out;
+  }
   async function runAutomatic(){
     if(!Store.canEdit()||automaticRunning||automaticFailure||window.ESSessions?.active?.())return 0;
     automaticRunning=true;let count=0;
-    try{await window.wfFlushReport?.();for(let pass=0;pass<6;pass++){if(window.ESSessions?.active?.()){scheduleAutomaticDeferred();break;}const plan=automaticPlan(detect(true,'player').player);if(!plan.length)break;automaticAttempted=plan.map(item=>item.candidate.id).join('|');const merged=await autoMergeBatch(plan);count+=merged;if(!merged)break;await new Promise(resolve=>setTimeout(resolve,0));}automaticMerged+=count;return count;}
+    try{await window.wfFlushReport?.();for(let pass=0;pass<6;pass++){if(window.ESSessions?.active?.()){scheduleAutomaticDeferred();break;}const plan=[...linkedRecordPlan(),...automaticPlan(detect(true,'player').player)];if(!plan.length)break;automaticAttempted=plan.map(item=>item.candidate.id).join('|');const merged=await autoMergeBatch(plan);count+=merged;if(!merged)break;await new Promise(resolve=>setTimeout(resolve,0));}automaticMerged+=count;return count;}
     catch(error){automaticFailure=error.message;automaticAttempted='';toast('Automatic merges stopped: '+error.message+' Review Merge Center before retrying.');throw error;}
     finally{automaticRunning=false;if(count||automaticFailure){if(STATE.view==='mergecenter')setTimeout(renderMergeCenter,0);else if(count){render();if(typeof DRAWER_OPEN!=='undefined'&&DRAWER_OPEN)renderProfile();toast(count+' clear player duplicates merged. Undo is available in Merge Center.');automaticMerged=0;}}}
   }

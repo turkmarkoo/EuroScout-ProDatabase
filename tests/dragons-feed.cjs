@@ -42,7 +42,7 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  assert.equal(live.fixtures[1].home.key,'hun|NHS');
  assert.equal(live.fixtures[1].away.key,'plk|OZZ');
  assert(events.includes('euroscout-dragons'));
-assert.match(html,/euroscout-dragons\.js\?v=20261008-current-season-key-v5/);
+assert.match(html,/euroscout-dragons\.js\?v=20261008-full-player-identity-v11/);
  assert.doesNotMatch(code,/Promise\.race\(\[localPromise/);
  assert.doesNotMatch(code,/data-dd-check|Check latest/);
  assert.match(code,/Update stats ↗/);
@@ -58,5 +58,15 @@ assert.match(html,/euroscout-dragons\.js\?v=20261008-current-season-key-v5/);
  const speedFeed={...live,leagues:[{meta:{id:'dragons-speed',name:'EuroCup',season:'2026/27',privateOwnerFeed:true},players:manyStats}]};
  const started=Date.now();context.window.EuroScoutDragons.connectData({leagues:[{meta:{id:'test'},players:manyBase}]},speedFeed);const elapsed=Date.now()-started;
  assert(elapsed<2000,'DragonsData identity linking should use one shared player index; took '+elapsed+' ms');
+ const bioRaw={leagues:[{meta:{id:'acb'},teams:[{code:'UNI',name:'Unicaja',logo:'club.png'}],players:[{id:'acb-diaz',name:'Alberto Díaz',born:1994,height:190,weight:90,age:32,country:'Spain',role:'Guard',img:'headshot.png',team:'UNI',teamName:'Unicaja',league:'acb'},{id:'acb-smith-1',name:'Alex Smith',born:1995,team:'UNI',teamName:'Unicaja',league:'acb'},{id:'acb-smith-2',name:'Adam Smith',born:1995,team:'UNI',teamName:'Unicaja',league:'acb'}]}]};
+ const abbreviated={...live,fixtures:[],leagues:[{meta:{id:'dragons-acb-test',name:'Spain ACB',season:'ACB 2026/27',privateOwnerFeed:true},teams:[{code:'dd-uni',name:'Unicaja'}],players:[{id:'dragons-diaz',name:'A. Díaz',team:'dd-uni',teamName:'Unicaja',g:2,ppg:9,gameLog:[['2026-10-04']]},{id:'dragons-smith',name:'A. Smith',team:'dd-uni',teamName:'Unicaja',g:1,ppg:4,gameLog:[]},{id:'dragons-wrong-year',name:'A. Díaz',born:2001,team:'dd-uni',teamName:'Unicaja',g:1,gameLog:[]}]}]};
+ const before=JSON.stringify(bioRaw),enriched=context.window.EuroScoutDragons.connectData(bioRaw,abbreviated),stats=enriched.leagues.at(-1).players;
+ assert.equal(stats[0].name,'Alberto Díaz');assert.equal(stats[0].height,190);assert.equal(stats[0].weight,90);assert.equal(stats[0].age,32);assert.equal(stats[0].country,'Spain');assert.equal(stats[0].img,'headshot.png');assert.equal(stats[0].g,2);assert.equal(stats[0].ppg,9);assert.equal(context.window.EuroScoutDragons.key(stats[0]),'acb|UNI');assert.equal(stats[1].linkedEuroScoutId,undefined);assert.equal(stats[2].linkedEuroScoutId,undefined);assert.equal(JSON.stringify(bioRaw),before);
+
+ context.window.EUROSCOUT_ACB_IDENTITY_FIXES=[{code:'test-olaseni',name:'Gabriel Olaseni',born:1991,height:208,country:'United Kingdom',role:'Big',img:'verified.png',feedAliases:['A. Olaseni'],feedTeam:'Unicaja',source:'https://acb.com/verified'}];
+ const supplementFeed={...abbreviated,leagues:[{...abbreviated.leagues[0],players:[{id:'dragons-verified',name:'A. Olaseni',teamName:'Unicaja',g:1,ppg:7,gameLog:[]},{id:'dragons-other-team',name:'A. Olaseni',teamName:'Other Club',g:1},{id:'dragons-conflicting-birth',name:'A. Olaseni',teamName:'Unicaja',born:2000,g:1}]}]};
+ const verified=context.window.EuroScoutDragons.connectData(bioRaw,supplementFeed).leagues.at(-1).players;assert.equal(verified[0].name,'Gabriel Olaseni');assert.equal(verified[0].img,'verified.png');assert.equal(verified[0].country,'United Kingdom');assert.equal(verified[0].linkedEuroScoutId,undefined);assert.equal(verified[0].g,1);assert.equal(verified[0].ppg,7);assert.equal(context.window.EuroScoutDragons.key(verified[0]),'acb|UNI');assert.equal(verified[1].name,'A. Olaseni');assert.equal(verified[2].name,'A. Olaseni');
+ supplementFeed.leagues[0].meta.season='2025/26';assert.equal(context.window.EuroScoutDragons.connectData(bioRaw,supplementFeed).leagues.at(-1).players[0].name,'A. Olaseni');
+ const metadata={window:{}};vm.runInNewContext(fs.readFileSync('data/acb-verified-identities-20261008.js','utf8'),metadata);assert.equal(metadata.window.EUROSCOUT_ACB_IDENTITY_FIXES.length,27);assert.ok(metadata.window.EUROSCOUT_ACB_IDENTITY_FIXES.every(p=>p.source.startsWith('https://acb.com/')&&p.img.startsWith('https://static.acb.com/')&&p.birthDate&&p.country));
  console.log('Approved reader access, blocked external access, snapshot isolation and rejected-feed tests passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
