@@ -24,7 +24,11 @@ function shirt(p){const v=storedShirt(p);if(v!=null)return v;const official=offi
 function jerseyOrder(a,b){const rank=p=>{const n=shirt(p);return n==='00'?-2:n==='0'?-1:/^\d{1,2}$/.test(n)?Number(n):1000};return rank(a)-rank(b)||a.name.localeCompare(b.name);}
 function resetRosters(){clubIndex=null;rosters.clear();}
 function officialDirectories(){return [window.EUROSCOUT_EUROCUP_ROSTERS,window.EUROSCOUT_OFFICIAL_ROSTERS].filter(Boolean);}
-function addClubPlayer(index,seen,key,p){key=canonKey(key);if(!key||!p)return;const id=gid(p)||p.id;if(!id)return;if(!seen.has(key))seen.set(key,new Set());if(seen.get(key).has(id))return;seen.get(key).add(id);if(!index.has(key))index.set(key,[]);index.get(key).push(p);}
+function rosterBaseName(p){return fold(p?.name||'').replace(/\b(jr|sr|ii|iii|iv)\b/g,' ').replace(/\s+/g,' ').trim();}
+function rosterBirth(p){return String(p?.born||p?.birthYear||String(p?.birthdate||'').match(/(?:19|20)\d{2}/)?.[0]||'');}
+function rosterNumber(p){const n=p?.jersey??p?.number??officialRosterRow(p)?.number;return n==null?'':String(n).trim();}
+function sameRosterPerson(a,b){const an=fold(a?.name||''),bn=fold(b?.name||'');if(!an||!bn)return false;const ab=rosterBirth(a),bb=rosterBirth(b);if(an===bn)return !(ab&&bb&&ab!==bb);if(rosterBaseName(a)!==rosterBaseName(b))return false;const aj=rosterNumber(a),bj=rosterNumber(b);return !!((ab&&bb&&ab===bb)||(aj&&bj&&aj===bj));}
+function addClubPlayer(index,seen,key,p){key=canonKey(key);if(!key||!p)return;const id=gid(p)||p.id;if(!id)return;if(!seen.has(key))seen.set(key,{ids:new Set(),players:[]});const bucket=seen.get(key);if(bucket.ids.has(id))return;if(bucket.players.some(x=>sameRosterPerson(x,p))){bucket.ids.add(id);return;}bucket.ids.add(id);bucket.players.push(p);if(!index.has(key))index.set(key,[]);index.get(key).push(p);}
 function buildClubIndex(){
  const index=new Map(),seen=new Map(),m=next26Get(),mb=next26bGet(),pool=assignPool(),directories=officialDirectories();
  for(const p of pool)for(const key of effective26keys(p,m,mb))addClubPlayer(index,seen,key,p);

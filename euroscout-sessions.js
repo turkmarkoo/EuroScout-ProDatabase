@@ -339,10 +339,14 @@ function openStart(preset, done) {
     el.comp.innerHTML = c.options.map(o => '<option value="' + escAttr(o.id) + '">' + esc(o.name) + (c.shared.includes(o.id) ? '' : ' · one team only') + '</option>').join('') + '<option value="__other">Other / friendly…</option>';
     if ([...el.comp.options].some(o => o.value === keep)) el.comp.value = keep;
     $1('#sxCompOtherWrap', box).hidden = el.comp.value !== '__other';
+    const keepKnown = el.known.value;
     games = knownGames(el.a.value, el.b.value);
     $1('#sxKnownWrap', box).hidden = !games.length;
     el.known.innerHTML = '<option value="">— not listed · enter by hand —</option>' + games.map((g, i) => '<option value="' + i + '">' + fmtDate(g.date) + (g.time ? ' ' + esc(g.time) : '') + ' · ' + esc(g.comp.name) + (g.round ? ' · ' + (/^\d+$/.test(String(g.round)) ? 'R' : '') + esc(g.round) : '') + ' · ' + (g.scoreA !== '' && g.scoreB !== '' ? g.scoreA + '–' + g.scoreB : 'not played yet') + '</option>').join('');
-    if (preset.game) { const i = games.findIndex(g => g.date === preset.game.date && g.comp.id === preset.game.comp); if (i >= 0) { el.known.value = String(i); el.known.onchange(); } }
+    let pick = keepKnown !== '' && games[Number(keepKnown)] ? Number(keepKnown) : -1;
+    if (preset.game) { const i = games.findIndex(g => g.date === preset.game.date && g.comp.id === preset.game.comp); if (i >= 0) pick = i; }
+    if (pick < 0 && el.a.value && el.b.value && games.length) pick = 0;
+    if (pick >= 0) { el.known.value = String(pick); el.known.onchange(); }
   }
   el.a.onchange = el.b.onchange = paint;
   el.comp.onchange = () => { $1('#sxCompOtherWrap', box).hidden = el.comp.value !== '__other'; };

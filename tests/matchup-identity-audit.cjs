@@ -29,10 +29,13 @@ const rosterContext={
  window:{EUROSCOUT_EUROCUP_ROSTERS:eurocup},
  canonKey:key=>key,gid:p=>p._gid||p.id,next26Get:()=>({}),next26bGet:()=>({}),
  assignPool:()=>[],allPlayersEvery:()=>eurocup.players,player:()=>null,
- effective26keys:()=>[],effective26:()=>null,isStatus:()=>false,Map,Set
+ effective26keys:()=>[],effective26:()=>null,isStatus:()=>false,fold:s=>String(s||'').toLowerCase(),officialRosterRow:()=>null,Map,Set
 };
 vm.createContext(rosterContext);
-vm.runInContext(helperSource+';this.clubIndex=buildClubIndex();',rosterContext);
+vm.runInContext(helperSource+";this.clubIndex=buildClubIndex();this.sameRosterPerson=sameRosterPerson;",rosterContext);
+assert.equal(rosterContext.sameRosterPerson({name:'D. Maddox',jersey:'21'},{name:'D. Maddox Jr',jersey:'21'}),true,'suffix aliases with the same jersey are one roster person');
+assert.equal(rosterContext.sameRosterPerson({name:'G. Gazzotti',born:1999},{name:'G. Gazzotti',born:1999}),true,'same-name feed rows merge');
+assert.equal(rosterContext.sameRosterPerson({name:'Alex Smith',born:1998},{name:'Alex Smith',born:2001}),false,'same-name players with conflicting birth years remain separate');
 assert.equal(rosterContext.clubIndex.get('lnb|LEM').length,leMans.length,'Le Mans official registrations must populate its matchup roster');
 assert.equal(rosterContext.clubIndex.get('lba|BDBT').length,tortona.length,'Tortona official registrations must populate its matchup roster');
 const lietkabelis=sets[0].roster.filter(row=>row.teamCode==='LKB');
