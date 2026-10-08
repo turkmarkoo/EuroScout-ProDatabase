@@ -42,7 +42,7 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  assert.equal(live.fixtures[1].home.key,'hun|NHS');
  assert.equal(live.fixtures[1].away.key,'plk|OZZ');
  assert(events.includes('euroscout-dragons'));
-assert.match(html,/euroscout-dragons\.js\?v=20261008-competition-key-v4/);
+assert.match(html,/euroscout-dragons\.js\?v=20261008-current-season-key-v5/);
  assert.doesNotMatch(code,/Promise\.race\(\[localPromise/);
  assert.doesNotMatch(code,/data-dd-check|Check latest/);
  assert.match(code,/Update stats ↗/);

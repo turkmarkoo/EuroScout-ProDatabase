@@ -9,6 +9,11 @@ assert.match(html,/buducnost/);
 assert.match(html,/sc derby\|studentski centar/);
 assert.match(picker,/\['fec','FIBA Europe Cup',\/\^fibaeuropecup\$\//);
 assert.ok(picker.includes("replace(/26$/,'')"));
+assert.match(html,/const currentSeasonKeys=new Set/);
+const current=JSON.parse(fs.readFileSync('data/data.json','utf8'));
+const eurocup2627=current.season2627.comps.eurocup.teams;
+assert.ok(eurocup2627.some(team=>team.key==='lnb|LEM'&&/Le Mans/i.test(team.name)),'Le Mans is a current 2026/27 EuroCup entry');
+assert.ok(!current.season2627.comps.bcl.teams.some(team=>/Le Mans/i.test(team.name)||team.key==='bcl|MSB'),'Le Mans historical BCL identity is not a 2026/27 BCL entry');
 
 const data=JSON.parse(fs.readFileSync('ncaa-rosters.json','utf8'));
 const counts=new Map();
