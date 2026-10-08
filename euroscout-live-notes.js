@@ -19,7 +19,7 @@ function numberKey(p){return '2026/27|'+p._liveClub;}
 function shirt(p){const v=recOf(p).jerseyNumbers?.[numberKey(p)];if(v!=null)return String(v);const r=window.EuroScoutExpansion?.record(p);return r&&canonKey('directory|'+r.club)===p._liveClub&&r.jersey!=null?String(r.jersey):'';}
 function jerseyOrder(a,b){const rank=p=>{const n=shirt(p);return n==='00'?-2:n==='0'?-1:/^\d{1,2}$/.test(n)?Number(n):1000};return rank(a)-rank(b)||a.name.localeCompare(b.name);}
 function resetRosters(){clubIndex=null;rosters.clear();}
-function liveRoster(key){if(!key)return null;key=canonKey(key);if(rosters.has(key))return rosters.get(key);const club=allClubs().find(c=>c.key===key);if(!club)return null;
+function liveRoster(key){if(!key)return null;key=canonKey(key);if(rosters.has(key))return rosters.get(key);const club=allClubs().find(c=>c.key===key)||window.ESTeamSelection?.teamForKey?.(key);if(!club)return null;
  if(!clubIndex){clubIndex=new Map();const m=next26Get(),mb=next26bGet();for(const p of assignPool())for(const k of effective26keys(p,m,mb)){if(!clubIndex.has(k))clubIndex.set(k,[]);clubIndex.get(k).push(p);}}
  const r={t:{name:club.name},club,players:(clubIndex.get(key)||[]).map(p=>({...p,_liveClub:key})).sort(jerseyOrder)};rosters.set(key,r);return r;}
 function rosterPlayers(){return ['a','b'].flatMap(k=>liveRoster(STATE.scouting[k])?.players||[])}
@@ -102,7 +102,7 @@ function backgroundLeagues(){if(extraAsked||STATE._extraDone||typeof loadExtraLe
 
 function fullRedraw(){document.querySelector('.liveScouting')?.remove();renderScouting(true);}
 function wireFrame(){const s=STATE.scouting;
- document.querySelectorAll('.scoutTeamButton').forEach(el=>el.onclick=()=>{const slot=el.dataset.slot;if(!window.ESTeamSelection)return;window.ESTeamSelection.open({slot,currentKey:s[slot],onConfirm:({team})=>{s[slot]=team.key;filters[slot]={q:'',pos:''};const a=SX?.active();if(a)SX.update({[slot]:{key:team.key,name:team.name}});fullRedraw();}});});
+ document.querySelectorAll('.scoutTeamButton').forEach(el=>el.onclick=()=>{const slot=el.dataset.slot;if(!window.ESTeamSelection)return;window.ESTeamSelection.open({slot,currentKey:s[slot],onConfirm:({team})=>{const key=canonKey(team.key);s[slot]=key;filters[slot]={q:'',pos:''};resetRosters();const a=SX?.active();if(a)SX.update({[slot]:{key,name:team.name}});fullRedraw();}});});
  document.querySelectorAll('.mx-rsearch').forEach(el=>el.oninput=()=>{filters[el.dataset.slot].q=el.value;applyFilter(el.dataset.slot);});
  document.querySelectorAll('.mx-pos').forEach(el=>el.onclick=()=>{filters[el.dataset.slot].pos=el.dataset.pos;document.querySelectorAll('.mx-pos[data-slot="'+el.dataset.slot+'"]').forEach(b=>{const on=b===el;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});applyFilter(el.dataset.slot);});
  const start=document.querySelector('#mxStart');if(start)start.onclick=startSession;

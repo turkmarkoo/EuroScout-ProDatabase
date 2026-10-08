@@ -63,6 +63,8 @@ const COMPETITION_ALIASES=[
 function competitionIdentity(meta){const name=fold(meta.name).replace(/20\d{2}\s*[\/-]\s*(?:20)?\d{2}/g,'').replace(/[^a-z0-9]/g,'');const baseId=String(meta.id||'').replace(/26$/,'');const hit=COMPETITION_ALIASES.find(x=>x[2].test(name)||baseId===x[0]);return hit?{key:hit[0],id:hit[0],name:hit[1]}:{key:'name:'+name,id:meta.id,name:meta.name};}
 function directoryCompetitionId(name){return'directory:'+fold(name).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
 function clubLogoUrl(club){if(!club)return'';if(club.logo)return club.logo;const team=(club.teams||[]).find(row=>row.logo);return team?.logo||'';}
+const teamNameKey=value=>fold(value).replace(/[^a-z0-9]/g,'');
+function closeTeamName(left,right){const a=teamNameKey(left),b=teamNameKey(right);return a===b||(Math.min(a.length,b.length)>=7&&(a.includes(b)||b.includes(a)));}
 function uniqueCompetitionTeams(teams){
  const byIdentity=new Map();
  for(const club of teams||[]){
@@ -75,25 +77,33 @@ function uniqueCompetitionTeams(teams){
  return[...byIdentity.values()].sort((a,b)=>a.name.localeCompare(b.name));
 }
 function currentTeamClub(ref,competitionId,competitionName,clubs,data){
- const wanted=fold(ref.name).replace(/[^a-z0-9]/g,''),key=ref.currentKey||ref.key||competitionId+'|'+wanted;
+ const wanted=teamNameKey(ref.name),key=ref.currentKey||ref.key||competitionId+'|'+wanted;
  let club=typeof clubByKey==='function'?clubByKey(key):null;
+ /* A live statistics feed can use the competition's own team key while the
+    roster registry uses the domestic key. The published 2026/27 entry is the
+    stable bridge between those two identities (for example Tortona). */
+ const seasonRef=(data.season2627?.comps?.[competitionId]?.teams||[]).find(team=>closeTeamName(team.name,ref.name));
+ if(!club&&seasonRef?.key&&typeof clubByKey==='function')club=clubByKey(seasonRef.key);
  const code=String(key).split('|')[1]||'';
  const sourceLeague=(data.leagues||[]).find(league=>competitionIdentity(league.meta).id===competitionId);
  const sourceTeam=(sourceLeague?.teams||[]).find(team=>team.code===code)||
   (sourceLeague?.teams||[]).find(team=>fold(team.name).replace(/[^a-z0-9]/g,'')===wanted);
  const nearSourceTeam=sourceTeam||(sourceLeague?.teams||[]).find(team=>{const name=fold(team.name).replace(/[^a-z0-9]/g,'');return Math.min(name.length,wanted.length)>=7&&(name.includes(wanted)||wanted.includes(name));});
  if(!club&&sourceTeam&&typeof clubByKey==='function')club=clubByKey(sourceLeague.meta.id+'|'+sourceTeam.code);
- if(!club)club=clubs.find(candidate=>fold(candidate.name).replace(/[^a-z0-9]/g,'')===wanted)||null;
+ if(!club)club=clubs.find(candidate=>teamNameKey(candidate.name)===wanted)||null;
  const officialAba=competitionId==='aba'?window.EUROSCOUT_ABA_ROSTERS?.teams?.find(team=>{const name=fold(team.name).replace(/[^a-z0-9]/g,'');return name===wanted||name.endsWith(wanted)||wanted.endsWith(name);}):null;
  const globalSourceTeam=(data.leagues||[]).flatMap(league=>league.teams||[]).find(team=>fold(team.name).replace(/[^a-z0-9]/g,'')===wanted&&team.logo);
  const nbaLogo=competitionId==='nba'&&/^\d+$/.test(code)?'https://cdn.nba.com/logos/nba/'+code+'/primary/L/logo.svg':competitionId==='gleague'&&/^\d+$/.test(code)?'https://cdn.nba.com/logos/gleague/'+code+'/primary/L/logo.svg':'';
  const logo=ref.logo||(officialAba?.id?'https://www.aba-liga.com/images/club/150x150/'+officialAba.id+'.png':'')||nearSourceTeam?.logo||globalSourceTeam?.logo||nbaLogo||KNOWN_TEAM_LOGOS.get(wanted)||clubLogoUrl(club);
  const country=ref.country||sourceTeam?.country||club?.country||'';
- return{...(club||{}),key,name:ref.name||sourceTeam?.name||club?.name||key,country,logo,leagues:club?.leagues||[{id:competitionId,name:competitionName}],teams:logo?[{lg:competitionId,name:ref.name||sourceTeam?.name||'',country,logo},...(club?.teams||[])]:club?.teams||[{lg:competitionId,name:ref.name||'',country}]};
+ const resolvedKey=club?.key||seasonRef?.key||key;
+ return{...(club||{}),key:resolvedKey,name:ref.name||sourceTeam?.name||club?.name||resolvedKey,country,logo,leagues:club?.leagues||[{id:competitionId,name:competitionName}],teams:logo?[{lg:competitionId,name:ref.name||sourceTeam?.name||'',country,logo},...(club?.teams||[])]:club?.teams||[{lg:competitionId,name:ref.name||'',country}]};
 }
+let competitionCache=null;
 function buildCompetitions(){
  if(typeof allClubs!=='function')return[];
  const clubs=allClubs(),defs=new Map(),data=window.STATE?.data||{};
+ if(competitionCache?.data===data&&competitionCache.clubs===clubs&&competitionCache.count===clubs.length)return competitionCache.value;
  const addDef=(value,replaceTeams=false)=>{if(!value?.id||value.id==='n2627'||value.id==='directory')return;const identity=competitionIdentity(value),old=defs.get(identity.key)||{},incoming=value._teamKeys||[],teamKeys=replaceTeams&&incoming.length?incoming:[...(old._teamKeys||[]),...incoming],rawRefs=[...(old._rawRefs||[]),...(value._rawRefs||[])];defs.set(identity.key,{...old,...value,id:identity.id,name:identity.name,_ids:[...new Set([...(old._ids||[]),value.id])],_teamKeys:[...new Set(teamKeys)],_rawRefs:rawRefs});};
  for(const L of data.leagues||[])if(L.meta.id!=='n2627'&&(typeof showsTeams!=='function'||showsTeams(L.meta)))addDef({...L.meta,_rawRefs:(L.teams||[]).map(team=>({currentKey:L.meta.id+'|'+team.code,...team}))});
  /* Authenticated payloads may retain registry clubs without the original
@@ -122,7 +132,7 @@ function buildCompetitions(){
   defs.set(identity.key,{...old,id:identity.id,name:identity.name,_ids:[...new Set([...(old._ids||[]),id,id+'26'])],_teamKeys:[],_clubs:teams,_officialFiba:true});
  }
  defs.delete('n2627');
- return[...defs.values()].map(meta=>{
+ const value=[...defs.values()].map(meta=>{
    const keyed=(meta._teamKeys||[]).map(key=>typeof clubByKey==='function'?clubByKey(key):null).filter(Boolean),uniqueKeyed=[...new Map(keyed.map(c=>[c.key,c])).values()];
    const ids=meta._ids||[meta.id],current=clubs.filter(c=>currentCompetitionIds(c).some(id=>ids.includes(id)));
    const currentRefs=(meta._currentRefs||[]).map(ref=>currentTeamClub(ref,meta.id,meta.name,clubs,data));
@@ -131,13 +141,13 @@ function buildCompetitions(){
    const teams=uniqueCompetitionTeams(rawTeams);
    return{id:meta.id,name:meta.name,region:region(meta,teams),category:category(meta),logo:meta.logo||'',teams};
  }).filter(c=>c.teams.length).sort((a,b)=>a.name.localeCompare(b.name));
+ competitionCache={data,clubs,count:clubs.length,value};return value;
 }
 function open(options={}){
  close();
- const competitions=buildCompetitions();
+ let competitions=[];
  const current=typeof clubByKey==='function'?clubByKey(options.currentKey):null,currentIds=current?currentCompetitionIds(current):[];
- let selectedComp=current?competitions.find(c=>currentIds.includes(c.id))||competitions.find(c=>(current.leagues||[]).some(l=>l.id===c.id)):null;
- let selectedTeam=current&&selectedComp?current:null,cat='all',compQuery='',teamQuery='';
+ let selectedComp=null,selectedTeam=null,cat='all',compQuery='',teamQuery='';
  const mask=document.createElement('div');mask.className='tsw-mask';mask.id='teamSelectionWorkspace';
  mask.innerHTML='<section class="tsw-dialog" role="dialog" aria-modal="true" aria-labelledby="tswTitle">'+
   '<header><span class="tsw-head-icon" aria-hidden="true">♟</span><div><h2 id="tswTitle">Select Team '+safe(String(options.slot||'').toUpperCase())+'</h2><p>Choose a competition and team for your scouting matchup.</p></div><button type="button" class="tsw-close" aria-label="Close">×</button></header>'+
@@ -170,11 +180,21 @@ function open(options={}){
   },100);};
  teamInput.oninput=e=>{teamQuery=fold(e.target.value.trim());renderTeams();};
  mask.querySelectorAll('[data-tsw-cat]').forEach(b=>b.onclick=()=>{cat=b.dataset.tswCat;mask.querySelectorAll('[data-tsw-cat]').forEach(x=>x.classList.toggle('on',x===b));renderCompetitions();});
- function done(){if(!(selectedComp&&selectedTeam))return;remember(selectedComp.id);const result={competition:selectedComp,team:selectedTeam};close();options.onConfirm?.(result);}
+ function done(){if(!(selectedComp&&selectedTeam))return;remember(selectedComp.id);selectedTeams.set(selectedTeam.key,selectedTeam);const result={competition:selectedComp,team:selectedTeam};close();options.onConfirm?.(result);}
  $('.tsw-confirm').onclick=done;$('.tsw-cancel').onclick=close;$('.tsw-close').onclick=close;mask.onclick=e=>{if(e.target===mask)close();};
  mask.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();close();}if(e.key==='Enter'&&document.activeElement?.closest('.tsw-search')&&selectedComp&&selectedTeam){e.preventDefault();done();}};
- renderRecent();renderCompetitions();renderTeams();renderSummary();setTimeout(()=>$('#tswCompSearch').focus(),0);
+ compList.innerHTML='<div class="tsw-empty" role="status">Loading competitions and current rosters…</div>';
+ teamList.innerHTML='<div class="tsw-empty">The team list will appear here.</div>';
+ renderSummary();
+ requestAnimationFrame(()=>setTimeout(()=>{
+  if(!document.body.contains(mask))return;
+  competitions=buildCompetitions();
+  selectedComp=current?competitions.find(c=>currentIds.includes(c.id))||competitions.find(c=>(current.leagues||[]).some(l=>l.id===c.id)):null;
+  selectedTeam=current&&selectedComp?current:null;
+  renderRecent();renderCompetitions();renderTeams();renderSummary();$('#tswCompSearch').focus();
+ },0));
 }
 function close(){document.querySelector('#teamSelectionWorkspace')?.remove();}
-window.ESTeamSelection={open,close,_buildCompetitions:buildCompetitions};
+const selectedTeams=new Map();
+window.ESTeamSelection={open,close,teamForKey:key=>selectedTeams.get(key)||null,_buildCompetitions:buildCompetitions};
 })();

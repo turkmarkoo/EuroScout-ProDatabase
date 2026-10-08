@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const code=fs.readFileSync('euroscout-dragons.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 const feed={schema:1,quality_policy:'accepted_live_boxscores_only',leagues:[{meta:{id:'dragons-el-1',privateOwnerFeed:true},players:[]}],fixtures:[]};
-function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;const access={internal,owner:email==='markoturk.scouting@gmail.com',user:email?{email}:null,get:async()=>{calls++;return{};},field:()=> 'a'.repeat(32),readPayload:async()=>JSON.stringify(feed)};const c={window:{ESAccess:access},ESAccess:access,structuredClone,console};vm.runInNewContext(code,c);return {api:c.window.EuroScoutDragons,calls:()=>calls};}
+function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;const access={internal,owner:email==='markoturk.scouting@gmail.com',user:email?{email}:null,get:async()=>{calls++;return{};},field:()=> 'a'.repeat(32),readPayload:async()=>JSON.stringify(feed)};const c={window:{ESAccess:access},ESAccess:access,structuredClone,console,setTimeout,clearTimeout};vm.runInNewContext(code,c);return {api:c.window.EuroScoutDragons,calls:()=>calls};}
 (async()=>{
  const raw={leagues:[{meta:{id:'historical'},players:[]}],notes:{keep:true}};
  let s=setup('other@example.org');assert.equal((await s.api.apply(raw)).leagues.length,2);assert.equal(s.calls(),1);
@@ -40,7 +40,10 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  assert.equal(live.fixtures[1].home.key,'hun|NHS');
  assert.equal(live.fixtures[1].away.key,'plk|OZZ');
  assert(events.includes('euroscout-dragons'));
-assert.match(html,/euroscout-dragons\.js\?v=20261007-registry-repair/);
+assert.match(html,/euroscout-dragons\.js\?v=20261008-fast-local-refresh/);
+ assert.match(code,/Promise\.race\(\[localPromise/);
+ assert.match(code,/Update stats ↗/);
+ assert.match(code,/Cloud sync ↗/);
  assert.match(html,/raw=await window\.EuroScoutDragons\?\.apply\(raw\)\|\|raw/);
  assert.match(html,/prepareCoreData\(raw,false,false,false\)/);
  assert.match(html,/Never let a large private snapshot win the first-paint race/);
