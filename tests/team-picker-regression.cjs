@@ -11,7 +11,7 @@ const picker = fs.readFileSync(path.join(root, 'team-selection-workspace-2026100
 assert.match(html, /team-selection-workspace\.css\?v=20260930-1/);
 assert.match(html, /data\/competition-assets\.js\?v=20261007-picker-leagues/);
 assert.match(html, /team-selection-workspace-20261007d\.js\?v=20261008-select-fast/);
-assert.match(html, /euroscout-live-notes\.js\?v=20261008-auth-roster-v2/);
+assert.match(html, /euroscout-live-notes\.js\?v=20261008-roster-authority-v3/);
 assert.ok(html.indexOf('team-selection-workspace-20261007d.js') < html.indexOf('euroscout-live-notes.js'));
 assert.ok(html.indexOf('data/competition-assets.js') < html.indexOf('team-selection-workspace-20261007d.js'));
 assert.match(notes, /class="scoutTeamButton"/);

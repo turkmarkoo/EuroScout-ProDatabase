@@ -28,8 +28,8 @@ const helperSource=live.slice(live.indexOf('function officialDirectories()'),liv
 const rosterContext={
  window:{EUROSCOUT_EUROCUP_ROSTERS:eurocup},
  canonKey:key=>key,gid:p=>p._gid||p.id,next26Get:()=>({}),next26bGet:()=>({}),
- assignPool:()=>[],allPlayersEvery:()=>eurocup.players,player:()=>null,
- effective26keys:()=>[],effective26:()=>null,isStatus:()=>false,fold:s=>String(s||'').toLowerCase(),officialRosterRow:()=>null,Map,Set
+ assignPool:()=>eurocup.players,allPlayersEvery:()=>eurocup.players,player:()=>null,
+ effective26keys:()=>['stale|OLD'],effective26:()=> 'stale|OLD',isStatus:()=>false,fold:s=>String(s||'').toLowerCase(),officialRosterRow:()=>null,Map,Set
 };
 vm.createContext(rosterContext);
 vm.runInContext(helperSource+";this.clubIndex=buildClubIndex();this.sameRosterPerson=sameRosterPerson;",rosterContext);
@@ -38,6 +38,7 @@ assert.equal(rosterContext.sameRosterPerson({name:'G. Gazzotti',born:1999},{name
 assert.equal(rosterContext.sameRosterPerson({name:'Alex Smith',born:1998},{name:'Alex Smith',born:2001}),false,'same-name players with conflicting birth years remain separate');
 assert.equal(rosterContext.clubIndex.get('lnb|LEM').length,leMans.length,'Le Mans official registrations must populate its matchup roster');
 assert.equal(rosterContext.clubIndex.get('lba|BDBT').length,tortona.length,'Tortona official registrations must populate its matchup roster');
+assert.equal(rosterContext.clubIndex.get('stale|OLD')?.length||0,0,'stale cloud assignments must not override official current registrations');
 const lietkabelis=sets[0].roster.filter(row=>row.teamCode==='LKB');
 const ilic=lietkabelis.filter(row=>['Milos Ilic','Veljko Ilic'].includes(row.name));
 assert.equal(ilic.length,2);
