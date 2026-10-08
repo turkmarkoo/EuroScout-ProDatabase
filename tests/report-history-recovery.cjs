@@ -26,7 +26,7 @@ assert.match(sessions,/everything\(\), ids/,'history must include recovered lega
 assert.match(css,/\.mx-col\{[^}]*grid-template-rows:auto auto auto minmax\(0,1fr\)/,'roster columns must reserve a constrained scroll row');
 assert.match(css,/\.mx-col \.rosterList\{[^}]*height:100%;[^}]*overflow-y:scroll;[^}]*scrollbar-gutter:stable/,'roster columns must own a real scroll viewport');
 assert.match(live,/function storedShirt\(p\)/,'jersey numbers must survive player and club aliases');
-assert.match(live,/addEventListener\('wheel'/,'roster wheel input must scroll its own viewport');
+assert.match(live,/function scrollMatchupArea\(e\)/,'all matchup wheel input must scroll its nearest viewport');
 assert.match(html,/Object\.entries\(r\.jerseyNumbers\|\|\{\}\)/,'background identity consolidation must retain jersey numbers');
 assert.match(mergeCenter,/merged\.jerseyNumbers=/,'manual identity merges must retain jersey numbers');
 console.log('Report deduplication, alias-history recovery, and roster scrolling checks passed.');

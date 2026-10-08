@@ -5,7 +5,10 @@ assert.match(html,/CORE_SCRIPT_PROMISES\.has\(key\)/,'parallel background loader
 assert.match(html,/^\s*if\(\/(?:[^\n]+)matchup[^\n]+loadMatchupRosterScripts/m,'a deep-linked matchup must request roster packs during boot');
 assert.match(live,/ensureMatchupDirectories\(\);/,'the matchup must request its roster directories before resolving team rows');
 assert.match(live,/Loading confirmed 2026\/27 roster/,'an empty pre-load roster must be shown as loading, not as an unconfirmed club');
-assert.match(live,/document\.querySelectorAll\('\.mx-col'\).*addEventListener\('wheel'/,'the whole roster column must route the wheel to its roster list');
+assert.match(live,/function scrollMatchupArea\(e\).*\.rosterList,#liveBullets,#liveRelated/,'one delegated handler must cover both rosters and the middle notebook');
+assert.match(live,/addEventListener\('wheel',scrollMatchupArea,\{capture:true,passive:false\}\)/,'the delegated wheel handler must run in capture phase before embedded-page handlers');
+assert.match(live,/getBoundingClientRect\(\)\.top.*--matchup-workspace/,'workspace height must use the app\'s actual top offset, including the Dragons Data status bar');
+assert.match(css,/main#app\{height:var\(--matchup-workspace/,'the matchup must fit below all page chrome');
 assert.match(css,/\.mx-col\{[^}]*max-height:100%[^}]*contain:layout/);
 assert.match(css,/\.rosterList\{[^}]*height:100%[^}]*overflow-y:scroll/);
 const source=html.slice(html.indexOf('let CORE_FULL_PROMISE='),html.indexOf('function loadCoreEnrichmentScripts()'));

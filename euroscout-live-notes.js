@@ -3,7 +3,8 @@
    never scrolls away, similar notes on demand. */
 (function(){
 'use strict';
-function sizeWorkspace(){const header=document.querySelector('body > header');document.documentElement.style.setProperty('--matchup-header',(header?.getBoundingClientRect().height||76)+'px');document.documentElement.style.setProperty('--matchup-viewport',(window.visualViewport?.height||window.innerHeight)+'px');}
+function sizeWorkspace(){const root=document.documentElement,viewport=window.visualViewport?.height||window.innerHeight,app=document.querySelector('main#app'),top=Math.max(0,app?.getBoundingClientRect().top||document.querySelector('body > header')?.getBoundingClientRect().bottom||76);root.style.setProperty('--matchup-viewport',viewport+'px');root.style.setProperty('--matchup-workspace',Math.max(240,viewport-top)+'px');}
+function scrollMatchupArea(e){const area=e.target?.closest?.('.rosterList,#liveBullets,#liveRelated');if(!area||!area.closest('.liveScouting'))return;const max=area.scrollHeight-area.clientHeight;if(max<=0)return;const unit=e.deltaMode===1?32:e.deltaMode===2?area.clientHeight:1,next=Math.max(0,Math.min(max,area.scrollTop+e.deltaY*unit));if(next===area.scrollTop)return;area.scrollTop=next;e.preventDefault();e.stopPropagation();}
 sizeWorkspace();window.addEventListener('resize',sizeWorkspace);window.visualViewport?.addEventListener('resize',sizeWorkspace);const appHeader=document.querySelector('body > header');if(appHeader)new ResizeObserver(sizeWorkspace).observe(appHeader);
 
 const cats=[['nAth','Athleticism'],['nOff','Offense'],['nDef','Defense'],['nIntel','Intel'],['nProj','Projection']];
@@ -132,7 +133,7 @@ function backgroundLeagues(){if(extraAsked||STATE._extraDone||typeof loadExtraLe
 
 function fullRedraw(){document.querySelector('.liveScouting')?.remove();renderScouting(true);}
 function wireFrame(){const s=STATE.scouting;
- document.querySelectorAll('.mx-col').forEach(col=>col.addEventListener('wheel',e=>{const list=col.querySelector('.rosterList'),max=list?list.scrollHeight-list.clientHeight:0;if(max<=0)return;const unit=e.deltaMode===1?32:e.deltaMode===2?list.clientHeight:1,next=Math.max(0,Math.min(max,list.scrollTop+e.deltaY*unit));if(next!==list.scrollTop){list.scrollTop=next;e.preventDefault();e.stopPropagation();}},{passive:false}));
+ const root=document.querySelector('.liveScouting');root?.addEventListener('wheel',scrollMatchupArea,{capture:true,passive:false});document.querySelector('#liveBullets')?.setAttribute('tabindex','0');requestAnimationFrame(sizeWorkspace);
  document.querySelectorAll('.scoutTeamButton').forEach(el=>el.onclick=()=>{const slot=el.dataset.slot;if(!window.ESTeamSelection)return;window.ESTeamSelection.open({slot,currentKey:s[slot],onConfirm:({team})=>{const key=canonKey(team.key);s[slot]=key;filters[slot]={q:'',pos:''};resetRosters();const a=SX?.active();if(a)SX.update({[slot]:{key,name:team.name}});fullRedraw();}});});
  document.querySelectorAll('.mx-rsearch').forEach(el=>el.oninput=()=>{filters[el.dataset.slot].q=el.value;applyFilter(el.dataset.slot);});
  document.querySelectorAll('.mx-pos').forEach(el=>el.onclick=()=>{filters[el.dataset.slot].pos=el.dataset.pos;document.querySelectorAll('.mx-pos[data-slot="'+el.dataset.slot+'"]').forEach(b=>{const on=b===el;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});applyFilter(el.dataset.slot);});
