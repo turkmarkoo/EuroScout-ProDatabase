@@ -6438,7 +6438,10 @@ function scoutSeasonPool(s){
  for(const r of data?.roster||[]){if(!qualifying.has(teamKeys.get(r.teamId)))continue;for(const id of r.ids){const p=byId.get(id);if(p)registrations.set(gid(p),r);}}
  const out=[];
  for(const [id,rows] of groups){
-  const base=rows[0],reg=registrations.get(id);
+  // Source feeds can contain unnamed team/bench placeholders. Keep source
+  // records for recovery, but list only groups with an identifiable player.
+  const named=rows.filter(row=>String(row.name||'').trim());if(!named.length)continue;
+  const base=named[0],reg=registrations.get(id);
   if(s.competition==='bclq'&&(!reg||season!=='2026/27'))continue;
   const keys=season==='2026/27'?effective26keys(base,m,mb):[];
   const historical=rows.filter(p=>!p._rosterOnly&&scoutSeason(p)===season);
@@ -6451,6 +6454,7 @@ function scoutSeasonPool(s){
   if(s.competition==='bclq'&&stats==='2026/27')candidates=candidates.filter(p=>p.competitionId==='bclq'||p.stage==='Q');
   candidates.sort((a,b)=>(b.g||0)-(a.g||0));const record=candidates[0];
   let p;if(record)p={...record};else{p={};for(const k of ['id','name','code','league','team','teamName','role','pos','height','weight','age','born','country','img','_grp','_gid'])if(base[k]!=null)p[k]=base[k];p._rosterOnly=true;p.gameLog=[];p.pct=null;p.arch=[];}
+  if(!String(p.name||'').trim())p.name=base.name;
   p._seasonLabel=record?stats+' · '+(leagueOf(record)?.meta?.name||''):'No '+stats+' statistics recorded';
   p._seasonClub=season==='2026/27'?(s.competition==='bclq'?reg.teamName:clubs.map(c=>c.name).join(' / ')||'Club unconfirmed'):(historical[0]?.teamName||p.teamName);
   p._seasonContext=season==='2026/27'?'2026/27 roster'+(s.competition==='bclq'?' · BCL Qualifiers':''):'2025/26 club';out.push(p);
