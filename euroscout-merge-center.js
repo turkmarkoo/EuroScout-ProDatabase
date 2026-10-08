@@ -389,6 +389,7 @@
     merged.rating=Math.max(target.rating||0,other.rating||0);
     merged.tags=[...new Set([...(target.tags||[]),...(other.tags||[])])];
     merged.eye={...(other.eye||{}),...(target.eye||{})};
+    merged.jerseyNumbers={...(other.jerseyNumbers||{}),...(target.jerseyNumbers||{})};
     return merged;
   }
   async function autoMergeBatch(plan) {

@@ -17,11 +17,16 @@ assert.ok(merged._workflow.viewings.some(v=>v.sessionId==='bcl-session'),'orphan
 const built=history.build(merged._workflow.viewings,[{id:'bcl-session',gameDate:'2026-09-25',a:{name:'BCL Team A'},b:{name:'BCL Team B'},players:[{id:'canonical-player'}]}],['canonical-player']);
 assert.equal(built.filter(x=>x.title.includes('BCL Team')).length,1,'recovered session and viewing must deduplicate');
 
-const html=fs.readFileSync('index.html','utf8'),sessions=fs.readFileSync('euroscout-sessions.js','utf8'),css=fs.readFileSync('euroscout-live-notes.css','utf8'),mergeCenter=fs.readFileSync('euroscout-merge-center.js','utf8');
+const html=fs.readFileSync('index.html','utf8'),sessions=fs.readFileSync('euroscout-sessions.js','utf8'),css=fs.readFileSync('euroscout-live-notes.css','utf8'),live=fs.readFileSync('euroscout-live-notes.js','utf8'),mergeCenter=fs.readFileSync('euroscout-merge-center.js','utf8');
 assert.match(html,/euroscout-record-merge\.js\?v=20261008-history-recovery/);
 assert.match(html,/next\._workflow=ESRecordMerge\.mergeWorkflows\(report\._workflow,next\._workflow\)/,'ordinary report saves must preserve history');
 assert.match(html,/function recordAliasLinks\(\)/,'history recovery must follow saved player merges after a source feed disappears');
 assert.match(mergeCenter,/ESRecordMerge\.mergeWorkflows\(a\[key\],value\)/,'manual identity merges must retain both timelines');assert.match(sessions,/reportRecords\(p\)/,'history must read records from every linked ID');
 assert.match(sessions,/everything\(\), ids/,'history must include recovered legacy sessions');
-assert.match(css,/\.mx-col \.rosterList\{[^}]*height:0;[^}]*overflow-y:scroll;[^}]*scrollbar-gutter:stable/,'roster columns must own a real scroll viewport');
+assert.match(css,/\.mx-col\{[^}]*grid-template-rows:auto auto auto minmax\(0,1fr\)/,'roster columns must reserve a constrained scroll row');
+assert.match(css,/\.mx-col \.rosterList\{[^}]*height:auto;[^}]*overflow-y:auto;[^}]*scrollbar-gutter:stable/,'roster columns must own a real scroll viewport');
+assert.match(live,/function storedShirt\(p\)/,'jersey numbers must survive player and club aliases');
+assert.match(live,/addEventListener\('wheel'/,'roster wheel input must scroll its own viewport');
+assert.match(html,/Object\.entries\(r\.jerseyNumbers\|\|\{\}\)/,'background identity consolidation must retain jersey numbers');
+assert.match(mergeCenter,/merged\.jerseyNumbers=/,'manual identity merges must retain jersey numbers');
 console.log('Report deduplication, alias-history recovery, and roster scrolling checks passed.');
