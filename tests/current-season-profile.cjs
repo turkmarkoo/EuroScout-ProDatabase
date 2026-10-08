@@ -39,7 +39,7 @@ test('profile season cards discover and default to linked DragonsData 2026/27 li
   assert.match(ui,/r\._dragonsData/);
   assert.match(ui,/seasons\.includes\('2026\/27'\)\?'2026\/27'/);
   assert.match(ui,/const value=display\[key\]/);
-  assert.match(html,/euroscout-ui\.js\?v=20261006-dashboard-season/);
+  assert.match(html,/euroscout-ui\.js\?v=20261008-dashboard-evidence-v9/);
 });
 
 test('dashboard defaults to played 2026/27 statistics before qualification thresholds are met',()=>{
@@ -48,7 +48,7 @@ test('dashboard defaults to played 2026/27 statistics before qualification thres
   assert.match(ui,/ES\.dashboardSeason=currentSeason/);
   assert.match(ui,/ES\.dashboardSeason===currentSeason\?Number\(p\.g\)>0:p\.qualified/);
   assert.match(ui,/new Set\(\[currentSeason,/);
-  assert.match(html,/euroscout-ui\.js\?v=20261006-dashboard-season/);
+  assert.match(html,/euroscout-ui\.js\?v=20261008-dashboard-evidence-v9/);
 });
 
 test('dashboard groups historical and current feeds under one competition choice',()=>{

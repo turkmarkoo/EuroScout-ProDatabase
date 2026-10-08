@@ -18,7 +18,7 @@ saveRec=async function(p,patch){if(!Store.canEdit())return;const old=recOf(p),st
 };
 /* Search current notes, never hidden historical text or workflow metadata. */
 noteText=function(p){return (Object.values(wfContent(effectiveReport(p))).join(' ')+' '+playerTags(p).join(' ')).toLowerCase();};
-esNoteDate=function(p){const r=wfReport(p);return Object.prototype.hasOwnProperty.call(r,'_notesUpdated')?r._notesUpdated:(recOf(p).updated_at||'');};
+// Keep the shared linked-record and session note-date calculation.
 async function wfWrite(p,change){if(!Store.canEdit())return;const r=wfReport(p),w=JSON.parse(JSON.stringify(r._workflow||{}));change(w);w.updatedAt=wfNow();await saveRec(p,{report:JSON.stringify({...r,_workflow:w})});if(DRAWER_OPEN&&CURRENT===p.id)renderProfile();else render();}
 function wfField(form,label,name,type='text',value='',options){const wrap=esEl('label','wf-field');wrap.appendChild(esEl('span',null,label));const input=esEl(options?'select':type==='textarea'?'textarea':'input');if(options)options.forEach(([v,l])=>{const o=esEl('option',null,l);o.value=v;input.appendChild(o);});else if(type!=='textarea')input.type=type;input.name=name;input.value=value;input.id='wf-'+name;wrap.appendChild(input);form.appendChild(wrap);return input;}
 function wfForm(title){showModal('<h3 id="wfDialogTitle"></h3><form id="wfForm" class="wf-form"></form>');$('#wfDialogTitle').textContent=title;return $('#wfForm');}

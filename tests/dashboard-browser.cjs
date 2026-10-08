@@ -1,0 +1,36 @@
+const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/PC/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+(async()=>{const root=process.cwd(),browser=await chromium.launch({channel:'chrome',headless:true}),page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[],fetches=[];
+page.on('pageerror',e=>errors.push(e.message));
+await page.route('**/*',async route=>{const u=new URL(route.request().url());if(u.hostname!=='euro.test')return route.abort();fetches.push(u.pathname);
+if(u.pathname==='/euroscout-access.js')return route.fulfill({contentType:'text/javascript',body:`window.ESAccess={internal:true,owner:true,user:{email:'test@example.com',uid:'test'},state:{schema:1,records:{},appData:{},seeds:{}},seedReady:Promise.resolve({seeds:{},core:{transfers:{},season2627:{season:'2026/27',comps:{}},domestic2627:{leagues:{}},rumors:{metadataMarker:'preserved'}}}),saveState:async function(s){this.state=s;return true;},refresh:async()=>false,get:async()=>null,field:()=>null};ESAccess.ready=Promise.resolve(ESAccess);`});
+const file=path.resolve(root,u.pathname.slice(1)||'index.html');return fs.existsSync(file)?route.fulfill({path:file}):route.fulfill({status:404,body:''});});
+try{await page.goto('https://euro.test/index.html',{waitUntil:'domcontentloaded'});
+await page.waitForFunction(()=>typeof STATE!=='undefined'&&STATE.data?.rumors?.metadataMarker==='preserved'&&STATE.data.leagues.length>40&&!document.querySelector('#coreLoadStatus'),{},{timeout:90000});
+const loaded=await page.evaluate(()=>{for(const name of ['Elijah Bryant','Sasha Vezenkov','Carlik Jones','Azuolas Tubelis','Kevin Punter']){const p=allPlayersEvery().find(p=>p.name===name&&p.league==='euroleague');if(p){p.statsSeason='2026/27';p.g=1;}}STATE.league=STATE.data.leagues.find(l=>l.meta.id==='euroleague');STATE.view='dashboard';render();return{leagues:STATE.data.leagues.length,players:allPlayersEvery().length,clubs:allClubs().length,membership:Object.entries(STATE.data.season2627.comps).map(([id,c])=>({id,total:c.teams.length})),standouts:[...document.querySelectorAll('.es-dashboard-standouts .es-dashboard-player')].map(e=>e.innerText),sample:['Elijah Bryant','Sasha Vezenkov','Carlik Jones','Azuolas Tubelis','Kevin Punter','Josh Pierre-Louis'].map(name=>{const p=allPlayersEvery().find(p=>p.name===name);return{name,id:p?.id,group:p?recordIds(p):[],club:p?esCurrentRosterProfile(p).name:null};})};});
+assert.ok(fetches.includes('/data/data.json'),'metadata-only seed must fetch the complete catalogue');console.log('Complete catalogue:',JSON.stringify(loaded));
+const result=await page.evaluate(async()=>{
+const find=name=>{const choices=allPlayersEvery().filter(p=>p.name===name),p=choices.find(p=>effective26(p)&&!isStatus(effective26(p)))||choices[0];if(!p)throw Error('Missing '+name);return p;};
+const recent=find('Josh Pierre-Louis'),older=find('Gediminas Orelik');
+await Store.save(gid(recent),{report:JSON.stringify({nOff:'Synthetic recent Szolnoki observation',_notesUpdated:'2026-10-06T08:00:00Z'}),updated_at:'2026-10-08T11:00:00Z'});
+await Store.save(gid(older),{report:JSON.stringify({nOff:'Synthetic older observation',_notesUpdated:'2026-10-05T12:00:00Z'}),updated_at:'2026-10-08T12:00:00Z'});
+const ec=STATE.data.season2627.comps.eurocup.teams.slice(0,4),fec=STATE.data.season2627.comps.fec.teams.find(t=>/Szolnok/i.test(t.name)),zastal=STATE.data.season2627.comps.fec.teams.find(t=>/Zastal/i.test(t.name)),slo=STATE.data.domestic2627.leagues.slo.teams.slice(0,2);
+const session=(id,competition,a,b,watched,players=[])=>({id,competition,a,b,startedAt:watched+'T08:00:00Z',endedAt:watched+'T10:00:00Z',watchedOn:[watched],gameDate:'2026-10-06',players});
+const saved={v:1,sessions:[session('szolnoki-zastal',{id:'',name:'FIBA Europe Cup'},fec,zastal,'2026-10-07',[{id:recordIds(recent).at(-1),pid:recent.id,status:'notes',name:recent.name}]),session('euro-named',{id:'',name:'EuroCup'},ec[0],ec[1],'2026-10-01'),session('euro-id',{id:'eurocup',name:'EuroCup'},ec[2],ec[3],'2026-10-07'),session('slo-name',{id:'',name:'Liga OTP banka'},slo[0],slo[1],'2026-10-06')]};
+localStorage.setItem('euroscout:sessions:v1',JSON.stringify(saved));window.dispatchEvent(new Event('euroscout:rosters-ready'));
+const recordsBefore=localStorage.getItem('euroscout:records'),sessionsBefore=localStorage.getItem('euroscout:sessions:v1');
+STATE.view='dashboard';render();const displayed=[...document.querySelectorAll('.es-dashboard-notes .es-dashboard-player')].map(e=>e.innerText),coverage=ESSessions.coverage();
+// Repainting and changing views must never alter notes, jerseys or recovered sessions.
+render();STATE.view='scoutlog';render();document.querySelector('.sx-tab[data-tab="comps"]').click();const renderedCoverage=[...document.querySelectorAll('.sx-table tbody tr')].map(row=>row.innerText),coverageTab=document.querySelector('.sx-tab[data-tab="comps"]').textContent;STATE.view='dashboard';render();
+return{displayed,renderedCoverage,coverageTab,sessionDates:[...esNoteSessionDates()],ids:recordIds(recent),date:esNoteDate(recent),coverage:coverage.filter(c=>['eurocup','fec','bcl','slo'].includes(c.id)),recordsUnchanged:recordsBefore===localStorage.getItem('euroscout:records'),sessionsUnchanged:sessionsBefore===localStorage.getItem('euroscout:sessions:v1'),recentClub:esCurrentRosterProfile(recent).name};
+});
+console.log('Dashboard and coverage:',JSON.stringify(result));
+assert.ok(result.displayed[0].includes('Josh Pierre-Louis'));assert.ok(result.date.startsWith('2026-10-07'));assert.ok(!result.recentClub.includes('unconfirmed'));
+const euro=result.coverage.filter(c=>c.name==='EuroCup');assert.equal(euro.length,1);assert.equal(euro[0].games,2);assert.equal(euro[0].teams,4);assert.equal(euro[0].total,loaded.membership.find(c=>c.id==='eurocup').total);assert.ok(euro[0].pct>0);assert.ok(euro[0].last.startsWith('2026-10-07'));
+assert.equal(result.renderedCoverage.filter(text=>text.startsWith('EuroCup')).length,1);assert.ok(result.renderedCoverage.every(text=>!text.includes('team list unknown')));assert.ok(result.coverageTab.endsWith('3'));
+assert.equal(result.coverage.find(c=>c.id==='fec').total,50);assert.equal(result.coverage.find(c=>c.id==='bcl').total,32);assert.ok(result.coverage.find(c=>c.id==='slo').total>0);assert.ok(result.recordsUnchanged&&result.sessionsUnchanged);assert.deepEqual(errors,[]);
+assert.equal(loaded.standouts.length,5);assert.ok(loaded.standouts.every(text=>!text.includes('unconfirmed')));
+assert.ok(loaded.sample.slice(0,5).every(p=>p.club&&!p.club.includes('unconfirmed')),'all five named EuroLeague standouts must have confirmed current clubs');
+await page.screenshot({path:path.resolve('../dashboard-browser-20261008.png')});console.log('PASS Chromium metadata-only private seed: full catalogue, current clubs, linked recent notes, unified coverage, saved history unchanged.');
+}catch(e){await page.screenshot({path:path.resolve('../dashboard-failure-20261008.png')});console.log('Diagnostics',await page.evaluate(()=>({leagues:typeof STATE!=='undefined'&&STATE.data?.leagues.length,body:document.body.innerText.slice(-900)})),errors);throw e;}finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

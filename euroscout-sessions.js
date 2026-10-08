@@ -271,30 +271,36 @@ function teamLogs() {
 }
 
 /* ── Competition coverage ──────────────────────────────── */
+function competitionNameKey(name){const key=String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b20\d{2}\s*[\/-]\s*(?:20)?\d{2}\b/g,'').replace(/[^a-z0-9]+/g,' ').trim();return ({'bcl':'basketball champions league','bcl qualifiers':'basketball champions league qualifiers','liga endesa':'liga acb','betclic elite':'france betclic elite'})[key]||key;}
 function competitionsKnown() {
-  const out = new Map(), d = STATE.data || {};
-  Object.entries((d.season2627 || {}).comps || {}).forEach(([id, c]) => out.set(id, { id, name: c.name, total: (c.teams || []).length }));
-  Object.entries((d.domestic2627 || {}).leagues || {}).forEach(([id, c]) => { if (!out.has(id)) out.set(id, { id, name: c.name, total: (c.teams || []).length }); });
-  (d.leagues || []).forEach(L => { const m = L.meta || {}; if (m.id && !out.has(m.id)) out.set(m.id, { id: m.id, name: m.name, total: (L.teams || []).length }); });
+  const out=new Map(),byName=new Map(),d=STATE.data||{};
+  const add=(id,c,current)=>{const name=competitionNameKey(c.name),existing=out.get(id)||byName.get(name);if(existing){existing.aliasIds.add(id);if(name)byName.set(name,existing);return;}
+    const field=new Set(),fieldNames=new Set();if(current&&c.complete!==false)for(const t of c.teams||[]){const key=typeof t==='string'?t:t.key||(t.code?id+'|'+t.code:'');if(key)field.add(canonKey(key));if(t.name)fieldNames.add(competitionNameKey(t.name));}
+    const row={id,name:c.name,total:field.size||fieldNames.size,field,fieldNames,aliasIds:new Set([id])};out.set(id,row);if(name)byName.set(name,row);};
+  Object.entries(d.season2627?.comps||{}).forEach(([id,c])=>add(id,c,true));
+  Object.entries(d.domestic2627?.leagues||{}).forEach(([id,c])=>add(id,c,true));
+  (d.leagues||[]).forEach(L=>{const m=L.meta||{};if(m.id)add(m.id,{...m,teams:L.teams},m.season==='2026/27');});
   return out;
 }
 function coverage() {
-  const comps = competitionsKnown(), rows = new Map();
-  const row = c => { const k = c.id || 'name:' + c.name; if (!rows.has(k)) { const known = comps.get(c.id); rows.set(k, { id: c.id || '', name: (known && known.name) || c.name || 'Unspecified', total: known ? known.total : 0, games: new Set(), teams: new Set(), players: new Set(), sessions: 0, last: '' }); } return rows.get(k); };
-  comps.forEach(c => row(c));
-  everything().forEach(s => {
-    if (!s.competition || !(s.competition.id || s.competition.name)) return;
-    const r = row(s.competition); r.sessions++;
-    r.games.add(s.gameDate + '|' + [s.a.key || s.a.name, s.b.key || s.b.name].sort().join('|'));
-    [s.a, s.b].forEach(t => { if (t.key || t.name) r.teams.add(t.key || t.name); });
-    s.players.forEach(x => r.players.add(x.id));
-    if ((s.gameDate || '') > r.last) r.last = s.gameDate || '';
+  const comps=competitionsKnown(),rows=new Map(),byName=new Map(),byId=new Map(),clubsByName=new Map();
+  comps.forEach(c=>{byName.set(competitionNameKey(c.name),c);c.aliasIds.forEach(id=>byId.set(id,c));});
+  allClubs().forEach(c=>{for(const name of [c.name,...(c.teams||[]).flatMap(t=>[t.name,...(t.searchAliases||[])])]){const key=competitionNameKey(name);if(!key)continue;if(!clubsByName.has(key))clubsByName.set(key,c.key);else if(clubsByName.get(key)!==c.key)clubsByName.set(key,null);}});
+  const teamKey=t=>canonKey(t.key||clubsByName.get(competitionNameKey(t.name))||'')||'name:'+competitionNameKey(t.name);
+  const row=c=>{const known=byId.get(c.id)||byName.get(competitionNameKey(c.name)),k=known?.id||c.id||'name:'+competitionNameKey(c.name);if(!rows.has(k))rows.set(k,{id:known?.id||c.id||'',name:known?.name||c.name||'Unspecified',total:known?.total||0,field:known?.field||new Set(),fieldNames:known?.fieldNames||new Set(),covered:new Set(),games:new Set(),teams:new Set(),players:new Set(),sessions:0,last:''});return rows.get(k);};
+  comps.forEach(row);
+  everything().forEach(s=>{
+    if(!s.competition||!(s.competition.id||s.competition.name))return;
+    const r=row(s.competition);r.sessions++;
+    r.games.add(s.gameDate+'|'+[teamKey(s.a),teamKey(s.b)].sort().join('|'));
+    [s.a,s.b].forEach(t=>{if(!(t.key||t.name))return;const key=teamKey(t);r.teams.add(key);if(r.field.has(key)||r.fieldNames.has(competitionNameKey(t.name)))r.covered.add(key);});
+    s.players.forEach(x=>{const p=P(x.id)||P(x.pid);r.players.add(p?gid(p):x.id);});
+    const last=[s.endedAt,...(s.watchedOn||[]),s.startedAt].filter(Boolean).sort().at(-1)||'';if(last>r.last)r.last=last;
   });
-  return [...rows.values()].map(r => {
-    const shortlisted = [...r.players].filter(id => { const p = P(id); try { return p && isWatched(p); } catch (e) { return false; } }).length;
-    return { id: r.id, name: r.name, total: r.total, games: r.games.size, teams: r.teams.size, players: r.players.size, shortlisted, sessions: r.sessions, last: r.last,
-      pct: r.total ? Math.min(100, Math.round(r.teams.size / r.total * 100)) : null };
-  }).sort((x, y) => y.games - x.games || (y.pct || 0) - (x.pct || 0) || x.name.localeCompare(y.name));
+  return [...rows.values()].map(r=>{
+    const shortlisted=[...r.players].filter(id=>{const p=P(id);try{return p&&isWatched(p);}catch(e){return false;}}).length;
+    return{id:r.id,name:r.name,total:r.total,games:r.games.size,teams:r.teams.size,covered:r.covered.size,players:r.players.size,shortlisted,sessions:r.sessions,last:r.last,pct:r.total?Math.round(r.covered.size/r.total*100):null};
+  }).sort((x,y)=>y.games-x.games||(y.pct||0)-(x.pct||0)||x.name.localeCompare(y.name));
 }
 
 /* ── competition + known-game choices for two clubs ───── */
@@ -461,8 +467,8 @@ window.addEventListener('euroscout-fixtures', () => { if (STATE.view === 'scoutl
 function renderLog() {
   const sessions = everything();
   const teamKeys = new Set(); sessions.forEach(s => { if (s.a.key) teamKeys.add(s.a.key); if (s.b.key) teamKeys.add(s.b.key); });
-  const compCount = new Set(sessions.map(s => s.competition && (s.competition.id || s.competition.name)).filter(Boolean)).size;
-  const teams = tab === 'teams' ? teamLogs() : [], comps = tab === 'comps' ? coverage() : [];
+  const coverageRows=coverage(),compCount=coverageRows.filter(c=>c.sessions).length;
+  const teams = tab === 'teams' ? teamLogs() : [], comps = tab === 'comps' ? coverageRows : [];
   const a = active();
   const head = '<div class="sx-loghead"><div><h1 class="title" style="margin:0">Scouting log</h1><div class="sub">Every game you scouted, and what it adds up to for each team and competition.</div></div>' +
     (a ? '<button class="btn primary" id="sxResume">● Session running · ' + esc(a.a.name) + ' vs ' + esc(a.b.name) + '</button>' : (canEdit() ? '<button class="btn primary" id="sxNew">Start scouting session</button>' : '')) + '</div>' +
@@ -489,7 +495,7 @@ function renderLog() {
     const list = comps.filter(c => showUnscouted || c.games);
     body = '<label class="sx-check"><input type="checkbox" id="sxUnscouted" ' + (showUnscouted ? 'checked' : '') + '> Show competitions with nothing watched yet (' + comps.filter(c => !c.games).length + ')</label>' +
       (list.length ? '<div class="sx-tablewrap"><table class="sx-table"><thead><tr><th>Competition</th><th>Coverage</th><th>Teams watched</th><th>Games watched</th><th>Players viewed</th><th>On watchlist</th><th>Last session</th></tr></thead><tbody>' +
-      list.map(c => '<tr><td><b>' + esc(c.name) + '</b></td><td>' + (c.pct == null ? '<span class="sx-hint">team list unknown</span>' : '<span class="sx-fam"><span class="sx-fam-track"><i style="width:' + c.pct + '%"></i></span><b>' + c.pct + '%</b></span>') + '</td><td>' + c.teams + (c.total ? ' / ' + c.total : '') + '</td><td>' + c.games + '</td><td>' + c.players + '</td><td>' + c.shortlisted + '</td><td>' + fmtDate(c.last) + '</td></tr>').join('') + '</tbody></table></div><p class="sx-hint">Coverage is the share of a competition’s 2026/27 teams you have watched at least once.</p>'
+      list.map(c => '<tr><td><b>' + esc(c.name) + '</b></td><td>' + (c.pct == null ? '<span class="sx-hint">team list unknown</span>' : '<span class="sx-fam"><span class="sx-fam-track"><i style="width:' + c.pct + '%"></i></span><b>' + c.pct + '%</b></span>') + '</td><td>' + (c.total ? c.covered + ' / ' + c.total : c.teams) + '</td><td>' + c.games + '</td><td>' + c.players + '</td><td>' + c.shortlisted + '</td><td>' + fmtDate(c.last) + '</td></tr>').join('') + '</tbody></table></div><p class="sx-hint">Coverage counts current 2026/27 teams watched. Games and players also include earlier recorded sessions.</p>'
       : '<div class="empty">Nothing watched yet.</div>');
   }
   $1('#app').innerHTML = '<div class="view sx-log">' + head + body + '</div>';
