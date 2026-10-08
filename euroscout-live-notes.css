@@ -41,6 +41,7 @@ body:has(.liveScouting) #esBackTop{display:none!important}
 /* three columns: narrow · wide · narrow */
 .liveScouting .mx-layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(190px,250px) minmax(0,1fr) minmax(190px,250px);grid-template-rows:minmax(0,1fr);gap:12px;align-items:stretch;overflow:hidden}
 .liveScouting .mx-col,.liveScouting .mx-notebook{min-width:0;min-height:0;height:100%;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.liveScouting .mx-notebook{container-type:inline-size}
 .liveScouting .mx-col{padding:10px;display:grid;grid-template-rows:auto auto auto minmax(0,1fr);max-height:100%;contain:layout}
 .liveScouting .mx-colhead{flex:none;display:flex;align-items:center;margin-bottom:8px;min-width:0}
 .liveScouting .mx-colhead .scoutTeamSel{flex:1;min-width:0;width:auto;padding:7px 24px 7px 4px;border:0;border-bottom:1px solid transparent;border-radius:6px;background-color:transparent;font:700 15px var(--disp);color:var(--txt);text-overflow:ellipsis}
@@ -156,4 +157,10 @@ body:has(.liveScouting) #esBackTop{display:none!important}
  .liveScouting .liveBody{padding:8px 8px 0}
  .liveScouting .mx-similar{display:none}
  .liveScouting input,.liveScouting .bl-txt{font-size:16px}
+}
+
+/* Keep room for the notes when the expanded sidebar narrows the notebook. */
+@container (max-width:620px){
+ .liveScouting .mx-player{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"photo id" "buttons buttons"}
+ .liveScouting .mx-rate{display:none}
 }

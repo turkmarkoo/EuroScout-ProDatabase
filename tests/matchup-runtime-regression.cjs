@@ -15,12 +15,12 @@ assert.match(css,/\.mx-col\{[^}]*max-height:100%[^}]*contain:layout/);
 assert.match(css,/\.rosterList\{[^}]*height:100%[^}]*overflow-y:scroll/);
 const source=html.slice(html.indexOf('let CORE_FULL_PROMISE='),html.indexOf('function loadCoreEnrichmentScripts()'));
 let appended=[];const events=[];
-const context={window:{dispatchEvent:e=>events.push(e.type)},document:{createElement:()=>({}),head:{appendChild:node=>{appended.push(node.src);queueMicrotask(()=>node.onload());}}},Event:class Event{constructor(type){this.type=type;}},Map,Promise,console};
+const context={STATE:{data:null},window:{dispatchEvent:e=>events.push(e.type)},document:{createElement:()=>({}),head:{appendChild:node=>{appended.push(node.src);queueMicrotask(()=>node.onload());}}},Event:class Event{constructor(type){this.type=type;}},Map,Promise,console};
 vm.createContext(context);vm.runInContext(source,context);
 (async()=>{
  const a=context.loadMatchupRosterScripts(),b=context.loadMatchupRosterScripts();assert.equal(a,b,'concurrent matchup requests must share one promise');await a;
  assert.equal(appended.length,new Set(appended.map(x=>x.split('?')[0])).size,'each roster module must load once');
  const before=appended.length;await context.loadCoreScript('eurocup-rosters-2026.js?v=another-cache-key');assert.equal(appended.length,before,'later full-database loading must reuse the roster request');
- assert.deepEqual(events,['euroscout:rosters-ready','euroscout:rosters-ready'],'each completed roster pack must repaint immediately');
+ assert.deepEqual(events,['euroscout:rosters-ready'],'completed current roster modules must update memberships before repainting');
  console.log('Matchup roster packs load early once, refresh the empty cache, and roster panels keep independent scrolling.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

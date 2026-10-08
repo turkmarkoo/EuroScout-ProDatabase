@@ -11,7 +11,7 @@
 'use strict';
 const SEASON=2026, CACHE='euroscout:fixtures:v1', TTL=6*3600*1000;
 const LIVE=[{id:'euroleague',code:'E',name:'EuroLeague'},{id:'eurocup',code:'U',name:'EuroCup'}];
-let games=[],loadedAt=0,pending=null,state='idle',problems=[];
+let games=[],loadedAt=0,pending=null,state='idle',problems=[],lastRows={};
 const fold=s=>String(s||'').replace(/[đĐ]/g,'dj').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 const WEAK=new Set(['bc','bk','kk','fc','cb','sk','as','basket','basketball','basket-ball','club','the','de','city']);
 const toks=s=>fold(s).split(' ').filter(w=>w.length>1&&!WEAK.has(w));
@@ -84,7 +84,7 @@ function mergeFixtures(primary,fallback){
  return out;
 }
 function restore(){try{const c=JSON.parse(localStorage.getItem(CACHE)||'null');if(c&&c.season===SEASON&&Array.isArray(c.rows))return c;}catch(e){}return null;}
-function assemble(rowsByComp){problems=[];games=LIVE.flatMap(s=>build(s.id,s.name,rowsByComp[s.id]||[])).concat(fromFile()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));}
+function assemble(rowsByComp){lastRows=rowsByComp;problems=[];games=LIVE.flatMap(s=>build(s.id,s.name,rowsByComp[s.id]||[])).concat(fromFile()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));}
 
 function refresh(force){
  if(window.EuroScoutDragons?.active()){
@@ -93,9 +93,9 @@ function refresh(force){
   loadedAt=Date.now();state='ready';window.dispatchEvent(new Event('euroscout-fixtures'));return Promise.resolve(games);
  }
 
- if(pending)return pending;
+ if(pending){assemble(lastRows);return pending;}
  const cached=restore();
- if(cached&&!games.length){assemble(cached.rows.reduce((m,[id,rows])=>(m[id]=rows,m),{}));loadedAt=cached.at;state='cached';}
+ if(cached){assemble(cached.rows.reduce((m,[id,rows])=>(m[id]=rows,m),{}));loadedAt=cached.at;state='cached';}else{assemble({});}
  if(!force&&cached&&Date.now()-cached.at<TTL)return Promise.resolve(games);
  state='loading';
  pending=Promise.allSettled(LIVE.map(fetchLive)).then(res=>{
@@ -113,11 +113,12 @@ const todayStr=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMo
 const api=window.ESFixtures={
  refresh,all:()=>games,state:()=>state,problems:()=>problems.slice(),loadedAt:()=>loadedAt,
  competitions:()=>{const m=new Map();games.forEach(g=>{const c=m.get(g.comp)||{id:g.comp,name:g.compName,games:0,played:0};c.games++;if(g.played)c.played++;m.set(g.comp,c);});return [...m.values()];},
- between(ka,kb){ka=canonKey(ka||'');kb=canonKey(kb||'');if(!ka||!kb)return [];return games.filter(g=>(g.home.key===ka&&g.away.key===kb)||(g.home.key===kb&&g.away.key===ka));},
- forTeam(k){k=canonKey(k||'');return k?games.filter(g=>g.home.key===k||g.away.key===k):[];},
+ between(ka,kb){ka=canonKey(ka||'');kb=canonKey(kb||'');if(!ka||!kb)return [];return games.filter(g=>(canonKey(g.home.key)===ka&&canonKey(g.away.key)===kb)||(canonKey(g.home.key)===kb&&canonKey(g.away.key)===ka));},
+ forTeam(k){k=canonKey(k||'');return k?games.filter(g=>canonKey(g.home.key)===k||canonKey(g.away.key)===k):[];},
  recent(days,comp){const to=todayStr(),from=new Date(Date.now()-days*86400000).toISOString().slice(0,10);return games.filter(g=>g.date>=from&&g.date<=to&&(!comp||g.comp===comp)).reverse();},
  upcoming(days,comp){const from=todayStr(),to=new Date(Date.now()+days*86400000).toISOString().slice(0,10);return games.filter(g=>g.date>=from&&g.date<=to&&(!comp||g.comp===comp));}
 };
+window.addEventListener?.('euroscout:rosters-ready',()=>refresh(false));
 window.addEventListener?.('euroscout-dragons',()=>{const load=()=>refresh(true);if(pending)pending.finally(load);else load();});
 /* Wait for the database before matching teams, then load quietly in the background. */
 (function wait(n){if(typeof STATE!=='undefined'&&STATE.data&&typeof allClubs==='function'){try{allClubs();refresh(false);}catch(e){console.warn('Fixtures unavailable',e);}}else if(n<240)setTimeout(()=>wait(n+1),500);})(0);

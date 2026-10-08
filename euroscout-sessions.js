@@ -54,6 +54,8 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.g
 /* ── the store ─────────────────────────────────────────── */
 function all() { const d = readJSON(KEY, null); return d && Array.isArray(d.sessions) ? d.sessions.filter(s => !s.removed) : []; }
 function writeAll(list) {
+  const previous=localStorage.getItem(KEY);
+  if(previous){const parsed=readJSON(KEY,null);if(Array.isArray(parsed?.sessions)&&parsed.sessions.length)localStorage.setItem(KEY+':last-good',previous);}
   localStorage.setItem(KEY, JSON.stringify({ v: 1, sessions: list }));
   fresh();
   return Promise.resolve(Store.pushAppKey(KEY)).catch(() => false);
@@ -171,9 +173,11 @@ const cache = { stamp: '', legacy: [], reports: null };
 const HAS_NOTES = /"(?:nAth|nOff|nDef|nIntel|nProj|overall)":"[^"]/;
 function records() { return readJSON(RECORDS, {}) || {}; }
 function legacy() {
-  const raw = localStorage.getItem(RECORDS) || '', stamp = raw.length + ':' + hash(raw.slice(0, 2000) + raw.slice(-2000));
+  const sessionRaw=localStorage.getItem(KEY)||'',saved=readJSON(KEY,{sessions:[]}).sessions||[],savedIds=new Set(saved.map(s=>s.id)),activeId=active()?.id;
+  const raw = localStorage.getItem(RECORDS) || '', stamp = raw.length + ':' + hash(raw.slice(0, 2000) + raw.slice(-2000)) + ':' + hash(sessionRaw);
   if (cache.stamp === stamp) return cache.legacy;
-  const groups = new Map(), byName = new Map(allClubs().map(c => [c.name, c]));
+  const groups = new Map(), byName = new Map(), nameKey=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  allClubs().forEach(c=>{for(const name of [c.name,...(c.teams||[]).flatMap(t=>[t.name,...(t.searchAliases||[])])]){const key=nameKey(name);if(!key)continue;if(!byName.has(key))byName.set(key,c);else if(byName.get(key)?.key!==c.key)byName.set(key,null);}});
   let recs = {}; try { recs = JSON.parse(raw) || {}; } catch (e) { recs = {}; }
   const reports = new Set();
   Object.entries(recs).forEach(([id, rec]) => {
@@ -184,18 +188,22 @@ function legacy() {
     if (text.indexOf('"viewings"') < 0) return;
     const r = parseReport(rec.report);
     ((r._workflow || {}).viewings || []).forEach(v => {
-      if (v.removed || v.sessionId || v.source !== 'matchup' || !v.event) return;
-      const k = v.event + '|' + (v.gameDate || v.date);
+      // Missing session containers must not hide surviving player viewings.
+      // A saved removal marker or an unfinished active session is authoritative.
+      if(v.removed||!v.event||v.sessionId&&(savedIds.has(v.sessionId)||v.sessionId===activeId))return;
+      if(!v.sessionId&&v.source!=='matchup'&&v.event.split(/\s+vs\.?\s+/i).filter(Boolean).length!==2)return;
+      const k = v.sessionId ? 'session:'+v.sessionId : v.event + '|' + (v.gameDate || v.date);
       if (!groups.has(k)) {
-        const names = v.event.split(' vs '), A = byName.get(names[0]), B = byName.get(names[1]);
-        groups.set(k, { id: 'legacy:' + hash(k), legacy: true, event: v.event, startedAt: v.updatedAt || v.date, endedAt: '', watchedOn: [v.date].filter(Boolean),
+        const names = v.event.split(/\s+vs\.?\s+/i), A = byName.get(nameKey(names[0])), B = byName.get(nameKey(names[1]));
+        groups.set(k, { id: 'legacy:' + hash(k), legacy: true, recoveredSessionId:v.sessionId||'', event: v.event, startedAt: v.updatedAt || v.date, endedAt: '', watchedOn: [v.date].filter(Boolean),
           a: { key: A ? A.key : '', name: names[0] || '' }, b: { key: B ? B.key : '', name: names[1] || '' },
-          competition: { id: '', name: '' }, stage: '', gameDate: v.gameDate || v.date, mode: v.mode || 'Video', by: v.author || '', players: [], outcome: 'notes' });
+          competition: { id: v.competitionId || '', name: typeof v.competition==='string'?v.competition:(v.competition?.name||'') }, stage: v.stage||'', gameDate: v.gameDate || v.date, mode: v.mode || 'Video', by: v.author || '', players: [], outcome: 'notes' });
       }
-      const s = groups.get(k), p = player(id);  /* legacy() runs inside snap(), so it cannot use P() */
+      const s = groups.get(k), p = player(id);
+      if(v.date&&!s.watchedOn.includes(v.date))s.watchedOn.push(v.date);  /* legacy() runs inside snap(), so it cannot use P() */
       let ck = '';
       if (p) { try { const keys = effective26keys(p, next26Get(), next26bGet()).map(canonKey); ck = keys.find(x => x === s.a.key || x === s.b.key) || ''; } catch (e) { ck = ''; } }
-      if (!s.players.some(x => x.id === id)) s.players.push({ id, pid: p ? p.id : id, name: p ? p.name : id, club: ck, status: 'notes', sec: 0 });
+      if (!s.players.some(x => x.id === id)) s.players.push({ id, pid: p ? p.id : id, name: p ? p.name : id, club: ck, status: v.status||'notes', sec: 0 });
     });
   });
   cache.stamp = stamp; cache.legacy = [...groups.values()]; cache.reports = reports;
@@ -224,7 +232,7 @@ function hasReport(p) { return snap().reports.has(gid(p)) || (!recOf(p).report &
 function teamLog(key) {
   key = canonKey(key);
   const memo = snap().logs; if (memo.has(key)) return memo.get(key);
-  const c = club(key), sessions = everything().filter(s => s.a.key === key || s.b.key === key);
+  const c = club(key), sessions = everything().filter(s => canonKey(s.a.key) === canonKey(key) || canonKey(s.b.key) === canonKey(key));
   const games = new Map();
   sessions.forEach(s => { const k = s.gameDate + '|' + [s.a.key || s.a.name, s.b.key || s.b.name].sort().join('|'); if (!games.has(k)) games.set(k, s); });
   const dates = [...games.values()].map(s => s.gameDate).filter(Boolean).sort();
@@ -302,7 +310,7 @@ function knownGames(ka, kb) {
   (STATE.data.leagues || []).forEach(L => {
     const id = L.meta && L.meta.id, ta = (A.teams || []).find(t => t.lg === id), tb = (B.teams || []).find(t => t.lg === id);
     if (!ta || !tb || !(L.games || []).length) return;
-    L.games.forEach(g => { if ((g.h === ta.code && g.a === tb.code) || (g.h === tb.code && g.a === ta.code)) {
+    L.games.forEach(g => { if (String(g.date||'')>='2026-07-01'&&String(g.date||'')<'2027-07-01'&&((g.h === ta.code && g.a === tb.code) || (g.h === tb.code && g.a === ta.code))) {
       const homeIsA = g.h === ta.code;
       out.push({ date: g.date, comp: { id, name: L.meta.name }, round: g.rnd || '', scoreA: homeIsA ? g.hs : g.as, scoreB: homeIsA ? g.as : g.hs, home: homeIsA ? 'a' : 'b' });
     } });
@@ -310,7 +318,7 @@ function knownGames(ka, kb) {
   /* 2026/27 schedule: upcoming games first, nearest on top, then what has been played. */
   const FX = window.ESFixtures;
   if (FX) FX.between(ka, kb).forEach(g => {
-    const homeIsA = g.home.key === canonKey(ka);
+    const homeIsA = canonKey(g.home.key) === canonKey(ka);
     out.push({ date: g.date, time: g.time, comp: { id: g.comp, name: g.compName }, round: g.round, group: g.group, venue: g.venue, fixture: true, played: g.played,
       scoreA: g.played ? (homeIsA ? g.hs : g.as) : '', scoreB: g.played ? (homeIsA ? g.as : g.hs) : '', home: homeIsA ? 'a' : 'b' });
   });
@@ -354,7 +362,7 @@ function openStart(preset, done) {
   paint();
   /* Feeds can arrive before deferred FIBA aliases. Re-resolve this pair when
      the dialog opens so a legal company name cannot hide a known game. */
-  window.ESFixtures?.refresh(true).then(()=>{if(document.getElementById('sxStart')===f)paint();}).catch(()=>{});
+  Promise.resolve(window.loadMatchupRosterScripts?.()).then(()=>{if(document.getElementById('sxStart')===f)paint();return window.ESFixtures?.refresh(false);}).then(()=>{if(document.getElementById('sxStart')===f)paint();}).catch(()=>{});
   $1('#sxCancel', box).onclick = closeModal;
   f.onsubmit = e => {
     e.preventDefault();
@@ -504,7 +512,7 @@ function renderLog() {
    viewings it came from are tied to it. */
 function viewingsOf(s, r) {
   const vs = ((r._workflow || {}).viewings || []);
-  return s.legacy ? vs.filter(v => !v.removed && !v.sessionId && v.source === 'matchup' && v.event === s.event && (v.gameDate || v.date) === s.gameDate)
+  return s.legacy ? vs.filter(v => !v.removed && (s.recoveredSessionId ? v.sessionId===s.recoveredSessionId : !v.sessionId && v.source === 'matchup' && v.event === s.event && (v.gameDate || v.date) === s.gameDate))
     : vs.filter(v => !v.removed && v.sessionId === s.id);
 }
 /* Rewrites the viewings behind a session on every player it covers. */
@@ -521,7 +529,7 @@ function stored() { return readJSON(KEY, { sessions: [] }).sessions || []; }
 async function adopt(s) {
   if (!s.legacy) return s;
   const real = Object.assign({}, s, { id: crypto.randomUUID(), by: s.by || me(), scoreA: '', scoreB: '', venue: '', note: '' });
-  delete real.legacy; delete real.event;
+  delete real.legacy; delete real.event; delete real.recoveredSessionId;
   const writes = retag(s, () => ({ sessionId: real.id }));
   const list = stored(); list.push(real);
   await Promise.all(writes.concat([writeAll(list)]));
@@ -670,6 +678,7 @@ renderTeam = function () {
   } catch (e) { console.warn('Team log button unavailable', e); }
 };
 
+window.addEventListener?.('euroscout:rosters-ready',fresh);
 window.ESSessions = { STATUS, DWELL_MS, active, start, update, select, setStock, stockOf, markOf, review, finish, discard, remove, adopt, saveEdit, merge, openEdit, openMerge, all, everything,
   me, teamLog, teamLogs, coverage, compsFor, knownGames, timeline, openStart, openFinish, openTeamLog, openPlayerLog, openSession, fmtDate, fmtTime, clock, modal, closeModal, hash };
 })();

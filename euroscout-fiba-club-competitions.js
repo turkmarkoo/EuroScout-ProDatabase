@@ -96,7 +96,11 @@ function apply(raw){
  if(!raw?.leagues)return;
  enrichPlayerNationalities(raw);
  for(const competition of Object.values(data.competitions)){
-  if(raw.season2627?.comps){const current=window.EUROSCOUT_MEMBERSHIPS?.leagues?.[competition.id];if(current)raw.season2627.comps[competition.id]=JSON.parse(JSON.stringify(current));}
+  raw.season2627=raw.season2627||{};raw.season2627.comps=raw.season2627.comps||{};
+  // This pack can load before membership-data.js. Its verified entries must
+  // replace stale private-core membership without depending on script order.
+  raw.season2627.comps[competition.id]={id:competition.id,name:competition.name,season:data.season,checked:data.checked,confirmed:true,complete:true,international:true,source:competition.source,
+   teams:competition.teams.map(team=>({key:team.currentKey,name:team.name,stage:'RS'}))};
   const leagueId=competition.id+'26',teams=competition.teams.map(team=>({code:team.officialCode,name:team.name,source:team.source,logo:team.logo||null,country:team.country||'',canonicalKey:team.canonicalKey}));
   let league=raw.leagues.find(item=>item.meta.id===leagueId);
   if(!league){league={meta:{id:leagueId,name:competition.name+' 2026/27',season:data.season,source:competition.source,checked:data.checked,current:true},teams,players:[]};raw.leagues.push(league);}
