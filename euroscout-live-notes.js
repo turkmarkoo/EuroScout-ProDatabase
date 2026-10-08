@@ -16,11 +16,25 @@ const fold=t=>String(t||'').replace(/[đĐ]/g,'dj').normalize('NFD').replace(/[\
 const author=()=>SX?SX.me():(window.ESAccess?.user?.email||'');
 function todayStr(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
 function numberKey(p){return '2026/27|'+p._liveClub;}
-function shirt(p){const v=recOf(p).jerseyNumbers?.[numberKey(p)];if(v!=null)return String(v);const r=window.EuroScoutExpansion?.record(p);return r&&canonKey('directory|'+r.club)===p._liveClub&&r.jersey!=null?String(r.jersey):'';}
+function officialRosterRow(p){return window.EuroScoutEuroCup?.current?.(p)||window.EuroScoutOfficialRosters?.current?.(p)||null;}
+function shirt(p){const v=recOf(p).jerseyNumbers?.[numberKey(p)];if(v!=null)return String(v);const official=officialRosterRow(p);if(official?.number!=null)return String(official.number);const r=window.EuroScoutExpansion?.record(p);return r&&canonKey('directory|'+r.club)===p._liveClub&&r.jersey!=null?String(r.jersey):'';}
 function jerseyOrder(a,b){const rank=p=>{const n=shirt(p);return n==='00'?-2:n==='0'?-1:/^\d{1,2}$/.test(n)?Number(n):1000};return rank(a)-rank(b)||a.name.localeCompare(b.name);}
 function resetRosters(){clubIndex=null;rosters.clear();}
+function officialDirectories(){return [window.EUROSCOUT_EUROCUP_ROSTERS,window.EUROSCOUT_OFFICIAL_ROSTERS].filter(Boolean);}
+function addClubPlayer(index,seen,key,p){key=canonKey(key);if(!key||!p)return;const id=gid(p)||p.id;if(!id)return;if(!seen.has(key))seen.set(key,new Set());if(seen.get(key).has(id))return;seen.get(key).add(id);if(!index.has(key))index.set(key,[]);index.get(key).push(p);}
+function buildClubIndex(){
+ const index=new Map(),seen=new Map(),m=next26Get(),mb=next26bGet(),pool=assignPool(),directories=officialDirectories();
+ for(const p of pool)for(const key of effective26keys(p,m,mb))addClubPlayer(index,seen,key,p);
+ const byId=new Map(),sources=[...pool,...(typeof allPlayersEvery==='function'?allPlayersEvery():[]),...directories.flatMap(d=>d.players||[])];
+ for(const p of sources)for(const id of [p.id,gid(p),...(p._grp||[]).map(x=>x.id)])if(id&&!byId.has(id))byId.set(id,p);
+ for(const directory of directories){
+  const teams=new Map();for(const team of directory.teams||[]){const key=canonKey(team.currentKey||team.key);for(const id of [team.id,team.code])if(id)teams.set(id,key);}
+  for(const row of directory.roster||[]){const key=teams.get(row.teamId||row.teamCode);if(!key)continue;const ids=row.ids||[row.id];const p=ids.map(id=>(typeof player==='function'?player(id):null)||byId.get(id)).find(Boolean);if(!p)continue;const active=effective26(p,m);if(active&&!isStatus(active)&&canonKey(active)!==key)continue;addClubPlayer(index,seen,key,p);}
+ }
+ return index;
+}
 function liveRoster(key){if(!key)return null;key=canonKey(key);if(rosters.has(key))return rosters.get(key);const club=allClubs().find(c=>c.key===key)||window.ESTeamSelection?.teamForKey?.(key);if(!club)return null;
- if(!clubIndex){clubIndex=new Map();const m=next26Get(),mb=next26bGet();for(const p of assignPool())for(const k of effective26keys(p,m,mb)){if(!clubIndex.has(k))clubIndex.set(k,[]);clubIndex.get(k).push(p);}}
+ if(!clubIndex)clubIndex=buildClubIndex();
  const r={t:{name:club.name},club,players:(clubIndex.get(key)||[]).map(p=>({...p,_liveClub:key})).sort(jerseyOrder)};rosters.set(key,r);return r;}
 function rosterPlayers(){return ['a','b'].flatMap(k=>liveRoster(STATE.scouting[k])?.players||[])}
 /* G · W · B — the three groups the roster filter offers. */

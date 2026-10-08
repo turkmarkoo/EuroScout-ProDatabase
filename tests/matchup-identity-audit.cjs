@@ -15,6 +15,26 @@ for(const set of sets){
 const live=fs.readFileSync('euroscout-live-notes.js','utf8');
 assert.match(live,/function rosterName\(p,players\)/);
 assert.match(live,/esc\(rosterName\(p,r\.players\)\)/);
+assert.match(live,/function buildClubIndex\(\)/,'Matchup must build a stable roster index');
+assert.match(live,/window\.EUROSCOUT_EUROCUP_ROSTERS/,'Matchup must include official EuroCup registrations');
+assert.match(live,/window\.EUROSCOUT_OFFICIAL_ROSTERS/,'Matchup must include other official competition registrations');
+assert.match(live,/officialRosterRow\(p\)/,'Matchup must use official registration numbers');
+const eurocup=sets[0],leMans=eurocup.roster.filter(row=>row.teamCode==='LEM'),tortona=eurocup.roster.filter(row=>row.teamCode==='TRT');
+assert.ok(leMans.length>=12,'Le Mans must have a usable 2026/27 EuroCup roster');
+assert.ok(tortona.length>=12,'Tortona must have a usable 2026/27 EuroCup roster');
+assert.equal(new Set(leMans.flatMap(row=>row.ids)).size,leMans.flatMap(row=>row.ids).length,'Le Mans stable IDs must be unique');
+assert.equal(new Set(tortona.flatMap(row=>row.ids)).size,tortona.flatMap(row=>row.ids).length,'Tortona stable IDs must be unique');
+const helperSource=live.slice(live.indexOf('function officialDirectories()'),live.indexOf('function liveRoster(key)'));
+const rosterContext={
+ window:{EUROSCOUT_EUROCUP_ROSTERS:eurocup},
+ canonKey:key=>key,gid:p=>p._gid||p.id,next26Get:()=>({}),next26bGet:()=>({}),
+ assignPool:()=>[],allPlayersEvery:()=>eurocup.players,player:()=>null,
+ effective26keys:()=>[],effective26:()=>null,isStatus:()=>false,Map,Set
+};
+vm.createContext(rosterContext);
+vm.runInContext(helperSource+';this.clubIndex=buildClubIndex();',rosterContext);
+assert.equal(rosterContext.clubIndex.get('lnb|LEM').length,leMans.length,'Le Mans official registrations must populate its matchup roster');
+assert.equal(rosterContext.clubIndex.get('lba|BDBT').length,tortona.length,'Tortona official registrations must populate its matchup roster');
 const lietkabelis=sets[0].roster.filter(row=>row.teamCode==='LKB');
 const ilic=lietkabelis.filter(row=>['Milos Ilic','Veljko Ilic'].includes(row.name));
 assert.equal(ilic.length,2);
