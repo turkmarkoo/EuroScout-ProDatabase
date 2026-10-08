@@ -59,6 +59,7 @@
   const app = document.getElementById('app');
   const view = { type:'player', query:'', confidence:'all', status:'pending', reviewed:'all', pair:null, manualCandidate:null, manualA:null, manualB:null, quality:null, options:null, survivor:null, candidates:[], detectionReady:{} };
   let detectionCache = {}, detectionSignature = '', entityCache = {}, importQueue = [];
+  let cachedCatalogue=null,cachedInventory='',cachedOverride=null,automaticTimer=null;
   let automaticRunning=false, automaticAttempted='',automaticMerged=0,automaticFailure='';
   const AUTO_OPTIONS={reports:true,notes:true,statistics:true,timeline:true,watchlist:true,review:true,external:true,images:true};
 
@@ -78,7 +79,7 @@
     const external=[...new Set(group.flatMap(p=>[p._ext,p._rgm,p._proballers,p._otherLink]).filter(Boolean))].join('\n');
     const fiba=group.map(p=>p.fibaId||p._fiba).find(Boolean)||'';
     return {
-      id,name:profile.name||fallback?.name||'',born:profile.born||'',country:profile.country||'',
+      id,name:profile.name||fallback?.name||'',born:profile.born||'',birthDate:profile.birthDate||group.find(p=>p.birthDate)?.birthDate||'',country:profile.country||'',
       height:profile.height||'',position:profile.role||profile.pos||'',team:currentClub,league:currentLeague,
       photo:(typeof photoOf==='function'?photoOf(profile):profile.photo)||'',external,fiba,player:profile,
       report:Store.get(id)||{report:'{}',rating:0,watch:false,eye:{}},sources:{
@@ -142,23 +143,25 @@
   const birthYear=value=>String(value||'').match(/(?:19|20)\d{2}/)?.[0]||'';
   const countryKey=value=>fold(window.EuroScoutCountries?.canonical(value)||value);
   function positionKey(value){const p=fold(value);if(/\b(guard|pg|sg|point|shooting)\b/.test(p)||p==='g')return 'guard';if(/\b(center|centre|big)\b/.test(p)||p==='c')return 'big';if(/\b(forward|wing|sf|pf)\b/.test(p)||p==='f')return 'forward';return '';}
-  function realgmId(entity){const p=entity.player||{};return String(p.realgmId||p.realGMId||p.profile_url?.match(/\/Summary\/(\d+)/i)?.[1]||'');}
+  function realgmId(entity){const p=entity.player||{};const ids=[...new Set((p._grp||[p]).map(row=>String(row.realgmId||row.realGMId||[row.profile_url,row._rgm,entity.external].filter(Boolean).join('\n').match(/\/(?:Summary|GameLogs|NBA)\/(\d+)/i)?.[1]||'')).filter(Boolean))];return ids.length===1?ids[0]:ids.length?'conflict:'+ids.sort().join(','):'';}
   function sameClubContext(a,b){const words=value=>new Set(fold(value).split(' ').filter(word=>word.length>3&&!['basketball','club','team'].includes(word)));const left=words(a.team),right=words(b.team);if(!left.size||!right.size)return false;const shared=[...left].filter(word=>right.has(word)).length;return shared>=2||shared>=1&&Math.min(left.size,right.size)===1;}
   function automaticPlayerMatch(a,b){
     if(!a||!b||a.id===b.id)return false;
-    const nameA=playerFold(a.name),nameB=playerFold(b.name);if(!nameA||!nameB)return false;
+    const nameA=playerFold(a.name).replace(/\s+(?:jr|sr|ii|iii|iv)$/,''),nameB=playerFold(b.name).replace(/\s+(?:jr|sr|ii|iii|iv)$/,'');if(!nameA||!nameB)return false;
     const tokA=nameA.split(' ').filter(Boolean),tokB=nameB.split(' ').filter(Boolean),lastA=tokA.at(-1),lastB=tokB.at(-1),firstA=tokA[0]||'',firstB=tokB[0]||'';
     const sameTokenSet=tokA.length===tokB.length&&tokA.length>1&&[...tokA].sort().join(' ')===[...tokB].sort().join(' ');
     const initialCompat=!!lastA&&lastA===lastB&&!!firstA&&!!firstB&&(firstA===firstB||(firstA.length===1&&firstB.startsWith(firstA))||(firstB.length===1&&firstA.startsWith(firstB))||firstA.startsWith(firstB)||firstB.startsWith(firstA));
     const strongName=nameA===nameB||sameTokenSet;
-    if(!strongName&&!initialCompat)return false;
+    const middleA=tokA.slice(1,-1),middleB=tokB.slice(1,-1),tokenMatch=(a,b)=>a===b||a.length===1&&b.startsWith(a)||b.length===1&&a.startsWith(b),subset=(small,large)=>{let at=0;for(const token of large)if(at<small.length&&tokenMatch(small[at],token))at++;return at===small.length;};
+    if(!strongName&&(!initialCompat||middleA.length&&middleB.length&&!subset(middleA,middleB)&&!subset(middleB,middleA)))return false;
     const bornA=birthYear(a.born),bornB=birthYear(b.born);if(bornA&&bornB&&bornA!==bornB)return false;
+    const dateA=a.birthDate||a.player?.birthDate,dateB=b.birthDate||b.player?.birthDate;if(/^\d{4}-\d{2}-\d{2}$/.test(dateA||'')&&/^\d{4}-\d{2}-\d{2}$/.test(dateB||'')&&dateA!==dateB)return false;
     const heightA=Number(a.height),heightB=Number(b.height),heightKnown=!!(heightA&&heightB);
     if(heightKnown&&Math.abs(heightA-heightB)>5)return false;
     const countryA=countryKey(a.country),countryB=countryKey(b.country),countryKnown=!!(countryA&&countryB);
     if(countryKnown&&countryA!==countryB)return false;
     const positionA=positionKey(a.position),positionB=positionKey(b.position);
-    const realgmA=realgmId(a),realgmB=realgmId(b);if(realgmA&&realgmB&&realgmA!==realgmB)return false;
+    const realgmA=realgmId(a),realgmB=realgmId(b);if(realgmA.startsWith('conflict:')||realgmB.startsWith('conflict:')||realgmA&&realgmB&&realgmA!==realgmB)return false;
     const euroA=externalId(a.external,'eurobasket'),euroB=externalId(b.external,'eurobasket');if(euroA&&euroB&&euroA!==euroB)return false;
     const fibaA=externalId(a.fiba,'fiba'),fibaB=externalId(b.fiba,'fiba');if(fibaA&&fibaB&&fibaA!==fibaB)return false;
     const sharedProfile=!!(realgmA&&realgmA===realgmB||euroA&&euroA===euroB||fibaA&&fibaA===fibaB);
@@ -199,7 +202,7 @@
     // Resolve full connected duplicate groups in one pass. The former one-pair-
     // per-player cap needed many page reloads and left obvious name variants queued.
     const parent=new Map(),items=new Map(),find=id=>{let root=id;while(parent.has(root)&&parent.get(root)!==root)root=parent.get(root);let node=id;while(parent.has(node)&&parent.get(node)!==root){const next=parent.get(node);parent.set(node,root);node=next;}return root;};
-    const join=(a,b)=>{if(!parent.has(a))parent.set(a,a);if(!parent.has(b))parent.set(b,b);const ra=find(a),rb=find(b);if(ra!==rb)parent.set(rb,ra);};
+    const join=(a,b)=>{if(!parent.has(a))parent.set(a,a);if(!parent.has(b))parent.set(b,b);const ra=find(a),rb=find(b);if(ra!==rb){const left=[...items.values()].filter(item=>find(item.id)===ra),right=[...items.values()].filter(item=>find(item.id)===rb);if(left.every(a=>right.every(b=>automaticPlayerMatch(a,b))))parent.set(rb,ra);}};
     eligible.forEach(candidate=>{items.set(candidate.a.id,candidate.a);items.set(candidate.b.id,candidate.b);join(candidate.a.id,candidate.b.id);});
     const groups=new Map();items.forEach((item,id)=>{const root=find(id);if(!groups.has(root))groups.set(root,[]);groups.get(root).push(item);});
     for(const group of groups.values()){
@@ -234,7 +237,8 @@
   }
   function detect(force=false, requestedType='all') {
     const signature=state().merges.map(m=>m.id+':'+(m.undoneAt||'')).join('|');
-    if(force||signature!==detectionSignature){entityCache={};detectionCache={};detectionSignature=signature;}
+    const catalogue=typeof STATE!=='undefined'?STATE.data:null,inventory=(catalogue?.leagues||[]).map(L=>L.meta?.id+':'+(L.players||[]).length).join('|'),override=typeof OVR!=='undefined'?OVR:null;
+    if(force||signature!==detectionSignature||catalogue!==cachedCatalogue||inventory!==cachedInventory||override!==cachedOverride){entityCache={};detectionCache={};detectionSignature=signature;cachedCatalogue=catalogue;cachedInventory=inventory;cachedOverride=override;}
     const types=requestedType==='all'?['player','club','agent']:[requestedType];
     for (const type of types) {
       if(!force&&detectionCache[type])continue;
@@ -242,6 +246,7 @@
       if (type === 'player') {
         indexPairs(items,x => externalId(x.external,'eurobasket'),playerConfidence,'Same Eurobasket profile',out);
         indexPairs(items,x => externalId(x.fiba,'fiba'),playerConfidence,'Same FIBA profile',out);
+        indexPairs(items,x => realgmId(x), (a,b)=>automaticPlayerMatch(a,b)?99:playerConfidence(a,b),'Same RealGM person profile',out);
         indexPairs(items,x => playerFold(x.name),playerConfidence,'Name, birth year and bio comparison',out);
         indexPairs(items,x => x.born ? playerFold(x.name).split(' ').at(-1)+'|'+x.born : '',playerConfidence,'Same surname and birth year',out);
       } else if (type === 'club') {
@@ -345,12 +350,20 @@
     next.batches.forEach(b=>{if(Date.now()-Date.parse(b.at)>WINDOW){delete b.before;delete b.after;delete b.recordsBefore;delete b.recordsAfter;}});
     return next;
   }
-  function saveState(next) {
+  function saveState(next, persist=true) {
     compactUndo(next);
     try{localStorage.setItem(KEY,JSON.stringify(next));}
     catch(error){if(error?.name==='QuotaExceededError'||/quota/i.test(error?.message||''))throw Error('The Merge Center storage is full. Refresh once to compact older undo data, then retry the merge.');throw error;}
     try { Sync.stampKey(KEY); } catch {}
-    return Store.pushAppKey(KEY);
+    return persist?Store.pushAppKey(KEY):true;
+  }
+  async function persistBatch(next,records){
+    saveState(next,false);
+    const items=Object.entries(records).map(([id,rec])=>({id,rec}));
+    try{Sync.stampKey('euroscout:overrides');items.forEach(item=>Sync.stampRecord(item.id));}catch{}
+    const recordsSaved=Store.bulkSet?Store.bulkSet(items):Promise.all(items.map(item=>Store.save(item.id,item.rec)));
+    const saved=await Promise.all([recordsSaved,Store.pushAppKey('euroscout:overrides'),Store.pushAppKey(KEY)]);
+    if(saved.some(value=>value===false||Array.isArray(value)&&value.some(result=>result===false)))throw Error('Identity links or player notes could not be saved.');
   }
   function replaceId(value, sources, survivor) {
     if (typeof value === 'string') return sources.has(value) ? survivor : value;
@@ -372,7 +385,9 @@
     for (const [key,value] of Object.entries(b)) {
       const category = key==='_workflow' ? 'timeline' : key.startsWith('n') || key==='overall' ? 'notes' : 'reports';
       if (!options[category] || value == null || value === '') continue;
-      if (key==='_workflow'&&window.ESRecordMerge) a[key]=ESRecordMerge.mergeWorkflows(a[key],value);
+      if(key==='_notesUpdated'){a[key]=[a[key],value].filter(Boolean).sort().at(-1);}
+      else if(key==='_history'){const revisions=new Map([...(Array.isArray(a[key])?a[key]:[]),...(Array.isArray(value)?value:[])].map(x=>[x.id||JSON.stringify(x),x]));a[key]=[...revisions.values()].sort((x,y)=>String(x.savedAt||'').localeCompare(String(y.savedAt||'')));}
+      else if (key==='_workflow'&&window.ESRecordMerge) a[key]=ESRecordMerge.mergeWorkflows(a[key],value);
       else if ((key.startsWith('n')||key==='overall')&&window.ESRecordMerge) a[key]=ESRecordMerge.mergeNoteText(a[key],value);
       else if (/^n(?:Ath|Off|Def|Intel|Proj)$/.test(key)) a[key]=mergeNotes(a[key],value);
       else if (a[key] == null || a[key] === '') a[key]=value;
@@ -421,13 +436,12 @@
       localStorage.setItem('euroscout:overrides',JSON.stringify(override));
       next.batches.push({id:batchId,at,admin:Store.user?.email||window.ESAccess?.user?.email||'Administrator',
         count:batchMerges.length,pairs:batchMerges.map(item=>pairKey('player',item.survivor,item.source)),lightweight:true,recordsBefore,recordsAfter});
-      const saved=await Promise.all([Store.pushAppKey('euroscout:overrides'),saveState(next),...Object.entries(recordsAfter).map(([id,record])=>Store.save(id,record))]);
-      if(saved.some(result=>result===false))throw Error('Identity links or player notes could not be saved.');
+      await persistBatch(next,recordsAfter);
       OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};
       return batchMerges.length;
     }catch(error){
       beforeOverrides==null?localStorage.removeItem('euroscout:overrides'):localStorage.setItem('euroscout:overrides',beforeOverrides);
-      await Promise.allSettled([Store.pushAppKey('euroscout:overrides'),saveState(oldState),...Object.entries(recordsBefore).map(([id,record])=>Store.save(id,record))]);
+      await persistBatch(oldState,recordsBefore).catch(()=>{});
       OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};
       throw error;
     }
@@ -443,9 +457,9 @@
       for(const [playerId,post] of Object.entries(batch.recordsAfter||{}))if(JSON.stringify(Store.get(playerId))!==JSON.stringify(post))throw Error('A player was edited since this batch. Review those edits before undoing.');
       const undoneAt=new Date().toISOString();batch.undoneAt=undoneAt;mergePairs.forEach(item=>item.undoneAt=undoneAt);
       batch.pairs.forEach(pair=>{if(old.reviewed[pair]==='merged')delete old.reviewed[pair];old.autoSkipped[pair]=true;});
-      localStorage.setItem('euroscout:overrides',JSON.stringify(override));
-      const saved=await Promise.all([Store.pushAppKey('euroscout:overrides'),saveState(old),...Object.entries(batch.recordsBefore||{}).map(([playerId,record])=>Store.save(playerId,record))]);
-      if(saved.some(result=>result===false))throw Error('Undo could not be saved.');
+      const beforeOverrides=localStorage.getItem('euroscout:overrides');
+      try{localStorage.setItem('euroscout:overrides',JSON.stringify(override));await persistBatch(old,batch.recordsBefore||{});}
+      catch(error){beforeOverrides==null?localStorage.removeItem('euroscout:overrides'):localStorage.setItem('euroscout:overrides',beforeOverrides);await persistBatch(original,batch.recordsAfter||{}).catch(()=>{});OVR=ovrMerged();rebuildLinks();applyOverrides();throw error;}
       OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};if(STATE.view==='mergecenter')renderMergeCenter();toast('Automatic merge batch undone.');return;
     }
     if(!batch.before)throw Error('Undo is no longer available.');
@@ -609,6 +623,18 @@
     document.querySelectorAll('[data-mc-option]').forEach(el=>el.onchange=()=>view.options[el.dataset.mcOption]=el.checked);
     document.getElementById('mcMerge').onclick=async e=>{e.currentTarget.disabled=true;try{await merge(candidate,view.survivor,view.options);}catch(error){toast(error.message);e.currentTarget.disabled=false;}};
   }
+  function invalidateCatalogue(){detectionCache={};entityCache={};view.detectionReady={};automaticAttempted='';}
+  function scheduleAutomatic(){if(automaticTimer!==null)clearTimeout(automaticTimer);automaticTimer=setTimeout(()=>{automaticTimer=null;if(window.ESSessions?.active?.()){scheduleAutomaticDeferred();return;}runAutomatic().catch(error=>console.warn('Automatic identity consolidation delayed',error));},250);}
+  function scheduleAutomaticDeferred(){if(automaticTimer!==null)return;automaticTimer=setTimeout(()=>{automaticTimer=null;scheduleAutomatic();},30000);}
+  async function runAutomatic(){
+    if(!Store.canEdit()||automaticRunning||automaticFailure||window.ESSessions?.active?.())return 0;
+    automaticRunning=true;let count=0;
+    try{await window.wfFlushReport?.();for(let pass=0;pass<6;pass++){if(window.ESSessions?.active?.()){scheduleAutomaticDeferred();break;}const plan=automaticPlan(detect(true,'player').player);if(!plan.length)break;automaticAttempted=plan.map(item=>item.candidate.id).join('|');const merged=await autoMergeBatch(plan);count+=merged;if(!merged)break;await new Promise(resolve=>setTimeout(resolve,0));}automaticMerged+=count;return count;}
+    catch(error){automaticFailure=error.message;automaticAttempted='';toast('Automatic merges stopped: '+error.message+' Review Merge Center before retrying.');throw error;}
+    finally{automaticRunning=false;if(count||automaticFailure){if(STATE.view==='mergecenter')setTimeout(renderMergeCenter,0);else if(count){render();if(typeof DRAWER_OPEN!=='undefined'&&DRAWER_OPEN)renderProfile();toast(count+' clear player duplicates merged. Undo is available in Merge Center.');automaticMerged=0;}}}
+  }
+  window.addEventListener?.('euroscout:catalogue-ready',()=>{invalidateCatalogue();scheduleAutomatic();});
+  window.addEventListener?.('euroscout:rosters-ready',()=>{invalidateCatalogue();if(window.EuroScoutCatalogueReady)scheduleAutomatic();});
   function renderMergeCenter() {
     if (!Store.canEdit()) { app.innerHTML='<div class="mc-page"><h1>Administrator access required</h1></div>'; return; }
     // Do not pull the 6,000+ player NBA/NCAA packs merely by opening this page.
@@ -622,12 +648,9 @@
     }
     const all=detect(false,view.type);
     const plan=automaticPlan(all.player),signature=plan.map(item=>item.candidate.id).join('|');
-    if(plan.length&&!automaticFailure&&!automaticRunning&&automaticAttempted!==signature){
-      automaticRunning=true;automaticAttempted=signature;
+    if(plan.length&&!automaticFailure&&!automaticRunning&&automaticAttempted!==signature&&!window.ESSessions?.active?.()){
       app.innerHTML='<div class="mc-page"><h1>Merge Center</h1><p>Consolidating '+plan.length+' clear player duplicates…</p></div>';
-      autoMergeBatch(plan).then(count=>{automaticMerged+=count;automaticFailure='';}).catch(error=>{automaticFailure=error.message;automaticAttempted='';}).finally(()=>{
-        automaticRunning=false;if(STATE.view==='mergecenter')setTimeout(renderMergeCenter,50);
-      });return;
+      runAutomatic().catch(error=>console.warn('Automatic identity consolidation delayed',error));return;
     }
     if(automaticRunning)return;
     if(automaticMerged){toast(automaticMerged+' clear player duplicates merged. Undo is available for 30 days.');automaticMerged=0;}
@@ -685,7 +708,7 @@
     EuroScoutAgencyResearch.agentsOf=p=>[...new Set(original(p).map(canonicalAgent))];
   }
   function openPair(id) { view.type='player'; view.pair=id; view.manualCandidate=null; goView('mergecenter'); }
-  window.EuroScoutMergeCenter={canonicalPlayer,canonicalPlayerEntity,canonicalClub,canonicalAgent,activeClubMerges,hasManualGroup,detect,merge,undo,resolveImport,previewImport,playerConfidence,automaticPlayerMatch,automaticPlan,autoMergeBatch,openPair,
+  window.EuroScoutMergeCenter={canonicalPlayer,canonicalPlayerEntity,canonicalClub,canonicalAgent,activeClubMerges,hasManualGroup,detect,merge,undo,resolveImport,previewImport,playerConfidence,automaticPlayerMatch,automaticPlan,autoMergeBatch,runAutomatic,invalidateCatalogue,automaticStatus:()=>({running:automaticRunning,pending:automaticTimer!==null,failure:automaticFailure}),openPair,
     _test:{storageChanges,restoreStorageChanges,compactUndo,mergeReport}};
   window.renderMergeCenter=renderMergeCenter;
 })();

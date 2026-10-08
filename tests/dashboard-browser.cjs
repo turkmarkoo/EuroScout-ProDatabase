@@ -25,7 +25,7 @@ render();STATE.view='scoutlog';render();document.querySelector('.sx-tab[data-tab
 return{displayed,renderedCoverage,coverageTab,sessionDates:[...esNoteSessionDates()],ids:recordIds(recent),date:esNoteDate(recent),coverage:coverage.filter(c=>['eurocup','fec','bcl','slo'].includes(c.id)),recordsUnchanged:recordsBefore===localStorage.getItem('euroscout:records'),sessionsUnchanged:sessionsBefore===localStorage.getItem('euroscout:sessions:v1'),recentClub:esCurrentRosterProfile(recent).name};
 });
 console.log('Dashboard and coverage:',JSON.stringify(result));
-assert.ok(result.displayed[0].includes('Josh Pierre-Louis'));assert.ok(result.date.startsWith('2026-10-07'));assert.ok(!result.recentClub.includes('unconfirmed'));
+assert.ok(/Josh(?:ua Andreas)? Pierre-Louis/.test(result.displayed[0])&&!result.displayed[0].includes('unconfirmed'));assert.ok(result.date.startsWith('2026-10-07'));assert.ok(!result.recentClub.includes('unconfirmed'));
 const euro=result.coverage.filter(c=>c.name==='EuroCup');assert.equal(euro.length,1);assert.equal(euro[0].games,2);assert.equal(euro[0].teams,4);assert.equal(euro[0].total,loaded.membership.find(c=>c.id==='eurocup').total);assert.ok(euro[0].pct>0);assert.ok(euro[0].last.startsWith('2026-10-07'));
 assert.equal(result.renderedCoverage.filter(text=>text.startsWith('EuroCup')).length,1);assert.ok(result.renderedCoverage.every(text=>!text.includes('team list unknown')));assert.ok(result.coverageTab.endsWith('3'));
 assert.equal(result.coverage.find(c=>c.id==='fec').total,50);assert.equal(result.coverage.find(c=>c.id==='bcl').total,32);assert.ok(result.coverage.find(c=>c.id==='slo').total>0);assert.ok(result.recordsUnchanged&&result.sessionsUnchanged);assert.deepEqual(errors,[]);

@@ -3,7 +3,7 @@ const html=fs.readFileSync('index.html','utf8'),ui=fs.readFileSync('euroscout-ui
 test('metadata-only private core loads a public catalogue in parallel, preserves metadata, and does not wait for live fixtures',async()=>{
 let enrichDone,fetchCount=0,rendered=0;const enrichment=new Promise(resolve=>enrichDone=resolve),seed={core:{season2627:{comps:{}},rumors:{manual:'preserved'}},seeds:{}};
 const state={data:{leagues:[{meta:{id:'first'},players:[]}]},league:{meta:{id:'first'}}},access={internal:true,seedReady:Promise.resolve(seed)};
-const c={window:{ESAccess:access,ESFixtures:{refresh:()=>new Promise(()=>{})}},ESAccess:access,STATE:state,Promise,console,CORE_UPGRADE_STARTED:false,CORE_FULL_PROMISE:null,CURRENT:null,
+const c={Event,window:{dispatchEvent(){},ESAccess:access,ESFixtures:{refresh:()=>new Promise(()=>{})}},ESAccess:access,STATE:state,Promise,console,CORE_UPGRADE_STARTED:false,CORE_FULL_PROMISE:null,CURRENT:null,
 setCoreLoadStage(){},clearCoreLoadStage(){},loadCoreEnrichmentScripts:()=>enrichment,fetchCoreFile:async()=>{fetchCount++;enrichDone();return{leagues:[{meta:{id:'first'},players:[]},{meta:{id:'rest'},players:[]}]};},prepareCoreData:async raw=>raw,applyEuroScoutSeed(){},ovrMerged:()=>({}),applyOverrides(){},rebuildLinks(){},mergeGroupRecords(){},wireLeagueSelector(){},render:()=>rendered++,renderProfile(){}};
 vm.createContext(c);vm.runInContext(html.slice(html.indexOf('async function loadRemainingCore()'),html.indexOf('async function loadCurrentStatsThenFullCore(')),c);
 await c.loadRemainingCore();assert.equal(fetchCount,1);assert.equal(state.data.leagues.length,2);assert.equal(state.data.rumors.manual,'preserved');assert.equal(rendered,1);
