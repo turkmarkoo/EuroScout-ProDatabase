@@ -400,9 +400,11 @@ function openFinish(done) {
 
 /* ── Player history ────────────────────────────────────── */
 function timeline(p) {
-  const r = parseReport(recOf(p).report), w = r._workflow || {};
-  const ids = [gid(p), p.id].concat((p._grp || []).map(x => x.id)).filter(Boolean);
-  return ESScoutingHistory.build(w.viewings || [], all(), ids).map(g => ({
+  const ids = typeof recordIds === 'function' ? recordIds(p) : [gid(p), p.id].concat((p._grp || []).map(x => x.id)).filter(Boolean);
+  const workflows = (typeof reportRecords === 'function' ? reportRecords(p) : [recOf(p)])
+    .map(rec => parseReport(rec.report)._workflow).filter(Boolean);
+  const w = window.ESRecordMerge ? ESRecordMerge.mergeWorkflows(...workflows) : (workflows[0] || {});
+  return ESScoutingHistory.build(w.viewings || [], everything(), ids).map(g => ({
     ...g, kind: 'viewing', meta: [g.competition, g.mode,
       g.watched.length && (g.watched.length > 1 || g.watched[0] !== g.date)
         ? 'watched ' + g.watched.map(fmtDate).join(', ') : '',

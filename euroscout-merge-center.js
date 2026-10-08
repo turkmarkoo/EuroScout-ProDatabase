@@ -372,7 +372,9 @@
     for (const [key,value] of Object.entries(b)) {
       const category = key==='_workflow' ? 'timeline' : key.startsWith('n') || key==='overall' ? 'notes' : 'reports';
       if (!options[category] || value == null || value === '') continue;
-      if (/^n(?:Ath|Off|Def|Intel|Proj)$/.test(key)) a[key]=mergeNotes(a[key],value);
+      if (key==='_workflow'&&window.ESRecordMerge) a[key]=ESRecordMerge.mergeWorkflows(a[key],value);
+      else if ((key.startsWith('n')||key==='overall')&&window.ESRecordMerge) a[key]=ESRecordMerge.mergeNoteText(a[key],value);
+      else if (/^n(?:Ath|Off|Def|Intel|Proj)$/.test(key)) a[key]=mergeNotes(a[key],value);
       else if (a[key] == null || a[key] === '') a[key]=value;
       else if (typeof value === 'string' && typeof a[key] === 'string' && !a[key].includes(value)) a[key] += '\n—\n'+value;
       else if (Array.isArray(a[key]) && Array.isArray(value)) a[key]=[...new Set([...a[key],...value])];
