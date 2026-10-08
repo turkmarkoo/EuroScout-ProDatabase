@@ -16,4 +16,8 @@
    1|1|2026-10-02|COL||PAR||19:00|Arena Stožice
    2|1|2026-10-03|IGO|88|BOS|79
    `} */
-window.EUROSCOUT_FIXTURES_2627={generated:'2026-09-18',season:'2026/27',comps:{}};
+window.EUROSCOUT_FIXTURES_2627={generated:'2026-10-08',season:'2026/27',comps:{
+fec:{name:'FIBA Europe Cup',teams:{LANL:'LANDAU Lions',LION:'Lions de Geneve'},games:`
+fec-rs1-lanl-lion|1|2026-10-07|LANL|83|LION|105
+`}
+}};

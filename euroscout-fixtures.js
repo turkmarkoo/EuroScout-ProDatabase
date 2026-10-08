@@ -69,14 +69,27 @@ function fromDragons(rows){
   });
  });
 }
+function mergeFixtures(primary,fallback){
+ const seen=new Set(),out=[];
+ const identity=g=>{
+  const side=s=>s?.key||fold(s?.name||s?.code);
+  const sides=[side(g.home),side(g.away)].filter(Boolean).sort().join('~');
+  return g.comp+'|'+g.date+'|'+sides;
+ };
+ for(const g of [...primary,...fallback]){
+  const id=identity(g);
+  if(!g.date||!g.comp||seen.has(id))continue;
+  seen.add(id);out.push(g);
+ }
+ return out;
+}
 function restore(){try{const c=JSON.parse(localStorage.getItem(CACHE)||'null');if(c&&c.season===SEASON&&Array.isArray(c.rows))return c;}catch(e){}return null;}
 function assemble(rowsByComp){problems=[];games=LIVE.flatMap(s=>build(s.id,s.name,rowsByComp[s.id]||[])).concat(fromFile()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));}
 
 function refresh(force){
  if(window.EuroScoutDragons?.active()){
   const rows=EuroScoutDragons.fixtures();
-  const covered=new Set(rows.map(g=>g.comp||g.league_id));
-  problems=[];games=fromDragons(rows).concat(fromFile().filter(g=>!covered.has(g.comp))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
+  problems=[];games=mergeFixtures(fromDragons(rows),fromFile()).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
   loadedAt=Date.now();state='ready';window.dispatchEvent(new Event('euroscout-fixtures'));return Promise.resolve(games);
  }
 
