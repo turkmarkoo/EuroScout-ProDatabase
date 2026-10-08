@@ -33,10 +33,13 @@ function ensureMatchupDirectories(){
 }
 function officialDirectories(){return [window.EUROSCOUT_EUROCUP_ROSTERS,window.EUROSCOUT_OFFICIAL_ROSTERS].filter(Boolean);}
 window.addEventListener?.("euroscout:rosters-ready",()=>{resetRosters();if(STATE.view==="scouting")fullRedraw();});
-function rosterBaseName(p){return fold(p?.name||'').replace(/\b(jr|sr|ii|iii|iv)\b/g,' ').replace(/\s+/g,' ').trim();}
+function rosterNameTokens(p){return fold(p?.name||'').replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(Boolean).filter(token=>!['jr','sr','ii','iii','iv'].includes(token));}
+function rosterBaseName(p){return rosterNameTokens(p).join(' ');}
 function rosterBirth(p){return String(p?.born||p?.birthYear||String(p?.birthdate||'').match(/(?:19|20)\d{2}/)?.[0]||'');}
 function rosterNumber(p){const n=p?.jersey??p?.number??officialRosterRow(p)?.number;return n==null?'':String(n).trim();}
-function sameRosterPerson(a,b){const an=fold(a?.name||''),bn=fold(b?.name||'');if(!an||!bn)return false;const ab=rosterBirth(a),bb=rosterBirth(b);if(an===bn)return !(ab&&bb&&ab!==bb);if(rosterBaseName(a)!==rosterBaseName(b))return false;const aj=rosterNumber(a),bj=rosterNumber(b);return !!((ab&&bb&&ab===bb)||(aj&&bj&&aj===bj));}
+function rosterIdentityIds(p){const row=officialRosterRow(p),ids=[p?.id,gid(p),...(p?._grp||[]).map(x=>x.id),...(row?.ids||[])];return new Set(ids.filter(Boolean));}
+function compatibleRosterName(a,b){const at=rosterNameTokens(a),bt=rosterNameTokens(b);if(at.length<2||bt.length<2)return false;if(at.join(' ')===bt.join(' '))return true;if(at[0]!==bt[0]||at.at(-1)!==bt.at(-1))return false;const subset=(short,long)=>{let i=0;for(const token of long)if(token===short[i])i++;return i===short.length;};return subset(at,bt)||subset(bt,at);}
+function sameRosterPerson(a,b){const ai=rosterIdentityIds(a),bi=rosterIdentityIds(b);if([...ai].some(id=>bi.has(id)))return true;if(!compatibleRosterName(a,b))return false;const ab=rosterBirth(a),bb=rosterBirth(b);if(ab&&bb)return ab===bb;const exact=rosterBaseName(a)===rosterBaseName(b);if(exact&&!ab&&!bb)return true;const aj=rosterNumber(a),bj=rosterNumber(b);return !!(aj&&bj&&aj===bj);}
 function addClubPlayer(index,seen,key,p){key=canonKey(key);if(!key||!p)return;const id=gid(p)||p.id;if(!id)return;if(!seen.has(key))seen.set(key,{ids:new Set(),players:[]});const bucket=seen.get(key);if(bucket.ids.has(id))return;if(bucket.players.some(x=>sameRosterPerson(x,p))){bucket.ids.add(id);return;}bucket.ids.add(id);bucket.players.push(p);if(!index.has(key))index.set(key,[]);index.get(key).push(p);}
 function buildClubIndex(){
  const index=new Map(),seen=new Map(),m=next26Get(),mb=next26bGet(),pool=assignPool(),directories=officialDirectories();
