@@ -36,6 +36,7 @@ vm.createContext(rosterContext);
 vm.runInContext(helperSource+";this.clubIndex=buildClubIndex();this.sameRosterPerson=sameRosterPerson;",rosterContext);
 assert.equal(rosterContext.sameRosterPerson({name:'D. Maddox',jersey:'21'},{name:'D. Maddox Jr',jersey:'21'}),true,'suffix aliases with the same jersey are one roster person');
 assert.equal(rosterContext.sameRosterPerson({name:'James Frazier',jersey:'0'},{name:'James Frazier Jr.',jersey:'0'}),true,'punctuated suffix aliases are one roster person');
+assert.equal(rosterContext.sameRosterPerson({id:'fiba-fec-239392',name:'J.J. Frazier',born:1995,jersey:'0'},{id:'bclq-239392',name:'James Frazier Jr',born:1995,jersey:'0'}),true,'the same FIBA person ID merges across Europe Cup and qualifier prefixes');
 assert.equal(rosterContext.sameRosterPerson({name:'Edward Polite',jersey:'24'},{name:'Edward Polite Jr.',jersey:'24'}),true,'Polite suffix aliases are one roster person');
 assert.equal(rosterContext.sameRosterPerson({name:'Noah Kirkwood',born:1999},{name:'Noah Arthur Kirkwood',born:1999}),true,'middle names do not create a second roster person');
 assert.equal(rosterContext.sameRosterPerson({name:'Anthony Cowan Jr',born:1997},{name:'Anthony Dewayne Cowan',born:1997}),true,'middle names and suffixes can resolve together');
@@ -57,7 +58,8 @@ assert.deepEqual(Array.from(ilic,row=>row.name).sort(),['Milos Ilic','Veljko Ili
 assert.equal(new Set(ilic.map(row=>row.ids[0])).size,2);
 
 const raw=JSON.parse(fs.readFileSync('data/data.json','utf8')),actualPlayers=raw.leagues.flatMap(league=>league.players||[]);
-const official=sets[1],actualById=new Map(actualPlayers.map(player=>[player.id,player])),rosterById=new Map();
+const fibaContext={window:{}};vm.createContext(fibaContext);for(const file of ['official-rosters-2026.js','data/fiba-club-competitions-2026.js','euroscout-fiba-club-competitions.js'])vm.runInContext(fs.readFileSync(file,'utf8'),fibaContext);
+const official=fibaContext.window.EUROSCOUT_OFFICIAL_ROSTERS,actualById=new Map(actualPlayers.map(player=>[player.id,player])),rosterById=new Map();
 for(const directory of [eurocup,official])for(const row of directory.roster||[])for(const id of row.ids||[row.id])if(!rosterById.has(id))rosterById.set(id,row);
 const actualClubs=[
  {key:'aba|COL',name:'Cedevita Olimpija',teams:[{key:'aba|COL',name:'Cedevita Olimpija',searchAliases:['Cedevita Olimpija']},{key:'eurocup|LJU',name:'Cedevita Olimpija Ljubljana',searchAliases:['Cedevita Olimp','Cedevita Olimpija','KK Cedevita Olimpija']}]},
@@ -72,9 +74,11 @@ const actualContext={
 };
 vm.createContext(actualContext);vm.runInContext(helperSource+';this.clubIndex=buildClubIndex();',actualContext);
 const cedevita=actualContext.clubIndex.get('aba|COL'),landau=actualContext.clubIndex.get('fec|AL');
+assert.ok(official.roster.some(row=>row.name==='J.J. Frazier'),'the current FIBA Europe Cup J.J. Frazier row must be present in the reconstructed directory');
+assert.ok(official.roster.some(row=>row.name==='James Frazier Jr'),'the qualifier James Frazier Jr row must be present in the reconstructed directory');
 assert.equal(cedevita.length,15,'Cedevita cross-competition roster must collapse middle-name aliases');
 for(const surname of ['Kirkwood','Cowan','Houindo','Johnson','Hurt'])assert.equal(cedevita.filter(p=>p.name.includes(surname)).length,1,`Cedevita must show one ${surname} identity`);
-assert.equal(landau.length,12,'LANDAU roster must collapse suffix aliases');
+assert.equal(landau.length,13,'LANDAU current roster must contain 13 unique players after cross-feed identity consolidation');
 assert.equal(landau.filter(p=>/Frazier/.test(p.name)).length,1,'LANDAU must show one James Frazier identity');
 assert.equal(landau.filter(p=>/Polite/.test(p.name)).length,1,'LANDAU must show one Edward Polite identity');
 const cowan=sets[0].roster.find(row=>row.ids?.includes('eurocup-012003'));
