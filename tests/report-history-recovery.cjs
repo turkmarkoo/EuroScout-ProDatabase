@@ -24,7 +24,7 @@ assert.match(html,/function recordAliasLinks\(\)/,'history recovery must follow 
 assert.match(mergeCenter,/ESRecordMerge\.mergeWorkflows\(a\[key\],value\)/,'manual identity merges must retain both timelines');assert.match(sessions,/reportRecords\(p\)/,'history must read records from every linked ID');
 assert.match(sessions,/everything\(\), ids/,'history must include recovered legacy sessions');
 assert.match(css,/\.mx-col\{[^}]*grid-template-rows:auto auto auto minmax\(0,1fr\)/,'roster columns must reserve a constrained scroll row');
-assert.match(css,/\.mx-col \.rosterList\{[^}]*height:auto;[^}]*overflow-y:auto;[^}]*scrollbar-gutter:stable/,'roster columns must own a real scroll viewport');
+assert.match(css,/\.mx-col \.rosterList\{[^}]*height:100%;[^}]*overflow-y:scroll;[^}]*scrollbar-gutter:stable/,'roster columns must own a real scroll viewport');
 assert.match(live,/function storedShirt\(p\)/,'jersey numbers must survive player and club aliases');
 assert.match(live,/addEventListener\('wheel'/,'roster wheel input must scroll its own viewport');
 assert.match(html,/Object\.entries\(r\.jerseyNumbers\|\|\{\}\)/,'background identity consolidation must retain jersey numbers');

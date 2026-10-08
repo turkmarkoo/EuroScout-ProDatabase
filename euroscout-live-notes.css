@@ -41,7 +41,7 @@ body:has(.liveScouting) #esBackTop{display:none!important}
 /* three columns: narrow · wide · narrow */
 .liveScouting .mx-layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(190px,250px) minmax(0,1fr) minmax(190px,250px);grid-template-rows:minmax(0,1fr);gap:12px;align-items:stretch;overflow:hidden}
 .liveScouting .mx-col,.liveScouting .mx-notebook{min-width:0;min-height:0;height:100%;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-radius:12px}
-.liveScouting .mx-col{padding:10px;display:grid;grid-template-rows:auto auto auto minmax(0,1fr)}
+.liveScouting .mx-col{padding:10px;display:grid;grid-template-rows:auto auto auto minmax(0,1fr);max-height:100%;contain:layout}
 .liveScouting .mx-colhead{flex:none;display:flex;align-items:center;margin-bottom:8px;min-width:0}
 .liveScouting .mx-colhead .scoutTeamSel{flex:1;min-width:0;width:auto;padding:7px 24px 7px 4px;border:0;border-bottom:1px solid transparent;border-radius:6px;background-color:transparent;font:700 15px var(--disp);color:var(--txt);text-overflow:ellipsis}
 .liveScouting .mx-colhead .scoutTeamSel:hover,.liveScouting .mx-colhead .scoutTeamSel:focus{background-color:var(--panel2);border-bottom-color:var(--line)}
@@ -49,7 +49,7 @@ body:has(.liveScouting) #esBackTop{display:none!important}
 .liveScouting .mx-posfilter{flex:none;display:flex;gap:5px;margin-bottom:8px}
 .liveScouting .mx-pos{flex:1;padding:5px 0;font:600 12px var(--body);color:var(--txt);background:var(--panel);border:1px solid var(--line);border-radius:7px;cursor:pointer}
 .liveScouting .mx-pos.on{background:var(--mx-green);border-color:var(--mx-green);color:#fff}
-.liveScouting .mx-col .rosterList{height:auto;min-height:0;max-height:100%;overflow-x:hidden;overflow-y:auto;scrollbar-gutter:stable;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:3px;padding-right:2px}
+.liveScouting .mx-col .rosterList{height:100%;min-height:0;max-height:none;overflow-x:hidden;overflow-y:scroll;scrollbar-gutter:stable;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:3px;padding-right:2px}
 .liveScouting .mx-row{flex:none;display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;min-height:32px;text-align:left;color:var(--txt);background:var(--panel2);border:1px solid var(--line-soft,var(--line));border-radius:7px;cursor:pointer;box-shadow:none}
 .liveScouting .mx-row:hover{border-color:var(--mx-green);box-shadow:none}
 .liveScouting .mx-row .rrNum{flex:0 0 24px;display:inline-flex!important;justify-content:center;font:700 13px var(--disp);color:var(--accent-deep);font-variant-numeric:tabular-nums}

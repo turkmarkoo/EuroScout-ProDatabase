@@ -23,7 +23,15 @@ function officialRosterRow(p){return window.EuroScoutEuroCup?.current?.(p)||wind
 function shirt(p){const v=storedShirt(p);if(v!=null)return v;const official=officialRosterRow(p);if(official?.number!=null)return String(official.number);const r=window.EuroScoutExpansion?.record(p);return r&&canonKey('directory|'+r.club)===p._liveClub&&r.jersey!=null?String(r.jersey):'';}
 function jerseyOrder(a,b){const rank=p=>{const n=shirt(p);return n==='00'?-2:n==='0'?-1:/^\d{1,2}$/.test(n)?Number(n):1000};return rank(a)-rank(b)||a.name.localeCompare(b.name);}
 function resetRosters(){clubIndex=null;rosters.clear();}
+let rosterDirectoriesPending=false,rosterDirectoriesFailed=false;
+function matchupDirectoriesReady(){return !!(window.EUROSCOUT_EUROCUP_ROSTERS&&window.EUROSCOUT_OFFICIAL_ROSTERS);}
+function ensureMatchupDirectories(){
+ if(matchupDirectoriesReady()||rosterDirectoriesPending||typeof window.loadMatchupRosterScripts!=="function")return;
+ rosterDirectoriesPending=true;rosterDirectoriesFailed=false;
+ window.loadMatchupRosterScripts().then(()=>{rosterDirectoriesPending=false;resetRosters();if(STATE.view==="scouting")fullRedraw();}).catch(()=>{rosterDirectoriesPending=false;rosterDirectoriesFailed=true;if(STATE.view==="scouting")fullRedraw();});
+}
 function officialDirectories(){return [window.EUROSCOUT_EUROCUP_ROSTERS,window.EUROSCOUT_OFFICIAL_ROSTERS].filter(Boolean);}
+window.addEventListener?.("euroscout:rosters-ready",()=>{resetRosters();if(STATE.view==="scouting")fullRedraw();});
 function rosterBaseName(p){return fold(p?.name||'').replace(/\b(jr|sr|ii|iii|iv)\b/g,' ').replace(/\s+/g,' ').trim();}
 function rosterBirth(p){return String(p?.born||p?.birthYear||String(p?.birthdate||'').match(/(?:19|20)\d{2}/)?.[0]||'');}
 function rosterNumber(p){const n=p?.jersey??p?.number??officialRosterRow(p)?.number;return n==null?'':String(n).trim();}
@@ -66,7 +74,7 @@ function columnHTML(key,slot){const r=liveRoster(key),f=filters[slot];
  return '<div class="rosterCol mx-col" data-slot="'+slot+'"><div class="mx-colhead">'+(r?clubBadge(r.club,26):'')+teamButton(key,slot)+'</div>'+
  (r?'<input class="mx-rsearch" type="search" data-slot="'+slot+'" value="'+escAttr(f.q)+'" placeholder="Search players…" aria-label="Search '+escAttr(r.t.name)+' players"><div class="mx-posfilter" role="group" aria-label="Position filter">'+[['','All'],['G','G'],['W','W'],['B','B']].map(([v,l])=>'<button type="button" class="mx-pos'+(f.pos===v?' on':'')+'" data-pos="'+v+'" data-slot="'+slot+'" aria-pressed="'+(f.pos===v)+'">'+l+'</button>').join('')+'</div><div class="rosterList" tabindex="0" aria-label="'+escAttr(r.t.name)+' roster">'+
   r.players.map(p=>'<button type="button" class="rosterRow mx-row" data-id="'+escAttr(p.id)+'" title="'+escAttr(p.name)+'"'+(visible(p,slot)?'':' hidden')+'><span class="rrNum">'+esc(shirt(p)||'–')+'</span><span class="rrName">'+esc(rosterName(p,r.players))+'</span><span class="mx-mark" data-mark="'+(SX?SX.markOf(p):'')+'"></span><span class="mx-rpos">'+posShort(p)+'</span></button>').join('')+
-  (r.players.length?'':'<div class="empty">No confirmed 2026/27 assignments yet.</div>')+'</div>':'<div class="empty">Pick a team to see its roster.</div>')+'</div>';}
+  (r.players.length?'':'<div class="empty">'+(rosterDirectoriesPending?'Loading confirmed 2026/27 roster…':rosterDirectoriesFailed?'Roster data could not load. Retry the page once.':'No confirmed 2026/27 assignments yet.')+'</div>')+'</div>':'<div class="empty">Pick a team to see its roster.</div>')+'</div>';}
 
 function contextHTML(){const s=STATE.scouting,a=SX?.active(),ra=liveRoster(s.a),rb=liveRoster(s.b);
  const sub=a?[a.competition?.name,a.stage].filter(Boolean).join(' | ')||'Session running':'2026/27 rosters';
@@ -89,6 +97,7 @@ function headerHTML(p){const lv=levelBand(p),g=statGradeOverall(p),photo=photoOf
 
 renderScouting=function(partial=false){
  if(!partial)resetRosters();
+ ensureMatchupDirectories();
  const s=STATE.scouting,act=SX?.active();
  /* A running session owns the two teams, so a reload lands back in the game. */
  if(act&&!partial){s.a=act.a.key||s.a;s.b=act.b.key||s.b;}
@@ -123,7 +132,7 @@ function backgroundLeagues(){if(extraAsked||STATE._extraDone||typeof loadExtraLe
 
 function fullRedraw(){document.querySelector('.liveScouting')?.remove();renderScouting(true);}
 function wireFrame(){const s=STATE.scouting;
- document.querySelectorAll('.mx-col .rosterList').forEach(list=>list.addEventListener('wheel',e=>{const max=list.scrollHeight-list.clientHeight;if(max<=0)return;const unit=e.deltaMode===1?32:e.deltaMode===2?list.clientHeight:1,next=Math.max(0,Math.min(max,list.scrollTop+e.deltaY*unit));if(next!==list.scrollTop){list.scrollTop=next;e.preventDefault();e.stopPropagation();}},{passive:false}));
+ document.querySelectorAll('.mx-col').forEach(col=>col.addEventListener('wheel',e=>{const list=col.querySelector('.rosterList'),max=list?list.scrollHeight-list.clientHeight:0;if(max<=0)return;const unit=e.deltaMode===1?32:e.deltaMode===2?list.clientHeight:1,next=Math.max(0,Math.min(max,list.scrollTop+e.deltaY*unit));if(next!==list.scrollTop){list.scrollTop=next;e.preventDefault();e.stopPropagation();}},{passive:false}));
  document.querySelectorAll('.scoutTeamButton').forEach(el=>el.onclick=()=>{const slot=el.dataset.slot;if(!window.ESTeamSelection)return;window.ESTeamSelection.open({slot,currentKey:s[slot],onConfirm:({team})=>{const key=canonKey(team.key);s[slot]=key;filters[slot]={q:'',pos:''};resetRosters();const a=SX?.active();if(a)SX.update({[slot]:{key,name:team.name}});fullRedraw();}});});
  document.querySelectorAll('.mx-rsearch').forEach(el=>el.oninput=()=>{filters[el.dataset.slot].q=el.value;applyFilter(el.dataset.slot);});
  document.querySelectorAll('.mx-pos').forEach(el=>el.onclick=()=>{filters[el.dataset.slot].pos=el.dataset.pos;document.querySelectorAll('.mx-pos[data-slot="'+el.dataset.slot+'"]').forEach(b=>{const on=b===el;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});applyFilter(el.dataset.slot);});

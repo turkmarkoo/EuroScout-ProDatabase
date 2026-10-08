@@ -1,0 +1,21 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync('index.html','utf8'),live=fs.readFileSync('euroscout-live-notes.js','utf8'),css=fs.readFileSync('euroscout-live-notes.css','utf8');
+assert.match(html,/function loadMatchupRosterScripts\(\)/);
+assert.match(html,/CORE_SCRIPT_PROMISES\.has\(key\)/,'parallel background loaders must reuse one script request');
+assert.match(html,/^\s*if\(\/(?:[^\n]+)matchup[^\n]+loadMatchupRosterScripts/m,'a deep-linked matchup must request roster packs during boot');
+assert.match(live,/ensureMatchupDirectories\(\);/,'the matchup must request its roster directories before resolving team rows');
+assert.match(live,/Loading confirmed 2026\/27 roster/,'an empty pre-load roster must be shown as loading, not as an unconfirmed club');
+assert.match(live,/document\.querySelectorAll\('\.mx-col'\).*addEventListener\('wheel'/,'the whole roster column must route the wheel to its roster list');
+assert.match(css,/\.mx-col\{[^}]*max-height:100%[^}]*contain:layout/);
+assert.match(css,/\.rosterList\{[^}]*height:100%[^}]*overflow-y:scroll/);
+const source=html.slice(html.indexOf('let CORE_FULL_PROMISE='),html.indexOf('function loadCoreEnrichmentScripts()'));
+let appended=[];const events=[];
+const context={window:{dispatchEvent:e=>events.push(e.type)},document:{createElement:()=>({}),head:{appendChild:node=>{appended.push(node.src);queueMicrotask(()=>node.onload());}}},Event:class Event{constructor(type){this.type=type;}},Map,Promise,console};
+vm.createContext(context);vm.runInContext(source,context);
+(async()=>{
+ const a=context.loadMatchupRosterScripts(),b=context.loadMatchupRosterScripts();assert.equal(a,b,'concurrent matchup requests must share one promise');await a;
+ assert.equal(appended.length,new Set(appended.map(x=>x.split('?')[0])).size,'each roster module must load once');
+ const before=appended.length;await context.loadCoreScript('eurocup-rosters-2026.js?v=another-cache-key');assert.equal(appended.length,before,'later full-database loading must reuse the roster request');
+ assert.deepEqual(events,['euroscout:rosters-ready','euroscout:rosters-ready'],'each completed roster pack must repaint immediately');
+ console.log('Matchup roster packs load early once, refresh the empty cache, and roster panels keep independent scrolling.');
+})().catch(error=>{console.error(error);process.exitCode=1;});
