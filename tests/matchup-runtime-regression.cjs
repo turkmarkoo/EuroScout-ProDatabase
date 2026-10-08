@@ -1,6 +1,8 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const html=fs.readFileSync('index.html','utf8'),live=fs.readFileSync('euroscout-live-notes.js','utf8'),css=fs.readFileSync('euroscout-live-notes.css','utf8');
 assert.match(html,/function loadMatchupRosterScripts\(\)/);
+assert.match(html,/BUNDLED_ROSTER_SEEDS=new Set\(\['EUROSCOUT_EUROCUP_ROSTERS','EUROSCOUT_OFFICIAL_ROSTERS'/,'private cloud snapshots must not replace deployed roster directories');
+assert.doesNotMatch(html,/function loadMatchupRosterScripts\(\)\{\s*if\(window\.EUROSCOUT_EUROCUP_ROSTERS/,'stale authenticated roster globals must never bypass the current roster loader');
 assert.match(html,/CORE_SCRIPT_PROMISES\.has\(key\)/,'parallel background loaders must reuse one script request');
 assert.match(html,/^\s*if\(\/(?:[^\n]+)matchup[^\n]+loadMatchupRosterScripts/m,'a deep-linked matchup must request roster packs during boot');
 assert.match(live,/ensureMatchupDirectories\(\);/,'the matchup must request its roster directories before resolving team rows');
