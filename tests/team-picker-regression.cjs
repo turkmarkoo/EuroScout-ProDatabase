@@ -10,8 +10,8 @@ const picker = fs.readFileSync(path.join(root, 'team-selection-workspace-2026100
 
 assert.match(html, /team-selection-workspace\.css\?v=20260930-1/);
 assert.match(html, /data\/competition-assets\.js\?v=20261007-picker-leagues/);
-assert.match(html, /team-selection-workspace-20261007d\.js\?v=20261008-select-fast/);
-assert.match(html, /euroscout-live-notes\.js\?v=20261008-fiba-person-v7/);
+assert.match(html, /team-selection-workspace-20261007d\.js\?v=20261009-picker-fast-v2/);
+assert.match(html, /euroscout-live-notes\.js\?v=20261009-picker-fast-v9/);
 assert.ok(html.indexOf('team-selection-workspace-20261007d.js') < html.indexOf('euroscout-live-notes.js'));
 assert.ok(html.indexOf('data/competition-assets.js') < html.indexOf('team-selection-workspace-20261007d.js'));
 assert.match(notes, /class="scoutTeamButton"/);
@@ -71,4 +71,11 @@ assert.equal(competitions.filter(c=>c.id==='seriea2').length,1,'Serie A2 aliases
 assert.equal(competitions.find(c=>c.id==='seriea2').teams.length,20,'Serie A2 uses the official 2026/27 field');
 assert.ok(competitions.find(c=>c.id==='seriea2').teams.every(team=>team.logo),'official Serie A2 badges are retained');
 assert.ok(fs.existsSync(path.join(root,'assets','competitions','fiba-europe-cup.png')));
-console.log('Competition-first scouting matchup team picker checks passed.');
+const originalIndex=context.window.ESTeamSelection._buildCompetitions();
+context.window.EuroScoutFIBAClub.data={competitions:{fec:{name:'FIBA Europe Cup',teams:[...context.window.EuroScoutFIBAClub.data.competitions.fec.teams,{currentKey:'fec26|NEW',name:'New Current Club',country:'Slovenia',logo:'new.png'}]}}};
+const freshIndex=context.window.ESTeamSelection._buildCompetitions();
+assert.notEqual(freshIndex,originalIndex,'a refreshed current event must invalidate the cached picker even if the club count is unchanged');
+assert.equal(freshIndex.find(c=>c.id==='fec').teams.length,3,'fresh current event members must appear immediately');
+context.window.STATE.data.season2627={comps:{eurocup:{name:'EuroCup',teams:[{key:'new|THREE',name:'New Club Three',country:'France'}]}}};
+assert.equal(context.window.ESTeamSelection._buildCompetitions().find(c=>c.id==='eurocup').teams.length,1,'replacing the season entry list must invalidate the cached field');
+console.log('Competition-first team picker fields, aliases, logos, cached reopening and live-source invalidation checks passed.');

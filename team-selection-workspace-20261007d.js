@@ -76,34 +76,45 @@ function uniqueCompetitionTeams(teams){
  }
  return[...byIdentity.values()].sort((a,b)=>a.name.localeCompare(b.name));
 }
-function currentTeamClub(ref,competitionId,competitionName,clubs,data){
+/* Build lookup tables once per catalogue change, rather than scanning every
+   league and club again for each competition's team. */
+function teamLookup(clubs,data){
+ const byKey=new Map(),byName=new Map(),logoByName=new Map(),leagues=new Map(),resolved=new Map();
+ for(const club of clubs){byKey.set(club.key,club);if(!byName.has(teamNameKey(club.name)))byName.set(teamNameKey(club.name),club);}
+ for(const club of clubs)for(const team of club.teams||[])if(team.key&&!byKey.has(team.key))byKey.set(team.key,club);
+ for(const league of data.leagues||[]){
+  const id=competitionIdentity(league.meta).id;
+  if(!leagues.has(id)){const byCode=new Map(),namesByTeam=new Map(),names=[];for(const team of league.teams||[]){const name=teamNameKey(team.name);if(!byCode.has(team.code))byCode.set(team.code,team);if(!namesByTeam.has(name))namesByTeam.set(name,team);names.push({team,name});}leagues.set(id,{league,byCode,byName:namesByTeam,names});}
+  for(const team of league.teams||[]){const name=teamNameKey(team.name);if(team.logo&&!logoByName.has(name))logoByName.set(name,team.logo);}
+ }
+ const resolve=key=>{if(!key)return null;if(byKey.has(key))return byKey.get(key);if(!resolved.has(key))resolved.set(key,typeof clubByKey==='function'?clubByKey(key):null);return resolved.get(key);};
+ return{byName,logoByName,leagues,resolve};
+}
+function currentTeamClub(ref,competitionId,competitionName,clubs,data,lookup){
+ lookup=lookup||teamLookup(clubs,data);
  const wanted=teamNameKey(ref.name),key=ref.currentKey||ref.key||competitionId+'|'+wanted;
- let club=typeof clubByKey==='function'?clubByKey(key):null;
- /* A live statistics feed can use the competition's own team key while the
-    roster registry uses the domestic key. The published 2026/27 entry is the
-    stable bridge between those two identities (for example Tortona). */
+ let club=lookup.resolve(key);
+ /* Current international entries bridge sponsor names to domestic roster keys. */
  const seasonRef=(data.season2627?.comps?.[competitionId]?.teams||[]).find(team=>closeTeamName(team.name,ref.name));
- if(!club&&seasonRef?.key&&typeof clubByKey==='function')club=clubByKey(seasonRef.key);
- const code=String(key).split('|')[1]||'';
- const sourceLeague=(data.leagues||[]).find(league=>competitionIdentity(league.meta).id===competitionId);
- const sourceTeam=(sourceLeague?.teams||[]).find(team=>team.code===code)||
-  (sourceLeague?.teams||[]).find(team=>fold(team.name).replace(/[^a-z0-9]/g,'')===wanted);
- const nearSourceTeam=sourceTeam||(sourceLeague?.teams||[]).find(team=>{const name=fold(team.name).replace(/[^a-z0-9]/g,'');return Math.min(name.length,wanted.length)>=7&&(name.includes(wanted)||wanted.includes(name));});
- if(!club&&sourceTeam&&typeof clubByKey==='function')club=clubByKey(sourceLeague.meta.id+'|'+sourceTeam.code);
- if(!club)club=clubs.find(candidate=>teamNameKey(candidate.name)===wanted)||null;
- const officialAba=competitionId==='aba'?window.EUROSCOUT_ABA_ROSTERS?.teams?.find(team=>{const name=fold(team.name).replace(/[^a-z0-9]/g,'');return name===wanted||name.endsWith(wanted)||wanted.endsWith(name);}):null;
- const globalSourceTeam=(data.leagues||[]).flatMap(league=>league.teams||[]).find(team=>fold(team.name).replace(/[^a-z0-9]/g,'')===wanted&&team.logo);
+ if(!club&&seasonRef?.key)club=lookup.resolve(seasonRef.key);
+ const code=String(key).split('|')[1]||'',source=lookup.leagues.get(competitionId);
+ const sourceTeam=source?.byCode.get(code)||source?.byName.get(wanted);
+ const nearSourceTeam=sourceTeam||source?.names.find(({name})=>Math.min(name.length,wanted.length)>=7&&(name.includes(wanted)||wanted.includes(name)))?.team;
+ if(!club&&sourceTeam)club=lookup.resolve(source.league.meta.id+'|'+sourceTeam.code);
+ if(!club)club=lookup.byName.get(wanted)||null;
+ const officialAba=competitionId==='aba'?window.EUROSCOUT_ABA_ROSTERS?.teams?.find(team=>{const name=teamNameKey(team.name);return name===wanted||name.endsWith(wanted)||wanted.endsWith(name);}):null;
  const nbaLogo=competitionId==='nba'&&/^\d+$/.test(code)?'https://cdn.nba.com/logos/nba/'+code+'/primary/L/logo.svg':competitionId==='gleague'&&/^\d+$/.test(code)?'https://cdn.nba.com/logos/gleague/'+code+'/primary/L/logo.svg':'';
- const logo=ref.logo||(officialAba?.id?'https://www.aba-liga.com/images/club/150x150/'+officialAba.id+'.png':'')||nearSourceTeam?.logo||globalSourceTeam?.logo||nbaLogo||KNOWN_TEAM_LOGOS.get(wanted)||clubLogoUrl(club);
- const country=ref.country||sourceTeam?.country||club?.country||'';
- const resolvedKey=club?.key||seasonRef?.key||key;
+ const logo=ref.logo||(officialAba?.id?'https://www.aba-liga.com/images/club/150x150/'+officialAba.id+'.png':'')||nearSourceTeam?.logo||lookup.logoByName.get(wanted)||nbaLogo||KNOWN_TEAM_LOGOS.get(wanted)||clubLogoUrl(club);
+ const country=ref.country||sourceTeam?.country||club?.country||'',resolvedKey=club?.key||seasonRef?.key||key;
  return{...(club||{}),key:resolvedKey,name:ref.name||sourceTeam?.name||club?.name||resolvedKey,country,logo,leagues:club?.leagues||[{id:competitionId,name:competitionName}],teams:logo?[{lg:competitionId,name:ref.name||sourceTeam?.name||'',country,logo},...(club?.teams||[])]:club?.teams||[{lg:competitionId,name:ref.name||'',country}]};
 }
 let competitionCache=null;
 function buildCompetitions(){
  if(typeof allClubs!=='function')return[];
  const clubs=allClubs(),defs=new Map(),data=window.STATE?.data||{};
- if(competitionCache?.data===data&&competitionCache.clubs===clubs&&competitionCache.count===clubs.length)return competitionCache.value;
+ const sources=[data.leagues,data.leagues?.length,data.season2627?.comps,data.domestic2627?.leagues,window.EuroScoutFIBAClub?.data?.competitions,window.EUROSCOUT_BCLQ_2026?.teams,window.EUROSCOUT_ABA_ROSTERS?.teams];
+ if(competitionCache?.data===data&&competitionCache.clubs===clubs&&competitionCache.count===clubs.length&&sources.every((source,i)=>source===competitionCache.sources[i]))return competitionCache.value;
+ const lookup=teamLookup(clubs,data);
  const addDef=(value,replaceTeams=false)=>{if(!value?.id||value.id==='n2627'||value.id==='directory')return;const identity=competitionIdentity(value),old=defs.get(identity.key)||{},incoming=value._teamKeys||[],teamKeys=replaceTeams&&incoming.length?incoming:[...(old._teamKeys||[]),...incoming],rawRefs=[...(old._rawRefs||[]),...(value._rawRefs||[])];defs.set(identity.key,{...old,...value,id:identity.id,name:identity.name,_ids:[...new Set([...(old._ids||[]),value.id])],_teamKeys:[...new Set(teamKeys)],_rawRefs:rawRefs});};
  for(const L of data.leagues||[])if(L.meta.id!=='n2627'&&(typeof showsTeams!=='function'||showsTeams(L.meta)))addDef({...L.meta,_rawRefs:(L.teams||[]).map(team=>({currentKey:L.meta.id+'|'+team.code,...team}))});
  /* Authenticated payloads may retain registry clubs without the original
@@ -115,37 +126,39 @@ function buildCompetitions(){
  const addCurrent=source=>Object.entries(source||{}).forEach(([id,value])=>addDef({id,name:value.name||id,_teamKeys:(value.teams||[]).map(t=>t.key).filter(Boolean),_currentRefs:value.teams||[]},true));
  addCurrent(data.season2627?.comps);addCurrent(data.domestic2627?.leagues);
  /* The official 2026/27 ABA2 standings define a 16-team regional field. */
- {const old=defs.get('aba2')||{},teams=ABA2_CURRENT.map(team=>currentTeamClub(team,'aba2','ABA League 2',clubs,data));defs.set('aba2',{...old,id:'aba2',name:'ABA League 2',_ids:[...new Set([...(old._ids||[]),'aba2'])],_teamKeys:[],_currentRefs:[],_clubs:teams});}
+ {const old=defs.get('aba2')||{},teams=ABA2_CURRENT.map(team=>currentTeamClub(team,'aba2','ABA League 2',clubs,data,lookup));defs.set('aba2',{...old,id:'aba2',name:'ABA League 2',_ids:[...new Set([...(old._ids||[]),'aba2'])],_teamKeys:[],_currentRefs:[],_clubs:teams});}
  /* LNP publishes one 20-team Serie A2 field for 2026/27. Older imports also
     contain the prior 23-team season under a second label. */
- {const old=defs.get('seriea2')||{},teams=SERIE_A2_CURRENT.map(team=>currentTeamClub(team,'seriea2','Serie A2',clubs,data));defs.set('seriea2',{...old,id:'seriea2',name:'Serie A2',_ids:[...new Set([...(old._ids||[]),'seriea2'])],_teamKeys:[],_currentRefs:[],_clubs:teams});}
+ {const old=defs.get('seriea2')||{},teams=SERIE_A2_CURRENT.map(team=>currentTeamClub(team,'seriea2','Serie A2',clubs,data,lookup));defs.set('seriea2',{...old,id:'seriea2',name:'Serie A2',_ids:[...new Set([...(old._ids||[]),'seriea2'])],_teamKeys:[],_currentRefs:[],_clubs:teams});}
  /* BCL qualifier labels from the database and the official feed are one event. */
  if(window.EUROSCOUT_BCLQ_2026?.teams?.length){
-  const teams=window.EUROSCOUT_BCLQ_2026.teams.map(team=>currentTeamClub({currentKey:'bclq|'+team.code,...team},'bclq','BCL Qualifiers',clubs,data));
+  const teams=window.EUROSCOUT_BCLQ_2026.teams.map(team=>currentTeamClub({currentKey:'bclq|'+team.code,...team},'bclq','BCL Qualifiers',clubs,data,lookup));
   const old=defs.get('bclq')||{};defs.set('bclq',{...old,id:'bclq',name:'BCL Qualifiers',_ids:[...new Set([...(old._ids||[]),'bclq'])],_teamKeys:[],_currentRefs:[],_clubs:teams});
  }
  /* FIBA's current event payload is authoritative. Club membership maps also
     contain historical entries and can otherwise double the field. */
  for(const [id,competition] of Object.entries(window.EuroScoutFIBAClub?.data?.competitions||{})){
   const identity=competitionIdentity({id,name:competition.name||id}),old=defs.get(identity.key)||{};
-  const teams=(competition.teams||[]).map(team=>typeof clubByKey==='function'?clubByKey(team.currentKey):null).map((club,index)=>club||(()=>{const team=competition.teams[index];return{key:team.currentKey,name:team.name,country:team.country||'',logo:team.logo||'',leagues:[{id:id+'26',name:competition.name}],teams:[{lg:id+'26',name:team.name,country:team.country||'',logo:team.logo||''}]};})());
+  const teams=(competition.teams||[]).map(team=>lookup.resolve(team.currentKey)).map((club,index)=>club||(()=>{const team=competition.teams[index];return{key:team.currentKey,name:team.name,country:team.country||'',logo:team.logo||'',leagues:[{id:id+'26',name:competition.name}],teams:[{lg:id+'26',name:team.name,country:team.country||'',logo:team.logo||''}]};})());
   defs.set(identity.key,{...old,id:identity.id,name:identity.name,_ids:[...new Set([...(old._ids||[]),id,id+'26'])],_teamKeys:[],_clubs:teams,_officialFiba:true});
  }
  defs.delete('n2627');
  const value=[...defs.values()].map(meta=>{
-   const keyed=(meta._teamKeys||[]).map(key=>typeof clubByKey==='function'?clubByKey(key):null).filter(Boolean),uniqueKeyed=[...new Map(keyed.map(c=>[c.key,c])).values()];
-   const ids=meta._ids||[meta.id],current=clubs.filter(c=>currentCompetitionIds(c).some(id=>ids.includes(id)));
-   const currentRefs=(meta._currentRefs||[]).map(ref=>currentTeamClub(ref,meta.id,meta.name,clubs,data));
-   const sourceRefs=(meta._rawRefs||[]).map(ref=>currentTeamClub(ref,meta.id,meta.name,clubs,data));
-   const rawTeams=meta._clubs?meta._clubs:currentRefs.length?currentRefs:sourceRefs.length?sourceRefs:uniqueKeyed.length?uniqueKeyed:current.length?current:clubs.filter(c=>(c.leagues||[]).some(x=>ids.includes(x.id)));
+   /* Resolve only the field actually used; official/current lists take priority. */
+   let rawTeams=meta._clubs;
+   if(!rawTeams&&meta._currentRefs?.length)rawTeams=meta._currentRefs.map(ref=>currentTeamClub(ref,meta.id,meta.name,clubs,data,lookup));
+   if(!rawTeams&&meta._rawRefs?.length)rawTeams=meta._rawRefs.map(ref=>currentTeamClub(ref,meta.id,meta.name,clubs,data,lookup));
+   if(!rawTeams){const keyed=(meta._teamKeys||[]).map(lookup.resolve).filter(Boolean);if(keyed.length)rawTeams=[...new Map(keyed.map(c=>[c.key,c])).values()];}
+   if(!rawTeams){const ids=meta._ids||[meta.id],current=clubs.filter(c=>currentCompetitionIds(c).some(id=>ids.includes(id)));rawTeams=current.length?current:clubs.filter(c=>(c.leagues||[]).some(x=>ids.includes(x.id)));}
    const teams=uniqueCompetitionTeams(rawTeams);
    return{id:meta.id,name:meta.name,region:region(meta,teams),category:category(meta),logo:meta.logo||'',teams};
  }).filter(c=>c.teams.length).sort((a,b)=>a.name.localeCompare(b.name));
- competitionCache={data,clubs,count:clubs.length,value};return value;
+ competitionCache={data,clubs,count:clubs.length,sources,value};return value;
 }
+let cleanupPicker=null;
 function open(options={}){
  close();
- let competitions=[];
+ let competitions=[],byId=new Map(),ready=false,saving=false,searchTimer=null;
  const current=typeof clubByKey==='function'?clubByKey(options.currentKey):null,currentIds=current?currentCompetitionIds(current):[];
  let selectedComp=null,selectedTeam=null,cat='all',compQuery='',teamQuery='';
  const mask=document.createElement('div');mask.className='tsw-mask';mask.id='teamSelectionWorkspace';
@@ -153,48 +166,83 @@ function open(options={}){
   '<header><span class="tsw-head-icon" aria-hidden="true">♟</span><div><h2 id="tswTitle">Select Team '+safe(String(options.slot||'').toUpperCase())+'</h2><p>Choose a competition and team for your scouting matchup.</p></div><button type="button" class="tsw-close" aria-label="Close">×</button></header>'+
   '<div class="tsw-grid"><section class="tsw-panel tsw-competitions"><h3>1. Select Competition</h3><label class="tsw-search"><span>⌕</span><input type="search" id="tswCompSearch" placeholder="Search competitions or teams…" autocomplete="off"></label><div class="tsw-cats" role="group" aria-label="Competition categories">'+[['all','All'],['youth','Youth'],['national','National'],['club','Club'],['other','Other']].map(([id,label])=>'<button type="button" data-tsw-cat="'+id+'" class="'+(id==='all'?'on':'')+'">'+label+'</button>').join('')+'</div><div id="tswRecent"></div><div class="tsw-list" id="tswCompetitionList"></div></section>'+
   '<section class="tsw-panel tsw-teams"><h3>2. Select Team</h3><label class="tsw-search"><span>⌕</span><input type="search" id="tswTeamSearch" placeholder="Search teams in selected competition…" autocomplete="off" disabled></label><div class="tsw-team-context" id="tswTeamContext"></div><div class="tsw-list" id="tswTeamList"></div></section></div>'+
-  '<footer><div class="tsw-selected"><small>Selected:</small><div id="tswSelectedCompetition"></div><i></i><div id="tswSelectedTeam"></div></div><button type="button" class="btn ghost tsw-cancel">Cancel</button><button type="button" class="btn primary tsw-confirm" disabled>Confirm Selection →</button></footer></section>';
+  '<footer><p id="tswFeedback" role="alert" hidden style="grid-column:1/-1"></p><div class="tsw-selected"><small>Selected:</small><div id="tswSelectedCompetition"></div><i></i><div id="tswSelectedTeam"></div></div><button type="button" class="btn ghost tsw-cancel">Cancel</button><button type="button" class="btn primary tsw-confirm" disabled>Confirm Selection →</button></footer></section>';
  document.body.append(mask);
  const $=selector=>mask.querySelector(selector),compList=$('#tswCompetitionList'),teamList=$('#tswTeamList'),teamInput=$('#tswTeamSearch');
  function matchingCompetitions(){return competitions.filter(c=>(cat==='all'||c.category===cat)&&(!compQuery||fold(c.name+' '+c.region).includes(compQuery)||c.teams.some(t=>fold(t.name).includes(compQuery))));}
  function competitionRow(c){return'<button type="button" class="tsw-row tsw-comp-row'+(selectedComp?.id===c.id?' on':'')+'" data-comp="'+attr(c.id)+'">'+competitionLogo(c)+'<span><b>'+safe(c.name)+'</b><small>'+safe(c.region)+'</small></span><em>'+c.teams.length+' teams</em><strong>›</strong></button>';}
  function teamRow(c){return'<button type="button" class="tsw-row tsw-team-row'+(selectedTeam?.key===c.key?' on':'')+'" data-team="'+attr(c.key)+'">'+clubLogo(c)+'<span><b>'+safe(c.name)+'</b></span><em>'+safe(flag(c.country))+' '+safe(c.country||'—')+'</em><strong>›</strong></button>';}
- function renderRecent(){const items=recent().map(id=>competitions.find(c=>c.id===id)).filter(Boolean);$('#tswRecent').innerHTML=items.length?'<div class="tsw-recent"><div><b>◷ &nbsp;Recent Competitions</b><button type="button" id="tswClearRecent">Clear</button></div><nav>'+items.map(c=>'<button type="button" data-recent="'+attr(c.id)+'">'+competitionLogo(c)+safe(c.name)+'</button>').join('')+'</nav></div>':'';$('#tswClearRecent')?.addEventListener('click',()=>{localStorage.removeItem(RECENT_KEY);renderRecent();});mask.querySelectorAll('[data-recent]').forEach(b=>b.onclick=()=>selectCompetition(competitions.find(c=>c.id===b.dataset.recent)));}
- function renderCompetitions(){const rows=matchingCompetitions();compList.innerHTML=rows.map(competitionRow).join('')||'<div class="tsw-empty">No competitions found.</div>';compList.querySelectorAll('[data-comp]').forEach(b=>b.onclick=()=>selectCompetition(competitions.find(c=>c.id===b.dataset.comp)));}
+ function cancelSearch(){clearTimeout(searchTimer);searchTimer=null;}
+ function renderRecent(){const items=recent().map(id=>byId.get(id)).filter(Boolean);$('#tswRecent').innerHTML=items.length?'<div class="tsw-recent"><div><b>◷ &nbsp;Recent Competitions</b><button type="button" id="tswClearRecent">Clear</button></div><nav>'+items.map(c=>'<button type="button" data-recent="'+attr(c.id)+'">'+competitionLogo(c)+safe(c.name)+'</button>').join('')+'</nav></div>':'';$('#tswClearRecent')?.addEventListener('click',()=>{localStorage.removeItem(RECENT_KEY);renderRecent();});mask.querySelectorAll('[data-recent]').forEach(b=>b.onclick=()=>selectCompetition(byId.get(b.dataset.recent),null,true));}
+ function renderCompetitions(){const rows=matchingCompetitions();compList.innerHTML=rows.map(competitionRow).join('')||'<div class="tsw-empty">No competitions found.</div>';}
+ function highlightTeams(){teamList.querySelectorAll('[data-team]').forEach(row=>{const on=row.dataset.team===selectedTeam?.key;row.classList.toggle('on',on);row.setAttribute('aria-pressed',String(on));});}
  function renderTeams(){
   teamInput.disabled=!selectedComp;teamInput.placeholder=selectedComp?'Search teams in '+selectedComp.name+'…':'Select a competition first';
   if(!selectedComp){$('#tswTeamContext').innerHTML='';teamList.innerHTML='<div class="tsw-empty">Select a competition to see its teams.</div>';return;}
   $('#tswTeamContext').innerHTML=competitionLogo(selectedComp)+'<span><b>'+safe(selectedComp.name)+'</b><small>'+safe(selectedComp.region)+'</small></span><em>'+selectedComp.teams.length+' teams</em>';
-  const teams=selectedComp.teams.filter(c=>!teamQuery||fold(c.name+' '+c.country).includes(teamQuery));teamList.innerHTML=teams.map(teamRow).join('')||'<div class="tsw-empty">No teams found in this competition.</div>';teamList.querySelectorAll('[data-team]').forEach(b=>b.onclick=()=>{selectedTeam=selectedComp.teams.find(c=>c.key===b.dataset.team);renderTeams();renderSummary();});
+  const teams=selectedComp.teams.filter(c=>!teamQuery||fold(c.name+' '+c.country).includes(teamQuery));
+  if(selectedTeam&&!teams.some(team=>team.key===selectedTeam.key))selectedTeam=null;
+  teamList.innerHTML=teams.map(teamRow).join('')||'<div class="tsw-empty">No teams found in this competition.</div>';highlightTeams();
  }
- function selectCompetition(comp,team){if(!comp)return;selectedComp=comp;selectedTeam=team&&comp.teams.some(c=>c.key===team.key)?team:null;teamQuery='';teamInput.value='';renderCompetitions();renderTeams();renderSummary();}
+ function selectCompetition(comp,team,manual=false){
+  if(saving||!comp)return;cancelSearch();
+  if(manual&&compQuery){compQuery='';$('#tswCompSearch').value='';renderCompetitions();}
+  const previous=selectedTeam;selectedComp=comp;selectedTeam=comp.teams.find(c=>c.key===(team||previous)?.key)||null;
+  teamQuery='';teamInput.value='';
+  compList.querySelectorAll('[data-comp]').forEach(row=>row.classList.toggle('on',row.dataset.comp===comp.id));
+  renderTeams();renderSummary();
+ }
+ compList.onclick=e=>{const row=e.target.closest('[data-comp]');if(row&&compList.contains(row))selectCompetition(byId.get(row.dataset.comp),null,true);};
+ teamList.onclick=e=>{if(saving)return;const row=e.target.closest('[data-team]');if(!row||!selectedComp||!teamList.contains(row))return;cancelSearch();selectedTeam=selectedComp.teams.find(c=>c.key===row.dataset.team)||null;highlightTeams();renderSummary();};
  function renderSummary(){
   $('#tswSelectedCompetition').innerHTML=selectedComp?competitionLogo(selectedComp)+'<span><b>'+safe(selectedComp.name)+'</b><small>'+safe(selectedComp.region)+' · '+selectedComp.teams.length+' teams</small></span>':'<span><b>Competition</b><small>Not selected</small></span>';
   $('#tswSelectedTeam').innerHTML=selectedTeam?clubLogo(selectedTeam)+'<span><b>'+safe(selectedTeam.name)+'</b><small>'+safe(flag(selectedTeam.country))+' '+safe(selectedTeam.country||'')+'</small></span>':'<span><b>Team</b><small>Not selected</small></span>';
-  $('.tsw-confirm').disabled=!(selectedComp&&selectedTeam);
+  $('.tsw-confirm').disabled=saving||!(selectedComp&&selectedTeam);
  }
- let searchTimer=null;
- $('#tswCompSearch').oninput=e=>{compQuery=fold(e.target.value.trim());clearTimeout(searchTimer);searchTimer=setTimeout(()=>{
-   const matches=matchingCompetitions();renderCompetitions();
-   if(compQuery){const teamHits=[];for(const comp of matches)for(const team of comp.teams)if(fold(team.name).includes(compQuery))teamHits.push({comp,team});const uniqueTeams=new Map(teamHits.map(hit=>[hit.team.key,hit]));if(uniqueTeams.size===1){const only=[...uniqueTeams.values()][0],preferred=teamHits.find(hit=>hit.team.key===only.team.key&&hit.comp.id===selectedComp?.id)||only;selectCompetition(preferred.comp,preferred.team);}else if(teamHits[0]&&fold(teamHits[0].team.name)===compQuery)selectCompetition(teamHits[0].comp,teamHits[0].team);}
-  },100);};
- teamInput.oninput=e=>{teamQuery=fold(e.target.value.trim());renderTeams();};
- mask.querySelectorAll('[data-tsw-cat]').forEach(b=>b.onclick=()=>{cat=b.dataset.tswCat;mask.querySelectorAll('[data-tsw-cat]').forEach(x=>x.classList.toggle('on',x===b));renderCompetitions();});
- function done(){if(!(selectedComp&&selectedTeam))return;remember(selectedComp.id);selectedTeams.set(selectedTeam.key,selectedTeam);const result={competition:selectedComp,team:selectedTeam};close();options.onConfirm?.(result);}
+ function applySearch(){
+  cancelSearch();if(!ready||saving||!mask.isConnected)return;
+  const matches=matchingCompetitions();renderCompetitions();
+  if(compQuery){
+   const teamHits=[];for(const comp of matches)for(const team of comp.teams)if(fold(team.name).includes(compQuery))teamHits.push({comp,team});
+   const uniqueTeams=new Map(teamHits.map(hit=>[hit.team.key,hit]));
+   if(uniqueTeams.size===1){const only=[...uniqueTeams.values()][0],preferred=teamHits.find(hit=>hit.team.key===only.team.key&&hit.comp.id===selectedComp?.id)||only;selectCompetition(preferred.comp,preferred.team);}
+   else if(teamHits[0]&&fold(teamHits[0].team.name)===compQuery)selectCompetition(teamHits[0].comp,teamHits[0].team);
+   else if(selectedComp&&!matches.includes(selectedComp)){selectedComp=null;selectedTeam=null;renderTeams();renderSummary();}
+   else if(selectedTeam&&teamHits.length&&!teamHits.some(hit=>hit.team.key===selectedTeam.key)){selectedTeam=null;highlightTeams();renderSummary();}
+  }
+ }
+ $('#tswCompSearch').oninput=e=>{if(saving)return;compQuery=fold(e.target.value.trim());cancelSearch();searchTimer=setTimeout(applySearch,100);};
+ teamInput.oninput=e=>{if(saving)return;cancelSearch();teamQuery=fold(e.target.value.trim());renderTeams();renderSummary();};
+ mask.querySelectorAll('[data-tsw-cat]').forEach(b=>b.onclick=()=>{if(saving)return;cancelSearch();cat=b.dataset.tswCat;mask.querySelectorAll('[data-tsw-cat]').forEach(x=>x.classList.toggle('on',x===b));renderCompetitions();});
+ function done(){
+  if(saving||!(selectedComp&&selectedTeam))return;cancelSearch();saving=true;
+  const button=$('.tsw-confirm'),feedback=$('#tswFeedback'),result={competition:selectedComp,team:selectedTeam},previous=selectedTeams.get(selectedTeam.key);
+  button.disabled=true;button.textContent='Selecting…';feedback.hidden=true;
+  // Show feedback before applying the selection, and ignore duplicate clicks.
+  requestAnimationFrame(()=>setTimeout(async()=>{
+   if(!mask.isConnected)return;
+   try{selectedTeams.set(result.team.key,result.team);await options.onConfirm?.(result);remember(result.competition.id);if(mask.isConnected)close();}
+   catch(error){if(previous)selectedTeams.set(result.team.key,previous);else selectedTeams.delete(result.team.key);console.warn('Team selection could not be applied',error);if(mask.isConnected){feedback.textContent='Could not apply this team. Your selection has been kept. Try again.';feedback.hidden=false;saving=false;button.textContent='Confirm Selection →';renderSummary();}}
+  },0));
+ }
  $('.tsw-confirm').onclick=done;$('.tsw-cancel').onclick=close;$('.tsw-close').onclick=close;mask.onclick=e=>{if(e.target===mask)close();};
- mask.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();close();}if(e.key==='Enter'&&document.activeElement?.closest('.tsw-search')&&selectedComp&&selectedTeam){e.preventDefault();done();}};
+ mask.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();close();}if(e.key==='Enter'&&document.activeElement?.closest('.tsw-search')){e.preventDefault();if(searchTimer)applySearch();done();}};
+ cleanupPicker=cancelSearch;$('#tswCompSearch').focus();
  compList.innerHTML='<div class="tsw-empty" role="status">Loading competitions and current rosters…</div>';
  teamList.innerHTML='<div class="tsw-empty">The team list will appear here.</div>';
  renderSummary();
  requestAnimationFrame(()=>setTimeout(()=>{
   if(!document.body.contains(mask))return;
-  competitions=buildCompetitions();
-  selectedComp=current?competitions.find(c=>currentIds.includes(c.id))||competitions.find(c=>(current.leagues||[]).some(l=>l.id===c.id)):null;
-  selectedTeam=current&&selectedComp?current:null;
-  renderRecent();renderCompetitions();renderTeams();renderSummary();$('#tswCompSearch').focus();
+  try{
+   competitions=buildCompetitions();byId=new Map(competitions.map(c=>[c.id,c]));ready=true;
+   const recentComp=current?recent().map(id=>byId.get(id)).find(c=>c?.teams.some(team=>team.key===current.key)):null;
+   selectedComp=current?recentComp||competitions.find(c=>currentIds.includes(c.id))||competitions.find(c=>(current.leagues||[]).some(l=>competitionIdentity(l).id===c.id)):null;
+   selectedTeam=current&&selectedComp?selectedComp.teams.find(team=>team.key===current.key)||null:null;
+   renderRecent();renderCompetitions();renderTeams();renderSummary();if(compQuery)applySearch();
+  }catch(error){console.warn('Team picker unavailable',error);compList.innerHTML='<div class="tsw-empty" role="alert">Could not load teams. Close this picker and try again.</div>';}
  },0));
 }
-function close(){document.querySelector('#teamSelectionWorkspace')?.remove();}
+function close(){cleanupPicker?.();cleanupPicker=null;document.querySelector('#teamSelectionWorkspace')?.remove();}
 const selectedTeams=new Map();
 window.ESTeamSelection={open,close,teamForKey:key=>selectedTeams.get(key)||null,_buildCompetitions:buildCompetitions};
 })();
