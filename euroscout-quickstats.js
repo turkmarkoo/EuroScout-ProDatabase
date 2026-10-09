@@ -57,7 +57,27 @@ const PAGES={
    games.map(g=>'<tr><td>'+fmtDate(get(g,'date'))+'</td><td>'+(get(g,'ha')==='A'?'@ ':'')+esc(get(g,'opp')||'')+'</td><td class="'+(get(g,'win')?'qs-w':'qs-l')+'">'+(get(g,'win')?'W':'L')+' '+(get(g,'teamPts')??'')+'–'+(get(g,'oppPts')??'')+'</td><td>'+n(get(g,'min'),0)+'</td><td><b>'+(get(g,'pts')??'—')+'</b></td><td>'+ma(g,'fgm','fga')+'</td><td>'+ma(g,'fg3m','fg3a')+'</td><td>'+ma(g,'ftm','fta')+'</td><td>'+(get(g,'reb')??'—')+'</td><td>'+(get(g,'ast')??'—')+'</td><td>'+(get(g,'stl')??'—')+'</td><td>'+(get(g,'blk')??'—')+'</td><td>'+(get(g,'tov')??'—')+'</td><td>'+(get(g,'pir')??'—')+'</td><td>'+(get(g,'pm')??'—')+'</td></tr>').join('')+'</tbody></table></div>';}
 };
 
-function linesOf(p){const g=gid(p);return allPlayersEvery().filter(x=>gid(x)===g&&x.league!=='sl').sort((a,b)=>(b.min||0)-(a.min||0));}
+function linesOf(p){const rows=typeof personLines==='function'?personLines(p):allPlayersEvery().filter(x=>gid(x)===gid(p));return rows.filter(x=>x.league!=='sl').sort((a,b)=>(b.min||0)-(a.min||0));}
+function competitionOf(p){
+ const meta=leagueOf(p)?.meta||{id:p.league,name:p.league},provider=String(p.league||'').match(/^dragons-([^-]+)-/i)?.[1];
+ const id=({ec:'eurocup',el:'euroleague',ita:'lba',otp:'slo',gre:'gbl',pol:'plk',fra:'lnb'})[provider]||provider||meta.id;
+ return window.ESTeamSelection?.competitionIdentity?.({...meta,id})||{id,name:String(meta.name||id).replace(/20\d{2}\s*[/-]\s*(?:20)?\d{2}/g,'').trim()};
+}
+const teamName=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/^(?:bk|bc|kk|cb) /,'');
+let clubNamesCache=null;
+function distinctLines(rows){
+ const clubs=typeof allClubs==='function'?allClubs():[];
+ let names=clubNamesCache?.clubs===clubs?clubNamesCache.names:null;
+ if(!names){names=new Map();const add=(name,key)=>{name=teamName(name);if(!name)return;if(!names.has(name))names.set(name,key);else if(names.get(name)!==key)names.set(name,null);};
+ for(const club of clubs){const key=canonKey(club.key);add(club.name,key);for(const team of club.teams||[])for(const name of [team.name,...(team.searchAliases||[])])add(name,key);}clubNamesCache={clubs,names};}
+ const resolved=rows.map(row=>{const comp=competitionOf(row),club=typeof clubByKey==='function'?[comp.id+'26',comp.id,...(row._dragonsData?[]:[row.league])].map(id=>clubByKey(id+'|'+row.team)).find(Boolean):null;return{row,comp,club};});
+ const localNames=new Map();for(const {row,comp,club}of resolved)if(club){const name=comp.id+'|'+teamName(row.teamName||club.name),key=canonKey(club.key);if(!localNames.has(name))localNames.set(name,key);else if(localNames.get(name)!==key)localNames.set(name,null);}
+ const groups=new Map(),rank=p=>[Number(p.g)||0,(p.gameLog||[]).map(g=>String(g[0]||'')).sort().at(-1)||'',(p.gameLog||[]).length,p._dragonsData?1:0,Object.keys(p).filter(k=>p[k]!=null&&p[k]!=='').length];
+ const better=(a,b)=>{const ar=rank(a),br=rank(b);for(let i=0;i<ar.length;i++)if(ar[i]!==br[i])return ar[i]>br[i];return false;};
+ for(const {row,comp,club}of resolved){const name=teamName(row.teamName||row.team),localName=comp.id+'|'+name,key=club?canonKey(club.key):localNames.get(localName)||names.get(name)||(localNames.has(localName)?'unresolved:'+row.id:name?'team:'+name:'unresolved:'+row.id);
+  const identity=seasonOf(row)+'|'+comp.id+'|'+key,prior=groups.get(identity);if(!prior||better(row,prior))groups.set(identity,row);}
+ return [...groups.values()];
+}
 const seasonLabel=value=>{const match=String(value||'').match(/(20\d{2})\s*[/–-]\s*((?:20)?\d{2})/);return match?match[1]+'/'+match[2].slice(-2):'';};
 function currentRosterOnly(p){
  const scope=[p.statsScope,p._rosterSeason,p._seasonLabel].map(seasonLabel).find(Boolean);
@@ -77,10 +97,10 @@ function paint(){
  const seasonLines=all.filter(x=>seasonOf(x)===seasonChoice),playedLines=seasonLines.filter(x=>Number(x.g)>0);
  // Current-roster profiles carry identity and photos but no box score. Once a
  // DragonsData line exists, keep that empty roster shell out of the selector.
- const shown=playedLines.length?playedLines:seasonLines;
- if(!line||!shown.includes(line))line=shown.find(x=>x.league===current.league)||shown[0]||current;
+ const shown=distinctLines(playedLines.length?playedLines:seasonLines);
+ if(!line||!shown.includes(line))line=shown.find(x=>competitionOf(x).id===competitionOf(line||current).id)||shown[0]||current;
  const L=leagueOf(line);
- host.innerHTML='<header class="qs-head"><div><h2>'+esc(current.name)+'</h2><div class="qs-filters"><label>Season<select id="qsSeason" aria-label="Statistics season">'+seasons.map(s=>'<option'+(s===seasonChoice?' selected':'')+'>'+esc(s)+'</option>').join('')+'</select></label><label>Competition'+(shown.length>1?'<select id="qsLine" aria-label="Competition">'+shown.map((x,i)=>'<option value="'+i+'"'+(x===line?' selected':'')+'>'+esc((leagueOf(x)?.meta?.name||x.league)+' · '+(x.teamName||x.team)+' · '+(x.g||0)+' g')+'</option>').join('')+'</select>':'<span class="qs-single">'+esc((L?.meta?.name||line.league)+' · '+(line.teamName||line.team))+'</span>')+'</label></div></div>'+
+ host.innerHTML='<header class="qs-head"><div><h2>'+esc(current.name)+'</h2><div class="qs-filters"><label>Season<select id="qsSeason" aria-label="Statistics season">'+seasons.map(s=>'<option'+(s===seasonChoice?' selected':'')+'>'+esc(s)+'</option>').join('')+'</select></label><label>Competition'+(shown.length>1?'<select id="qsLine" aria-label="Competition">'+shown.map((x,i)=>'<option value="'+i+'"'+(x===line?' selected':'')+'>'+esc(competitionOf(x).name+' · '+(x.teamName||x.team)+' · '+(x.g||0)+' g')+'</option>').join('')+'</select>':'<span class="qs-single">'+esc(competitionOf(line).name+' · '+(line.teamName||line.team))+'</span>')+'</label></div></div>'+
   '<a class="btn ghost sm" href="'+escAttr(eurobasketURL(current))+'" target="_blank" rel="noopener">Eurobasket ↗</a><button type="button" class="qs-x" id="qsClose" aria-label="Close stats">✕</button></header>'+
   '<div class="qs-body"><nav class="qs-side" role="tablist" aria-label="Stat categories">'+TABS.map(([k,l],i)=>'<button type="button" role="tab" aria-selected="'+(k===tab)+'" class="qs-tab'+(k===tab?' on':'')+'" data-qs="'+k+'"><span>'+l+'</span><kbd>'+(i+1)+'</kbd></button>').join('')+'</nav><section class="qs-main" tabindex="-1">'+(loading?'<p class="qs-hint">Loading official KZS statistics…</p>':line.g?PAGES[tab](line):'<p class="qs-hint">'+(loadError?esc(loadError):'No '+esc(seasonChoice)+' statistics for this player in the selected competition.')+'</p>')+'</section></div>';
  host.querySelector('#qsClose').onclick=close;
@@ -93,7 +113,7 @@ function refreshOfficialStats(p){
  EuroScoutKzsPro.loadStats(p).then(()=>{if(token!==loadToken)return;loading=false;line=null;percentilePools.clear();paint();}).catch(error=>{if(token!==loadToken)return;loading=false;loadError='Official KZS statistics could not be loaded. Please try again.';console.warn(loadError,error);paint();});
 }
 function open(p){
- if(!p)return;current=player(p.id)||p;line=null;seasonChoice='';loading=false;loadError='';percentilePools.clear();
+ if(!p)return;loadToken++;current=player(p.id)||p;line=null;seasonChoice='';loading=false;loadError='';percentilePools.clear();
  let mask=document.getElementById('qsMask');
  if(!mask){mask=document.createElement('div');mask.id='qsMask';mask.className='qs-mask';mask.innerHTML='<aside id="qsPanel" class="qs-panel" role="dialog" aria-modal="true" aria-label="Quick stats"></aside>';mask.addEventListener('mousedown',e=>{if(e.target===mask)close();});document.body.appendChild(mask);requestAnimationFrame(()=>mask.classList.add('open'));}
  paint();refreshOfficialStats(current);
@@ -101,5 +121,5 @@ function open(p){
 function close(){const m=document.getElementById('qsMask');if(m)m.remove();current=null;loading=false;loadError='';loadToken++;}
 const isOpen=()=>!!document.getElementById('qsMask');
 document.addEventListener('keydown',e=>{if(!isOpen()||document.getElementById('mtscMask'))return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return;}if(/^[1-8]$/.test(e.key)&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();tab=TABS[+e.key-1][0];paint();}},true);
-window.ESQuickStats={open,close,isOpen,seasonOf,follow(p){if(isOpen()&&p){current=player(p.id)||p;line=null;seasonChoice='';loading=false;loadError='';percentilePools.clear();paint();refreshOfficialStats(current);}}};
+window.ESQuickStats={open,close,isOpen,seasonOf,distinctLines,follow(p){if(isOpen()&&p){loadToken++;current=player(p.id)||p;line=null;seasonChoice='';loading=false;loadError='';percentilePools.clear();paint();refreshOfficialStats(current);}}};
 })();

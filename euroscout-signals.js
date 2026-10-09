@@ -12,7 +12,7 @@ const seasonLabel=value=>{const m=String(value||'').match(/(20\d{2})\s*[/–-]\s
 const playerSeason=x=>seasonLabel(x.statsScope||x.statsSeason||x.season||(typeof leagueOf==='function'?leagueOf(x)?.meta?.season:''));
 const currentRosterOnly=x=>playerSeason(x)==='2026/27'||x._fibaCurrent||x._rosterOnly||/^bclq-/.test(String(x.id||''))||
  ((!x.g||Number(x.g)===0)&&seasonLabel(x.currentRosterSeason||x._officialRoster?.season)==='2026/27');
-const lines=p=>{const g=gid(p);return allPlayersEvery().filter(x=>gid(x)===g&&x.league!=='sl'&&!currentRosterOnly(x));};
+const lines=p=>{const rows=typeof personLines==='function'?personLines(p):allPlayersEvery().filter(x=>gid(x)===gid(p));return rows.filter(x=>x.league!=='sl'&&!currentRosterOnly(x));};
 function next(p){try{return effective26keys(p,next26Get(),next26bGet()).map(canonKey).filter(k=>k&&!String(k).startsWith('__'));}catch(e){return [];}}
 const isEuropeClub=k=>!NOT_EUROPE.has(String(k).split('|')[0]);
 /* Where a 2026/27 signing came from, read off the transfer list: most college and

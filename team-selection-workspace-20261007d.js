@@ -244,5 +244,5 @@ function open(options={}){
 }
 function close(){cleanupPicker?.();cleanupPicker=null;document.querySelector('#teamSelectionWorkspace')?.remove();}
 const selectedTeams=new Map();
-window.ESTeamSelection={open,close,teamForKey:key=>selectedTeams.get(key)||null,_buildCompetitions:buildCompetitions};
+window.ESTeamSelection={open,close,competitionIdentity,teamForKey:key=>selectedTeams.get(key)||null,_buildCompetitions:buildCompetitions};
 })();

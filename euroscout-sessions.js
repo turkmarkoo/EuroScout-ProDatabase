@@ -35,7 +35,8 @@ const workspace = () => window.ESWorkspace ? ESWorkspace.visible() : canEdit();
 function canEdit() { try { return Store.canEdit(); } catch (e) { return false; } }
 function club(key) { try { return clubByKey(canonKey(key)); } catch (e) { return null; } }
 function clubName(key) { const c = club(key); return c ? c.name : ''; }
-function notesHash(p) { const r = effectiveReport(p); return hash(NOTE_KEYS.map(k => r[k] || '').join('\u0001')); }
+const noteHashCache=new Map();
+function notesHash(p) { const id=gid(p),source=recOf(p).report||'',seed=window.EUROSCOUT_NOTE_SEED,old=noteHashCache.get(id);if(old?.source===source&&old.seed===seed)return old.value;const r=effectiveReport(p),value=hash(NOTE_KEYS.map(k=>r[k]||'').join('\u0001'));noteHashCache.set(id,{source,seed,value});return value; }
 function readJSON(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
 
 /* ── modal of our own: tall content stays reachable ───── */
@@ -94,8 +95,9 @@ function bankDwell(a) {
 /* Called by the matchup whenever a player comes on screen. */
 function select(p, clubKey) {
   const a = active(); if (!a || !p) return;
-  bankDwell(a);
   const id = gid(p);
+  if(openId===id&&openSince&&a.players[id])return;
+  bankDwell(a);
   if (!a.players[id]) a.players[id] = { pid: p.id, name: p.name, club: canonKey(clubKey || ''), ms: 0, stock: '', before: notesHash(p) };
   openId = id; openSince = Date.now();
   setActive(a);
@@ -109,8 +111,8 @@ function setStock(p, dir) {
 }
 function stockOf(p) { const a = active(); return a && p && a.players[gid(p)] ? a.players[gid(p)].stock || '' : ''; }
 /* viewed / edited marks for the roster panels */
-function markOf(p) {
-  const a = active(); if (!a || !p) return '';
+function markOf(p, a=active()) {
+  if (!a || !p) return '';
   const e = a.players[gid(p)]; if (!e) return '';
   if (e.stock) return e.stock;
   if (e.before !== notesHash(p)) return 'notes';

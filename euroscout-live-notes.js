@@ -24,15 +24,28 @@ function officialRosterRow(p){return window.EuroScoutEuroCup?.current?.(p)||wind
 function shirt(p){const v=storedShirt(p);if(v!=null)return v;const official=officialRosterRow(p);if(official?.number!=null)return String(official.number);const r=window.EuroScoutExpansion?.record(p);return r&&canonKey('directory|'+r.club)===p._liveClub&&r.jersey!=null?String(r.jersey):'';}
 function jerseyOrder(a,b){const rank=p=>{const n=shirt(p);return n==='00'?-2:n==='0'?-1:/^\d{1,2}$/.test(n)?Number(n):1000};return rank(a)-rank(b)||a.name.localeCompare(b.name);}
 function resetRosters(){clubIndex=null;rosters.clear();}
-let rosterDirectoriesPending=false,rosterDirectoriesFailed=false;
+let rosterDirectoriesPending=false,rosterDirectoriesFailed=false,rosterRefreshTimer=null,matchupPointerDown=false,matchupInteractionUntil=0;
+document.addEventListener('pointerdown',e=>{if(e.target.closest?.('.liveScouting')){matchupPointerDown=true;matchupInteractionUntil=performance.now()+300;}},true);
+window.addEventListener('blur',()=>{matchupPointerDown=false;});
+for(const event of ['pointerup','pointercancel'])document.addEventListener(event,()=>{if(matchupPointerDown){matchupPointerDown=false;matchupInteractionUntil=performance.now()+200;}},true);
+function scheduleRosterRefresh(){
+ if(rosterRefreshTimer!==null)return;
+ rosterRefreshTimer=setTimeout(()=>{rosterRefreshTimer=null;
+  const editing=document.activeElement?.closest?.('.liveScouting')&&document.activeElement.matches('input,select,textarea,[contenteditable=true]');
+  if(editing||openingSession||matchupPointerDown||performance.now()<matchupInteractionUntil||document.querySelector('#teamSelectionWorkspace,#modal.open,#sxMask,#qsMask')){scheduleRosterRefresh();return;}
+  resetRosters();if(STATE.view==='scouting')fullRedraw();
+ },200);
+}
+/* Optional catalogue imports must not compete with active scouting input. */
+window.ESMatchupBusy=()=>STATE.view==='scouting'&&!!(openingSession||matchupPointerDown||performance.now()<matchupInteractionUntil||document.activeElement?.closest?.('.liveScouting')&&document.activeElement.matches('input,select,textarea,[contenteditable=true]')||document.querySelector('#teamSelectionWorkspace,#sxMask,#qsMask'));
 function matchupDirectoriesReady(){return !!(window.EUROSCOUT_EUROCUP_ROSTERS&&window.EUROSCOUT_OFFICIAL_ROSTERS);}
 function ensureMatchupDirectories(){
  if(matchupDirectoriesReady()||rosterDirectoriesPending||typeof window.loadMatchupRosterScripts!=="function")return;
  rosterDirectoriesPending=true;rosterDirectoriesFailed=false;
- window.loadMatchupRosterScripts().then(()=>{rosterDirectoriesPending=false;resetRosters();if(STATE.view==="scouting")fullRedraw();}).catch(()=>{rosterDirectoriesPending=false;rosterDirectoriesFailed=true;if(STATE.view==="scouting")fullRedraw();});
+ window.loadMatchupRosterScripts().then(()=>{rosterDirectoriesPending=false;scheduleRosterRefresh();}).catch(()=>{rosterDirectoriesPending=false;rosterDirectoriesFailed=true;scheduleRosterRefresh();});
 }
 function officialDirectories(){return [window.EUROSCOUT_EUROCUP_ROSTERS,window.EUROSCOUT_OFFICIAL_ROSTERS].filter(Boolean);}
-window.addEventListener?.("euroscout:rosters-ready",()=>{resetRosters();if(STATE.view==="scouting")fullRedraw();});
+window.addEventListener?.("euroscout:rosters-ready",scheduleRosterRefresh);
 function rosterNameTokens(p){return fold(p?.name||'').replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(Boolean).filter(token=>!['jr','sr','ii','iii','iv'].includes(token));}
 function rosterBaseName(p){return rosterNameTokens(p).join(' ');}
 function rosterBirth(p){return String(p?.born||p?.birthYear||String(p?.birthdate||'').match(/(?:19|20)\d{2}/)?.[0]||'');}
@@ -43,14 +56,15 @@ function sameRosterPerson(a,b){const ai=rosterIdentityIds(a),bi=rosterIdentityId
 function addClubPlayer(index,seen,key,p){key=canonKey(key);if(!key||!p)return;const id=gid(p)||p.id;if(!id)return;if(!seen.has(key))seen.set(key,{ids:new Set(),players:[]});const bucket=seen.get(key);if(bucket.ids.has(id))return;if(bucket.players.some(x=>sameRosterPerson(x,p))){bucket.ids.add(id);return;}bucket.ids.add(id);bucket.players.push(p);if(!index.has(key))index.set(key,[]);index.get(key).push(p);}
 function buildClubIndex(){
  const index=new Map(),seen=new Map(),m=next26Get(),mb=next26bGet(),pool=assignPool(),directories=officialDirectories();
- const byId=new Map(),sources=[...pool,...(typeof allPlayersEvery==='function'?allPlayersEvery():[]),...directories.flatMap(d=>d.players||[])];
+ const catalogue=typeof allPlayersEvery==='function'?allPlayersEvery():[],byId=new Map(),sources=[...pool,...catalogue,...directories.flatMap(d=>d.players||[])];
+ for(const p of catalogue)if(!byId.has(p.id))byId.set(p.id,p);
  for(const p of sources)for(const id of [p.id,gid(p),...(p._grp||[]).map(x=>x.id)])if(id&&!byId.has(id))byId.set(id,p);
  const clubKeysByName=new Map(),rememberClubName=(name,keys)=>{const n=fold(name);if(!n)return;if(!clubKeysByName.has(n))clubKeysByName.set(n,new Set());for(const key of keys)if(key)clubKeysByName.get(n).add(key);};
  for(const club of allClubs()){const keys=new Set([club.key,...(club.teams||[]).map(t=>t.key)].filter(Boolean));rememberClubName(club.name,keys);for(const team of club.teams||[]){rememberClubName(team.name,keys);for(const name of team.searchAliases||[])rememberClubName(name,keys);}}
  const officialRows=[],officialKeys=new Map(),mark=(id,key)=>{if(!id||!key)return;if(!officialKeys.has(id))officialKeys.set(id,new Set());officialKeys.get(id).add(key);};
  for(const directory of directories){
   const teams=new Map();for(const team of directory.teams||[]){const base=team.currentKey||team.key,keys=new Set([base,canonKey(base),team.key,team.currentKey].filter(Boolean));for(const name of [team.name,...(team.aliases||[])])for(const key of clubKeysByName.get(fold(name))||[])keys.add(key);for(const id of [team.id,team.code])if(id)teams.set(id,keys);}
-  for(const row of directory.roster||[]){const keys=teams.get(row.teamId||row.teamCode);if(!keys?.size)continue;const ids=row.ids||[row.id],p=ids.map(id=>(typeof player==='function'?player(id):null)||byId.get(id)).find(Boolean);if(!p)continue;officialRows.push({keys,p});for(const id of [...ids,p.id,gid(p),...(p._grp||[]).map(x=>x.id)])for(const key of keys)mark(id,key);}
+  for(const row of directory.roster||[]){const keys=teams.get(row.teamId||row.teamCode);if(!keys?.size)continue;const ids=row.ids||[row.id],p=ids.map(id=>byId.get(id)).find(Boolean);if(!p)continue;officialRows.push({keys,p});for(const id of [...ids,p.id,gid(p),...(p._grp||[]).map(x=>x.id)])for(const key of keys)mark(id,key);}
  }
  for(const p of pool){const registered=new Set();for(const id of [p.id,gid(p),...(p._grp||[]).map(x=>x.id)])for(const key of officialKeys.get(id)||[])registered.add(key);for(const key of registered.size?registered:effective26keys(p,m,mb))addClubPlayer(index,seen,key,p);}
  for(const {keys,p} of officialRows)for(const key of keys)addClubPlayer(index,seen,key,p);
@@ -112,7 +126,7 @@ renderScouting=function(partial=false){
  const players=rosterPlayers();if(!players.some(p=>p.id===selected))selected=walkList()[0]?.id||players[0]?.id||'';
  const p=players.find(p=>p.id===selected),rep=p?effectiveReport(p):{};
  if(p)migrateContext(p,rep);
- if(p&&SX&&act&&chosen===p.id)SX.select(p,p._liveClub);
+ if(p&&SX&&act&&chosen===p.id)try{SX.select(p,p._liveClub);}catch(error){busyStatus='Session tracking could not be saved. Free browser storage and retry.';console.warn('Session selection not saved',error);}
  const count=k=>bulletParse(rep[k]||'').length,total=cats.reduce((n,[k])=>n+count(k),0);
  const notebook='<section class="liveNotebook mx-notebook">'+(p?headerHTML(p)+'<div class="liveBody"><div class="mx-catbar"><div class="liveCategories" role="tablist" aria-label="Note categories">'+[['all','All notes'],...cats].map(([key,label])=>'<button type="button" role="tab" class="mx-cat'+(key===category?' on':'')+'" aria-selected="'+(key===category)+'" data-cat="'+key+'">'+label+' ('+(key==='all'?total:count(key))+')</button>').join('')+'</div><button type="button" class="mx-similar'+(showSimilar?' on':'')+'" id="mxSimilar" aria-pressed="'+showSimilar+'" title="Notes that overlap with the one you are writing">💡 Similar <span id="mxSimilarN"></span></button></div>'+
   '<div class="liveNoteTools"><input id="liveSearch" type="search" placeholder="Search this player’s notes…" aria-label="Search player notes"><span id="liveStatus" role="status">'+esc(busyStatus||(editable()?'✓ Changes save automatically':'Read only'))+'</span></div><div id="liveRelated" hidden></div><div id="liveBullets"></div></div>':'<div class="empty">Choose two teams, then select a player to begin taking notes.</div>')+'</section>';
@@ -136,7 +150,7 @@ renderScouting=function(partial=false){
    fetched quietly the first time the matchup opens, so new signings show on the
    2026/27 rosters and carry their signals. Never while a note is being typed. */
 let extraAsked=false;
-function backgroundLeagues(){if(extraAsked||STATE._extraDone||typeof loadExtraLeagues!=='function')return;extraAsked=true;setTimeout(()=>{loadExtraLeagues().then(()=>{const typing=document.activeElement&&(document.activeElement.isContentEditable||/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName));if(STATE.view==='scouting'&&!typing&&!document.querySelector('#modal,#sxMask,#qsMask,#teamSelectionWorkspace')){resetRosters();renderScouting(true);fullRedraw();}else resetRosters();}).catch(()=>{});},1500);}
+function backgroundLeagues(){if(extraAsked||STATE._extraDone||typeof loadExtraLeagues!=='function')return;extraAsked=true;setTimeout(()=>{loadExtraLeagues().then(scheduleRosterRefresh).catch(()=>{});},1500);}
 
 function fullRedraw(){document.querySelector('.liveScouting')?.remove();renderScouting(true);}
 function wireFrame(){const s=STATE.scouting;
@@ -152,7 +166,7 @@ function wireFrame(){const s=STATE.scouting;
 }
 function applyFilter(slot){const col=document.querySelector('.mx-col[data-slot="'+slot+'"]');if(!col)return;const byId=new Map((liveRoster(STATE.scouting[slot])?.players||[]).map(p=>[p.id,p]));col.querySelectorAll('.rosterRow').forEach(row=>{const p=byId.get(row.dataset.id);row.hidden=!p||!visible(p,slot);});}
 function wireRows(){document.querySelectorAll('.rosterRow').forEach(el=>{const on=el.dataset.id===selected;el.classList.toggle('liveSelected',on);el.setAttribute('aria-pressed',on);el.onclick=()=>choose(el.dataset.id,true);});}
-function refreshMarks(){if(!SX)return;const byId=new Map(rosterPlayers().map(p=>[p.id,p]));document.querySelectorAll('.rosterRow').forEach(row=>{const p=byId.get(row.dataset.id),m=row.querySelector('.mx-mark');if(p&&m)m.dataset.mark=SX.markOf(p);});}
+function refreshMarks(){if(!SX)return;const active=SX.active(),byId=new Map(rosterPlayers().map(p=>[p.id,p]));document.querySelectorAll('.rosterRow').forEach(row=>{const p=byId.get(row.dataset.id),m=row.querySelector('.mx-mark');if(p&&m)m.dataset.mark=SX.markOf(p,active);});}
 function tick(){if(!SX?.active()){clearInterval(timer);timer=null;return;}if(timer)return;timer=setInterval(()=>{if(!document.querySelector('.liveScouting')){clearInterval(timer);timer=null;return;}refreshMarks();},2000);}
 
 function swapTeams(){const s=STATE.scouting;[s.a,s.b]=[s.b,s.a];[filters.a,filters.b]=[filters.b,filters.a];const a=SX?.active();if(a)SX.update({a:a.b,b:a.a,scoreA:a.scoreB,scoreB:a.scoreA});fullRedraw();}
@@ -186,14 +200,14 @@ function wireNotebook(p,rep){
  document.querySelector('#mxPrev').onclick=()=>step(-1);document.querySelector('#mxNext').onclick=()=>step(1);
  document.querySelector('#mxWatch').onclick=()=>{if(!editable())return;toggleTag(p.id,WATCH_TAG).then(()=>renderScouting(true));};
  document.querySelectorAll('.mx-stock [data-stock]').forEach(b=>b.onclick=()=>{SX.setStock(p,b.dataset.stock);renderScouting(true);refreshMarks();});
- let dragged=null;
+ let dragged=null,noteSaveSequence=0;
  document.querySelectorAll('[data-cat]').forEach(el=>{el.onclick=()=>{category=el.dataset.cat;renderScouting(true)};if(el.dataset.cat==='all')return;el.ondragover=e=>{if(!dragged||dragged.field===el.dataset.cat)return;e.preventDefault();el.classList.add('drop');};el.ondragleave=()=>el.classList.remove('drop');el.ondrop=e=>{if(!dragged)return;e.preventDefault();const d=dragged;dragged=null;moveNote(d.field,d.text,el.dataset.cat);};});
  document.querySelector('#mxSimilar').onclick=()=>{showSimilar=!showSimilar;renderScouting(true);};
 
  const host=document.querySelector('#liveBullets'),related=document.querySelector('#liveRelated'),similarN=document.querySelector('#mxSimilarN');
  const tokens=t=>new Set(fold(t).split(/[^a-z0-9]+/).filter(w=>w.length>3).map(w=>/^(shoot|shot|shooting|shooter)/.test(w)?'shoot':/^(defen)/.test(w)?'defense':w.replace(/(ing|ers|es|s)$/,'')));
 
- function counts(){const r=effectiveReport(p);document.querySelectorAll('[data-cat]').forEach(button=>{const k=button.dataset.cat,label=k==='all'?'All notes':cats.find(c=>c[0]===k)[1];button.textContent=label+' ('+(k==='all'?cats.reduce((n,[f])=>n+bulletParse(r[f]||'').length,0):bulletParse(r[k]||'').length)+')'});document.querySelectorAll('[data-count]').forEach(el=>{const n=bulletParse(r[el.dataset.count]||'').length;el.textContent=n+' note'+(n===1?'':'s');});}
+ function counts(r=effectiveReport(p)){document.querySelectorAll('[data-cat]').forEach(button=>{const k=button.dataset.cat,label=k==='all'?'All notes':cats.find(c=>c[0]===k)[1];button.textContent=label+' ('+(k==='all'?cats.reduce((n,[f])=>n+bulletParse(r[f]||'').length,0):bulletParse(r[k]||'').length)+')'});document.querySelectorAll('[data-count]').forEach(el=>{const n=bulletParse(r[el.dataset.count]||'').length;el.textContent=n+' note'+(n===1?'':'s');});}
  /* Similar notes stay out of the way: the count is always there, the list only on request. */
  function suggestions(text,current){const words=tokens(text),matches=[];related.replaceChildren();if(words.size){const report=effectiveReport(p);for(const [key,label]of cats)bulletParse(report[key]||'').forEach((note,index)=>{if(key===current.key&&index===current.index)return;const other=tokens(note),score=[...words].filter(w=>other.has(w)).length;if(score)matches.push({key,label,note,index,score})});matches.sort((a,b)=>b.score-a.score);}
   similarN.textContent=matches.length?'('+matches.length+')':'';related.hidden=!showSimilar||!matches.length;if(related.hidden)return;
@@ -212,9 +226,9 @@ function wireNotebook(p,rep){
   const head=document.createElement('div');head.className='mx-sechead';const title=document.createElement('h3');title.textContent=label;const n=document.createElement('span');n.dataset.count=field;head.append(title,n);section.append(head);
   const list=document.createElement('div');section.append(list);host.append(section);
   if(!editable()){list.innerHTML='<ul class="mx-readonly">'+bulletParse(rep[field]||'').map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>';continue;}
-  let editor=makeBulletList(list,rep[field]||'','Write an observation…',()=>{/* An editor that has been redrawn away must never write its stale rows back. */if(!list.isConnected)return;if(SX?.active()&&chosen!==p.id){chosen=p.id;SX.select(p,p._liveClub);}const r=effectiveReport(p);r[field]=editor.serialize();
-   if(r._workflow?.noteTimes){r._workflow={...r._workflow};delete r._workflow.noteTimes;}counts();
-   saveRec(p,{report:JSON.stringify(r)}).then(ok=>{counts();refreshMarks();const st=document.querySelector('#liveStatus');if(st)st.textContent=ok===false?'Saved locally; cloud sync failed.':'✓ Saved to player profile';}).catch(()=>{const st=document.querySelector('#liveStatus');if(st)st.textContent='Could not sync changes.'});});
+  let editor=makeBulletList(list,rep[field]||'','Write an observation…',()=>{/* An editor that has been redrawn away must never write its stale rows back. */if(!list.isConnected)return;if(SX?.active()&&chosen!==p.id){chosen=p.id;try{SX.select(p,p._liveClub);}catch(error){console.warn('Session selection not saved',error);}}const r=effectiveReport(p);r[field]=editor.serialize();
+   if(r._workflow?.noteTimes){r._workflow={...r._workflow};delete r._workflow.noteTimes;}counts(r);
+   const sequence=++noteSaveSequence;saveRec(p,{report:JSON.stringify(r)}).then(ok=>{if(!list.isConnected||sequence!==noteSaveSequence)return;counts();refreshMarks();const st=document.querySelector('#liveStatus');if(st)st.textContent=ok===false?'Saved locally; cloud sync failed.':'✓ Saved to player profile';}).catch(()=>{if(!list.isConnected||sequence!==noteSaveSequence)return;const st=document.querySelector('#liveStatus');if(st)st.textContent='Could not save changes. Keep this note open and retry.'});});
   const addRow=list.querySelector('.bl-addrow');list.prepend(addRow);const addButton=addRow.querySelector('button');addButton.textContent='+  Add note';addButton.dataset.addNote=field;
   addButton.onclick=()=>{const ul=list.querySelector('.bl-ul');[...ul.children].slice(0,-1).forEach(li=>{if(!li.querySelector('.bl-txt').textContent.trim())li.remove();});const row=ul.lastElementChild;ul.prepend(row);row.querySelector('.bl-txt')?.focus();row.scrollIntoView({block:'nearest'});};
   decorate(list,field);

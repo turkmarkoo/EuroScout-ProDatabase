@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('euroscout-quickstats.js','utf8');
+const clubs=[{key:'fec26|LEV',name:'Patrioti Levice',teams:[]}],leagues={fec26:{meta:{id:'fec26',name:'FIBA Europe Cup 2026/27',season:'2026/27'}},'dragons-fec-127':{meta:{id:'dragons-fec-127',name:'FIBA Europe Cup',season:'2026/27'}},bclq:{meta:{id:'bclq',name:'BCL Qualifiers',season:'2026/27'}},'dragons-bclq-125':{meta:{id:'dragons-bclq-125',name:'Basketball Champions League Qualifiers',season:'2026/27'}}};
+const c={window:{ESTeamSelection:{competitionIdentity:m=>({id:m.id.replace(/26$/,''),name:m.id==='bclq'?'BCL Qualifiers':'FIBA Europe Cup'})}},document:{addEventListener(){}},allClubs:()=>clubs,canonKey:k=>k,clubByKey:k=>['bclq|LEV','fec26|LEV'].includes(k)?clubs[0]:null,leagueOf:p=>leagues[p.league]};vm.createContext(c);vm.runInContext(source,c);const api=c.window.ESQuickStats;
+const official={id:'official',league:'fec26',team:'LEV',teamName:'Patrioti Levice',g:1,ppg:11,min:36,gameLog:[]},feed={id:'feed',league:'dragons-fec-127',team:'dragons-team-263',teamName:'BK Patrioti Levice',g:1,ppg:11,min:35.98,gameLog:[['2026-10-06']],_dragonsData:true};
+const rows=[official,feed,{...official,id:'q',league:'bclq'},{...feed,id:'feed-q',league:'dragons-bclq-125'}],before=JSON.stringify(rows),out=api.distinctLines(rows);assert.equal(out.length,2);assert.deepEqual(Array.from(out,p=>p.id),['feed','feed-q']);assert.equal(JSON.stringify(rows),before);assert.equal(out[0].g,1,'Duplicate imports must never sum games');
+assert.equal(api.distinctLines([feed,{...feed,id:'older',season:'2025/26'}]).length,2,'Seasons stay separate');
+assert.equal(api.distinctLines([feed,{...feed,id:'transfer',team:'OTHER',teamName:'Other Club'}]).length,2,'Different clubs stay separate');
+assert.equal(api.distinctLines([{...official,id:'unknown-a',team:'',teamName:''},{...official,id:'unknown-b',team:'',teamName:''}]).length,2,'Unidentified teams cannot be merged');
+const more={...feed,id:'newer',g:2,gameLog:[]};assert.equal(api.distinctLines([feed,more])[0].id,'newer','A complete later sample beats an older detailed import');
+console.log('PASS repeated FEC and BCL qualifier imports collapse without summing games or modifying data; seasons, transfers and unknown teams stay separate.');
