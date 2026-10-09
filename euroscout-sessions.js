@@ -61,12 +61,25 @@ function writeAll(list) {
   return Promise.resolve(Store.pushAppKey(KEY)).catch(() => false);
 }
 function active() { const a = readJSON(ACTIVE, null); return a && a.id ? a : null; }
-function setActive(a) { if (a) localStorage.setItem(ACTIVE, JSON.stringify(a)); else localStorage.removeItem(ACTIVE); }
+/* Only the public fixture cache is disposable. Never evict notes, jerseys,
+   assignments, merge undo records or finished scouting history to make room. */
+function saveActive(a) {
+  const value = JSON.stringify(a);
+  try { localStorage.setItem(ACTIVE, value); }
+  catch (error) {
+    const quota = error?.name === 'QuotaExceededError' || error?.code === 22 || error?.code === 1014;
+    if (!quota || localStorage.getItem('euroscout:fixtures:v1') == null) throw error;
+    localStorage.removeItem('euroscout:fixtures:v1');
+    localStorage.setItem(ACTIVE, value);
+  }
+}
+function setActive(a) { if (a) saveActive(a); else localStorage.removeItem(ACTIVE); }
 
 /* ── a session in progress ─────────────────────────────── */
 let openId = '', openSince = 0;                 // the player currently on screen
 function start(details) {
   if (!canEdit()) return null;
+  const running = active(); if (running) return running;
   const a = Object.assign({ id: crypto.randomUUID(), startedAt: new Date().toISOString(), by: me(), players: {}, mode: 'Video',
     a: { key: '', name: '' }, b: { key: '', name: '' }, competition: { id: '', name: '' }, stage: '', gameDate: today(), scoreA: '', scoreB: '', venue: '' }, details);
   setActive(a); openId = ''; openSince = 0;
@@ -337,6 +350,7 @@ function knownGames(ka, kb) {
 function teamOptions(cur) { return scoutingTeamOptions(cur); }
 function openStart(preset, done) {
   if (!canEdit()) { toast('Only an editor can run a scouting session.'); return; }
+  const running = active(); if (running) { if (done) done(running); return; }
   preset = preset || {};
   const box = modal('<h3>Start scouting session</h3><p class="sx-hint">Pick the game once. Every player you open or edit is logged against it when you finish.</p>' +
     '<form id="sxStart" class="sx-form"><div class="sx-two"><label>Team A<select name="a" required>' + teamOptions(preset.a) + '</select></label><label>Team B<select name="b" required>' + teamOptions(preset.b) + '</select></label></div>' +
@@ -345,7 +359,7 @@ function openStart(preset, done) {
     '<label id="sxCompOtherWrap" hidden>Competition name<input name="compOther" type="text" placeholder="Pre-season · Friendly · Tournament name"></label>' +
     '<div class="sx-two"><label>Game date<input name="gameDate" type="date" value="' + escAttr(preset.gameDate || today()) + '"></label><label>How are you watching?<select name="mode"><option>Video</option><option>Live</option></select></label></div>' +
     '<div class="sx-two"><label>Score (optional)<span class="sx-score"><input name="scoreA" inputmode="numeric" maxlength="3" aria-label="Team A score"><i>–</i><input name="scoreB" inputmode="numeric" maxlength="3" aria-label="Team B score"></span></label><label>Venue (optional)<input name="venue" type="text"></label></div>' +
-    '<div class="sx-actions"><button type="button" class="btn ghost" id="sxCancel">Cancel</button><button class="btn primary">Start session</button></div></form>', true);
+    '<p id="sxStartStatus" class="sx-hint" role="alert" hidden></p><div class="sx-actions"><button type="button" class="btn ghost" id="sxCancel">Cancel</button><button type="submit" class="btn primary">Start session</button></div></form>', true);
   const f = $1('#sxStart', box), el = f.elements;
   let games = [];
   function paint() {
@@ -370,14 +384,32 @@ function openStart(preset, done) {
      the dialog opens so a legal company name cannot hide a known game. */
   Promise.resolve(window.loadMatchupRosterScripts?.()).then(()=>{if(document.getElementById('sxStart')===f)paint();return window.ESFixtures?.refresh(false);}).then(()=>{if(document.getElementById('sxStart')===f)paint();}).catch(()=>{});
   $1('#sxCancel', box).onclick = closeModal;
+  const status = $1('#sxStartStatus', box), button = f.querySelector('[type=submit]');
+  const showStartError = message => { status.textContent = message; status.hidden = false; };
+  f.addEventListener('invalid', () => showStartError('Check the highlighted field, then start the session.'), true);
+  let submitting = false;
   f.onsubmit = e => {
     e.preventDefault();
-    if (!el.a.value || !el.b.value || el.a.value === el.b.value) { toast('Pick two different teams.'); return; }
-    const other = el.comp.value === '__other', opt = el.comp.selectedOptions[0];
-    const a = start({ a: { key: canonKey(el.a.value), name: clubName(el.a.value) }, b: { key: canonKey(el.b.value), name: clubName(el.b.value) },
+    if (submitting || !f.isConnected) return;
+    if (!canEdit()) { showStartError('Your editing access is unavailable. Reconnect through DragonsHub and try again.'); return; }
+    if (!el.a.value || !el.b.value || el.a.value === el.b.value) { showStartError('Pick two different teams.'); return; }
+    submitting = true; button.disabled = true; button.textContent = 'Starting…'; status.hidden = true;
+    let a;
+    try {
+      const other = el.comp.value === '__other', opt = el.comp.selectedOptions[0];
+      a = start({ a: { key: canonKey(el.a.value), name: clubName(el.a.value) }, b: { key: canonKey(el.b.value), name: clubName(el.b.value) },
       competition: other ? { id: '', name: el.compOther.value.trim() || 'Other' } : { id: el.comp.value, name: opt ? opt.textContent.replace(' · one team only', '') : '' },
       stage: el.stage.value.trim(), gameDate: el.gameDate.value || today(), mode: el.mode.value, scoreA: el.scoreA.value.trim(), scoreB: el.scoreB.value.trim(), venue: el.venue.value.trim() });
-    closeModal(); if (done) done(a);
+      if (!a) throw Error('Editing access unavailable');
+    } catch (error) {
+      const quota = error?.name === 'QuotaExceededError' || error?.code === 22 || error?.code === 1014;
+      showStartError(quota ? 'This browser has no space left to save a session. Your notes and history have been kept. Free browser storage and try again; do not clear EuroScout site data.' : 'Could not save the session. Your selections have been kept. Try again.');
+      submitting = false; button.disabled = false; button.textContent = 'Start session';
+      return;
+    }
+    closeModal();
+    try { if (done) done(a); }
+    catch (error) { console.warn('Scouting session saved; matchup refresh failed', error); toast('Session saved. Reload this page to resume it.'); }
   };
 }
 

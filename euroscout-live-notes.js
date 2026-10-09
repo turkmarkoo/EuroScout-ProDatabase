@@ -156,7 +156,18 @@ function refreshMarks(){if(!SX)return;const byId=new Map(rosterPlayers().map(p=>
 function tick(){if(!SX?.active()){clearInterval(timer);timer=null;return;}if(timer)return;timer=setInterval(()=>{if(!document.querySelector('.liveScouting')){clearInterval(timer);timer=null;return;}refreshMarks();},2000);}
 
 function swapTeams(){const s=STATE.scouting;[s.a,s.b]=[s.b,s.a];[filters.a,filters.b]=[filters.b,filters.a];const a=SX?.active();if(a)SX.update({a:a.b,b:a.a,scoreA:a.scoreB,scoreB:a.scoreA});fullRedraw();}
-function startSession(){const s=STATE.scouting;SX.openStart({a:s.a,b:s.b},a=>{if(!a)return;s.a=a.a.key;s.b=a.b.key;s.gameDate=a.gameDate;fullRedraw();});}
+let openingSession=false;
+function startSession(){
+ if(openingSession||document.getElementById('sxStart'))return;
+ const button=document.querySelector('#mxStart'),s=STATE.scouting,preset={a:s.a,b:s.b};
+ openingSession=true;if(button){button.disabled=true;button.textContent='Opening…';}
+ // Paint feedback before building the full team picker; one click opens one dialog.
+ requestAnimationFrame(()=>setTimeout(()=>{
+  try{SX.openStart(preset,a=>{if(!a)return;s.a=a.a.key;s.b=a.b.key;s.gameDate=a.gameDate;fullRedraw();});}
+  catch(error){SX.closeModal();console.warn('Scouting session dialog unavailable',error);toast('Could not open the session form. Try again.');}
+  finally{openingSession=false;if(button?.isConnected){button.disabled=false;button.textContent='Start session';}}
+ },0));
+}
 function finishSession(){SX.openFinish(()=>fullRedraw());}
 function editGame(){const a=SX?.active();if(!a)return;const box=SX.modal('<h3>Game details</h3><form id="mxGame" class="sx-form"><div class="sx-two"><label>Competition<input name="comp" type="text" value="'+escAttr(a.competition?.name||'')+'"></label><label>Stage / round<input name="stage" type="text" value="'+escAttr(a.stage||'')+'"></label></div><div class="sx-two"><label>Game date<input name="gameDate" type="date" value="'+escAttr(a.gameDate||'')+'"></label><label>How are you watching?<select name="mode"><option'+(a.mode==='Video'?' selected':'')+'>Video</option><option'+(a.mode==='Live'?' selected':'')+'>Live</option></select></label></div><label>Venue<input name="venue" type="text" value="'+escAttr(a.venue||'')+'"></label><div class="sx-actions"><button class="btn primary">Save</button></div></form>');const f=box.querySelector('#mxGame');f.onsubmit=e=>{e.preventDefault();const name=f.elements.comp.value.trim();SX.update({competition:name===(a.competition?.name||'')?a.competition:{id:'',name},stage:f.elements.stage.value.trim(),gameDate:f.elements.gameDate.value||a.gameDate,mode:f.elements.mode.value,venue:f.elements.venue.value.trim()});SX.closeModal();renderScouting(true);};}
 
