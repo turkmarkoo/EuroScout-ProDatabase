@@ -66,15 +66,15 @@ const root=process.cwd(),ACTIVE='euroscout:session:active:v1',CACHE='euroscout:f
   await page.reload({waitUntil:'domcontentloaded'});const resumed=await embedded();await ready(resumed);await setup(resumed);
   assert.equal((await resumed.evaluate(()=>ESSessions.active())).id,started.id);assert.equal((await resumed.evaluate(()=>ESSessions.active())).players['test-player'].stock,'up');await unchanged(resumed,before);
   console.log('PASS embedded Chrome: both single-click buttons, Levice–Oostende fixture, duplicate-start protection, reload/resume and private data preservation');
-  // Standalone, full browser storage: only the rebuildable public schedule cache is evicted.
+  // Standalone, full browser storage: additional durable storage retains every prior key.
   await page.goto('https://euro.test/index.html#matchup',{waitUntil:'domcontentloaded'});await ready(page);await page.evaluate(()=>ESSessions.discard());await setup(page);await fill(page,true);await open(page);
-  await page.locator('#sxStart button[type=submit]').click();await assertStarted(page);assert.equal(await page.evaluate(CACHE=>localStorage.getItem(CACHE)===null,CACHE),true,'Recovery must remove the public fixture cache');await unchanged(page,before);await freeTestFill(page);
-  console.log('PASS full-storage recovery clears only fixture cache and starts the session');
-  // No disposable cache available: explain the failure, retain the form, then allow retry.
-  await page.evaluate(()=>ESSessions.discard());await setup(page);await fill(page,false);await open(page);
+  await page.locator('#sxStart button[type=submit]').click();await assertStarted(page);assert.equal(await page.evaluate(CACHE=>localStorage.getItem(CACHE)!==null,CACHE),true,'Durable overflow must retain the fixture cache');await unchanged(page,before);await freeTestFill(page);
+  console.log('PASS full-storage recovery retains caches and starts the session using durable overflow');
+  // With all storage unavailable: explain the failure, retain the form, then allow retry.
+  await page.evaluate(()=>ESSessions.discard());await setup(page);await fill(page,false);await page.evaluate(ACTIVE=>{window.__normalSet=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k===ACTIVE)throw new DOMException('Storage unavailable','QuotaExceededError');return window.__normalSet.call(this,k,v);};},ACTIVE);await open(page);
   const button=page.locator('#sxStart button[type=submit]');await button.click();await page.locator('#sxStartStatus:not([hidden])').waitFor();
   assert.match(await page.locator('#sxStartStatus').innerText(),/no space left/);assert.equal(await button.isEnabled(),true);assert.equal(await page.evaluate(()=>ESSessions.active()),null);assert.equal(await page.locator('[name=gameDate]').inputValue(),'2026-10-06');await unchanged(page,before);
-  await freeTestFill(page);await button.click();await assertStarted(page);await unchanged(page,before);
+  await page.evaluate(()=>{Storage.prototype.setItem=window.__normalSet;});await freeTestFill(page);await button.click();await assertStarted(page);await unchanged(page,before);
   console.log('PASS failed save shows a visible error, retains selections and allows successful retry');
   // Editing access can expire while the form is open: explain it and allow a retry.
   await page.evaluate(()=>ESSessions.discard());await setup(page);await open(page);

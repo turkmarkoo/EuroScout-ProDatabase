@@ -14,8 +14,26 @@ function leagueLabel(o){
 }
 
 let current=null;
-function eligible(s){return s instanceof HTMLSelectElement&&!s.matches('#mxLevel,#esLevel,#eProj,.es-blueprint-level,.es-level-picker')&&!s.disabled&&!s.multiple&&s.size<=1&&(s.options.length>=7||/team|club|agent|agency|league|country|arch|role|position/i.test(s.id));}
+function eligible(s){return s instanceof HTMLSelectElement&&!s.matches('#mxLevel,#esLevel,#eProj,.es-blueprint-level,.es-level-picker')&&!s.disabled&&!s.multiple&&s.size<=1&&(s.hasAttribute('data-option-search')||s.options.length>=7||/team|club|agent|agency|league|country|arch|role|position/i.test(s.id));}
+function openCompact(s,initial=''){
+ if(current)current.close();
+ const menu=document.createElement('div');menu.className='es-option-popover';menu.setAttribute('role','dialog');menu.setAttribute('aria-label',s.getAttribute('aria-label')||'Choose an option');
+ menu.innerHTML='<input type="search" aria-label="Search options" placeholder="Search…" autocomplete="off"><small aria-live="polite"></small><div class="es-option-results" role="listbox"></div>';
+ document.body.append(menu);s.setAttribute('aria-expanded','true');
+ const input=menu.querySelector('input'),list=menu.querySelector('.es-option-results'),count=menu.querySelector('small');
+ const isTeam=/team|club|roster/i.test(s.id)||(['a','b'].includes(s.name)&&!!s.closest('#sxStart'));
+ const clubs=isTeam?allClubs():[],byKey=new Map(),byName=new Map();for(const c of clubs){byKey.set(c.key,c);for(const t of c.teams||[])byKey.set(t.key,c);byName.set(normalize(c.name),c);}
+ const opts=Array.from(s.options).filter(o=>!o.hidden).map(o=>{const c=isTeam?(byKey.get(o.value)||byName.get(normalize(o.textContent.trim()))):null;return{value:o.value,label:o.textContent,disabled:o.disabled,logo:c?clubLogo(c):'',search:normalize([o.textContent,c?.country,c?.city,...(c?.teams||[]).flatMap(t=>[t.name,...(t.searchAliases||[])])].filter(Boolean).join(' '))};});
+ const position=()=>{if(!s.isConnected){close();return;}const r=s.getBoundingClientRect(),w=Math.min(isTeam?420:300,innerWidth-24),height=Math.min(380,innerHeight-24),below=innerHeight-r.bottom-12;menu.style.width=w+'px';menu.style.left=Math.max(12,Math.min(r.left,innerWidth-w-12))+'px';menu.style.maxHeight=Math.max(130,Math.min(height,Math.max(below,r.top-12)))+'px';menu.style.top=(below>=Math.min(240,height)?r.bottom+5:Math.max(12,r.top-Math.min(height,r.top-12)))+'px';};
+ const close=()=>{menu.remove();s.setAttribute('aria-expanded','false');document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',keys,true);window.removeEventListener('resize',position);current=null;if(s.isConnected)s.focus();};current={close};
+ const outside=e=>{if(!menu.contains(e.target)&&e.target!==s)close();};let limit=80;
+ const choose=o=>{if(!s.isConnected)return close();s.value=o.value;close();s.dispatchEvent(new Event('change',{bubbles:true}));};
+ function paint(){const words=normalize(input.value).trim().split(/\s+/).filter(Boolean),matches=opts.filter(o=>words.every(w=>o.search.includes(w)));list.replaceChildren();count.textContent=matches.length+' matching '+(isTeam?'teams':'options')+(matches.length>limit?' · type to narrow the list':'');for(const o of matches.slice(0,limit)){const b=document.createElement('button');b.type='button';b.setAttribute('role','option');b.dataset.value=o.value;b.setAttribute('aria-selected',String(o.value===s.value));b.disabled=o.disabled;if(o.logo){const img=document.createElement('img');img.src=o.logo;img.alt='';img.loading='lazy';img.onerror=()=>img.remove();b.append(img);}const text=document.createElement('span');text.textContent=o.label;b.append(text);if(o.value===s.value){const tick=document.createElement('i');tick.textContent='✓';tick.setAttribute('aria-hidden','true');b.append(tick);}b.onclick=()=>choose(o);list.append(b);}if(matches.length>limit){const more=document.createElement('button');more.type='button';more.className='es-option-more';more.textContent='Show more';more.onclick=()=>{limit+=80;paint();};list.append(more);}if(!matches.length)list.textContent='No matches.';}
+ function keys(e){if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();return;}const buttons=[...list.querySelectorAll('button:not(:disabled)')],index=buttons.indexOf(document.activeElement);if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();buttons[Math.max(0,Math.min(buttons.length-1,index+(e.key==='ArrowDown'?1:-1)))]?.focus();}else if(e.key==='Enter'&&e.target===input){e.preventDefault();buttons[0]?.click();}else if(e.key==='Tab'){close();}}
+ document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',keys,true);window.addEventListener('resize',position);input.oninput=()=>{limit=80;paint();};input.value=initial;position();paint();input.focus();
+}
 function open(s,initial=''){
+ if(s.closest('.liveScouting,#sxStart'))return openCompact(s,initial);
  if(current)current.close();
  const restore=document.activeElement,overlay=document.createElement('div');overlay.className='es-option-overlay';
  const title=s.getAttribute('aria-label')||document.querySelector('label[for="'+CSS.escape(s.id)+'"]')?.textContent||s.closest('label')?.childNodes[0]?.textContent||s.options[0]?.textContent||'Choose an option';

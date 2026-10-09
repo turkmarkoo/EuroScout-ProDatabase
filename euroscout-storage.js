@@ -1,0 +1,15 @@
+/* Durable overflow for a full localStorage. Existing values remain plain JSON and
+   are never removed or rewritten to make room. Await flush before reporting a save. */
+(function(){'use strict';
+ let store;try{store=window.localStorage;}catch{return;}
+ const get=Storage.prototype.getItem,set=Storage.prototype.setItem,remove=Storage.prototype.removeItem;
+ const allowed=k=>String(k).startsWith('euroscout:'),overflow=new Map();let db,failed=null,queue=Promise.resolve();const channel=window.BroadcastChannel?new BroadcastChannel('euroscout-local-overflow'):null;
+ const ready=new Promise(resolve=>{if(!window.indexedDB)return resolve(false);const r=indexedDB.open('euroscout-local-overflow',1);r.onupgradeneeded=()=>r.result.createObjectStore('values',{keyPath:'key'});r.onerror=()=>resolve(false);r.onblocked=()=>resolve(false);r.onsuccess=()=>{db=r.result;const q=db.transaction('values').objectStore('values').getAll();q.onsuccess=()=>{for(const row of q.result)overflow.set(row.key,row);resolve(true);};q.onerror=()=>resolve(false);};});
+ function persist(row){queue=queue.then(()=>new Promise((resolve,reject)=>{const t=db.transaction('values','readwrite');t.objectStore('values').put(row);t.oncomplete=()=>{channel?.postMessage(row);resolve();};t.onabort=t.onerror=()=>reject(t.error||Error('Additional browser storage is unavailable.'));})).catch(e=>{failed=e;window.dispatchEvent(new CustomEvent('euroscout:storage-error',{detail:e.message}));});}
+ Storage.prototype.getItem=function(k){return this===store&&allowed(k)&&overflow.has(String(k))?overflow.get(String(k)).value:get.call(this,k);};
+ Storage.prototype.setItem=function(k,v){if(this!==store||!allowed(k))return set.call(this,k,v);k=String(k);v=String(v);if(overflow.get(k)?.value===v)return;if(!overflow.has(k)){try{return set.call(this,k,v);}catch(e){if(!db||(e?.name!=='QuotaExceededError'&&e?.code!==22&&e?.code!==1014))throw e;}}
+ const row={key:k,value:v,dirty:true,at:Math.max(Date.now(),(overflow.get(k)?.at||0)+1)};overflow.set(k,row);persist(row);};
+ Storage.prototype.removeItem=function(k){k=String(k);if(this===store&&allowed(k)&&overflow.has(k)){const row={key:k,value:null,dirty:true,at:Date.now()};overflow.set(k,row);persist(row);}return remove.call(this,k);};
+ if(channel)channel.onmessage=e=>{const row=e.data;if(!row||!allowed(row.key)||(overflow.get(row.key)?.at||0)>row.at)return;overflow.set(row.key,row);window.dispatchEvent(new StorageEvent('storage',{key:row.key,newValue:row.value,storageArea:store}));};
+ window.ESStorage={ready,flush:async()=>{await queue;if(failed)throw failed;},pending:()=>Object.fromEntries([...overflow].filter(([,r])=>r.dirty).map(([k,r])=>[k,r.value])),ack:async values=>{for(const[k,value]of Object.entries(values)){const row=overflow.get(k);if(row?.dirty&&row.value===value){const next={...row,dirty:false};overflow.set(k,next);persist(next);}}await queue;if(failed)throw failed;},usage:()=>[...overflow.values()].map(r=>({key:r.key,storedCharacters:r.value?.length||0,additionalStorage:true,pendingSync:r.dirty}))};
+})();

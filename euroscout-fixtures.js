@@ -56,6 +56,15 @@ function fromFile(){
  const raw=window.EUROSCOUT_FIXTURES_2627;if(!raw||!raw.comps)return [];
  return Object.entries(raw.comps).flatMap(([comp,c])=>build(comp,c.name||comp,String(c.games||'').split(/\r?\n/).map(l=>l.trim()).filter(l=>l&&l[0]!=='#').map(l=>{const f=l.split('|');return {id:f[0],round:f[1]||'',date:f[2],h:f[3],hs:f[4]||'',a:f[5],as:f[6]||'',time:f[7]||'',venue:f[8]||'',hn:(c.teams||{})[f[3]],an:(c.teams||{})[f[5]]};}).filter(r=>r.date&&r.h&&r.a)));
 }
+// Official FIBA game URLs supply competition-scoped team codes. Resolve those
+// before a feed's company name or old competition alias.
+function officialFixtureKey(g,side){
+ const source=String(g.source_url||'');if(!/^https:\/\/(?:www\.)?fiba\.basketball\//.test(source))return '';
+ const codes=source.split('/').filter(Boolean).at(-1)?.match(/^\d+-([A-Za-z0-9]+)-([A-Za-z0-9]+)$/);if(!codes)return '';
+ const code=codes[side==='home'?1:2],teams=window.EUROSCOUT_FIBA_CLUB_2026?.teams||[];
+ const matches=teams.filter(t=>t.competition===g.comp&&String(t.officialCode||t.code)===code).map(t=>canonKey(t.currentKey||t.key));
+ const keys=[...new Set(matches.filter(k=>k&&clubByKey(k)))];return keys.length===1?keys[0]:'';
+}
 function fromDragons(rows){
  const grouped=new Map();
  for(const g of rows||[]){const comp=g.comp||g.league_id||'',list=grouped.get(comp)||[];list.push(g);grouped.set(comp,list);}
@@ -64,8 +73,8 @@ function fromDragons(rows){
   for(const g of list)for(const side of [g.home,g.away])if(side?.code)teams.set(side.code,{code:side.code,name:side.name||side.code});
   const keyOf=resolver(comp,[...teams.values()]);
   return list.map(g=>{
-   const side=s=>{const explicit=s?.key&&typeof clubByKey==='function'&&clubByKey(canonKey(s.key))?canonKey(s.key):'',raw=g.league_id&&s?.code?canonKey(g.league_id+'|'+s.code):'',direct=raw&&typeof clubByKey==='function'&&clubByKey(raw)?raw:'',key=explicit||direct||keyOf.get(s?.code)||'',c=key&&typeof clubByKey==='function'?clubByKey(key):null;return {...s,key,name:c?.name||s?.name||s?.code||''};};
-   return {...g,comp,home:side(g.home),away:side(g.away)};
+   const side=(s,which)=>{const official=officialFixtureKey(g,which),explicit=s?.key&&typeof clubByKey==='function'&&clubByKey(canonKey(s.key))?canonKey(s.key):'',raw=g.league_id&&s?.code?canonKey(g.league_id+'|'+s.code):'',direct=raw&&typeof clubByKey==='function'&&clubByKey(raw)?raw:'',key=official||explicit||direct||keyOf.get(s?.code)||'',c=key&&typeof clubByKey==='function'?clubByKey(key):null;return {...s,key,name:c?.name||s?.name||s?.code||''};};
+   return {...g,comp,home:side(g.home,'home'),away:side(g.away,'away')};
   });
  });
 }

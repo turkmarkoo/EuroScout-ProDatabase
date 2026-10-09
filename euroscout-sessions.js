@@ -149,6 +149,9 @@ async function finish(extra) {
      rather than a raw write so imported notes that have never been saved are
      carried into the record instead of being replaced by an empty report. */
   const event = [session.a.name, session.b.name].filter(Boolean).join(' vs ');
+  const list=readJSON(KEY,{sessions:[]}).sessions||[];list.push(session);
+  const historyWrite=writeAll(list); // Keep the active session if history cannot be stored.
+  await window.ESStorage?.flush();
   const writes = rows.filter(x => x.p).map(x => {
     const r = parseReport(recOf(x.p).report), w = Object.assign({}, r._workflow || {});
     w.viewings = (w.viewings || []).slice();
@@ -159,10 +162,8 @@ async function finish(extra) {
     w.updatedAt = ended.toISOString();
     return saveRec(x.p, { report: JSON.stringify(Object.assign({}, r, { _workflow: w })) });
   });
-  const list = readJSON(KEY, { sessions: [] }).sessions || [];
-  list.push(session);
   setActive(null); openId = ''; openSince = 0;
-  const ok = await Promise.all(writes.concat([writeAll(list)])).then(r => r.every(x => x !== false), () => false);
+  const ok = await Promise.all(writes.concat([historyWrite])).then(r => r.every(x => x !== false), () => false);
   return { session, ok };
 }
 function discard() { setActive(null); openId = ''; openSince = 0; }
@@ -320,7 +321,7 @@ function coverage() {
 
 /* ── competition + known-game choices for two clubs ───── */
 function compsFor(ka, kb) {
-  const list = k => { const c = club(k); if (!c) return []; let out = []; try { out = nextCompsOf(c).concat(domCompsOf(c)); } catch (e) { out = []; } return out.map(x => ({ id: x.id, name: x.name })); };
+  const list = k => { const c = club(k); if (!c) return []; let out = []; try { out = nextCompsOf(c).concat(domCompsOf(c)); } catch (e) { out = []; } for(const g of window.ESFixtures?.forTeam?.(k)||[])if(g.date>='2026-07-01'&&g.date<'2027-07-01')out.push({id:g.comp,name:g.compName});return [...new Map(out.map(x=>[x.id,{id:x.id,name:x.name}])).values()]; };
   const A = list(ka), B = list(kb), seen = new Set(), out = [];
   A.filter(x => B.some(y => y.id === x.id)).concat(A, B).forEach(x => { if (!seen.has(x.id)) { seen.add(x.id); out.push(x); } });
   return { options: out, shared: A.filter(x => B.some(y => y.id === x.id)).map(x => x.id) };
@@ -390,7 +391,7 @@ function openStart(preset, done) {
   const showStartError = message => { status.textContent = message; status.hidden = false; };
   f.addEventListener('invalid', () => showStartError('Check the highlighted field, then start the session.'), true);
   let submitting = false;
-  f.onsubmit = e => {
+  f.onsubmit = async e => {
     e.preventDefault();
     if (submitting || !f.isConnected) return;
     if (!canEdit()) { showStartError('Your editing access is unavailable. Reconnect through DragonsHub and try again.'); return; }
@@ -403,6 +404,7 @@ function openStart(preset, done) {
       competition: other ? { id: '', name: el.compOther.value.trim() || 'Other' } : { id: el.comp.value, name: opt ? opt.textContent.replace(' · one team only', '') : '' },
       stage: el.stage.value.trim(), gameDate: el.gameDate.value || today(), mode: el.mode.value, scoreA: el.scoreA.value.trim(), scoreB: el.scoreB.value.trim(), venue: el.venue.value.trim() });
       if (!a) throw Error('Editing access unavailable');
+      await window.ESStorage?.flush();
     } catch (error) {
       const quota = error?.name === 'QuotaExceededError' || error?.code === 22 || error?.code === 1014;
       showStartError(quota ? 'This browser has no space left to save a session. Your notes and history have been kept. Free browser storage and try again; do not clear EuroScout site data.' : 'Could not save the session. Your selections have been kept. Try again.');
@@ -442,11 +444,12 @@ function openFinish(done) {
   $1('#sxDiscard', box).onclick = () => { if (!confirm('Discard this session? Notes you wrote are kept; only the session record is dropped.')) return; discard(); closeModal(); if (done) done(null); };
   $1('#sxSave', box).onclick = async () => {
     const btn = $1('#sxSave', box); btn.disabled = true; btn.textContent = 'Saving…';
-    update({ scoreA: $1('#sxFA', box).value.trim(), scoreB: $1('#sxFB', box).value.trim() });
+    try{update({ scoreA: $1('#sxFA', box).value.trim(), scoreB: $1('#sxFB', box).value.trim() });
     const result = await finish({ note: $1('#sxNote', box).value.trim() });
     closeModal();
     toast(result && result.ok ? 'Session saved · ' + result.session.players.length + ' player timelines updated' : 'Session stored on this device; cloud sync failed.');
     if (done) done(result && result.session);
+    }catch(error){let status=box.querySelector('[data-save-error]');if(!status){status=document.createElement('p');status.dataset.saveError='';status.setAttribute('role','alert');box.append(status);}status.textContent='Could not save the session. The active session and existing notes are retained. '+error.message;btn.disabled=false;btn.textContent='Save session';}
   };
 }
 
