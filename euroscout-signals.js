@@ -62,6 +62,12 @@ function arrival(c){
  if(recent.some(x=>US_PRO.has(x.league))&&recent.every(x=>US_PRO.has(x.league)||NCAA.has(x.league)))return 'uspro';
  return '';
 }
+const SIGNAL_SEASON=SEASON_START+'/'+String(SEASON_START+1).slice(-2);
+function manualSignalRecord(p){const bio=typeof OVR==='undefined'?{}:OVR.bio||{},ids=[gid(p),p.id,...(p._grp||[]).map(x=>x.id)];for(const id of ids)if(Object.hasOwn(bio[id]||{},'arrivalSignals'))return bio[id].arrivalSignals||{};return {};}
+function manualRookie(p){const value=manualSignalRecord(p)[SIGNAL_SEASON]?.rookie;return typeof value==='boolean'?value:undefined;}
+async function setManualRookie(p,mode){if(!Store.canEdit())throw Error('Editing access required.');if(!['auto','yes','no'].includes(mode))throw Error('Invalid Rookie tag option.');await window.wfFlushReport?.();const existing=manualSignalRecord(p),season={...(existing[SIGNAL_SEASON]||{})};if(mode==='auto')delete season.rookie;else season.rookie=mode==='yes';ovrSaveLocal({bio:{[gid(p)||p.id]:{arrivalSignals:{...existing,[SIGNAL_SEASON]:season}}}},{players:typeof personLines==='function'?personLines(p):[p]});await window.ESStorage?.flush();}
+function editorHTML(p){if(typeof Store==='undefined'||!Store.canEdit())return '';const value=manualRookie(p),mode=value===true?'yes':value===false?'no':'auto';return '<label class="es-rookie-editor"><span>Rookie tag</span><select aria-label="Rookie tag · '+SIGNAL_SEASON+'" data-rookie-tag data-option-search>'+[['auto','Automatic'],['yes','Rookie'],['no','Not a rookie']].map(([v,label])=>'<option value="'+v+'"'+(v===mode?' selected':'')+'>'+label+'</option>').join('')+'</select><span class="es-rookie-status" role="status"></span></label>';}
+function wireEditor(host,p,onSaved){const field=host?.querySelector('[data-rookie-tag]');if(!field)return;field.onchange=async()=>{field.disabled=true;try{await setManualRookie(p,field.value);onSaved?.();}catch(error){field.disabled=false;const status=host.querySelector('.es-rookie-status');if(status)status.textContent='Could not save Rookie tag. Please retry.';console.warn('Rookie tag save failed',error);}};}
 const RULES=[
  {key:'college',label:'Rookie',title:'Arrives directly from NCAA basketball for a confirmed European club in 2026/27',
   test:(p,c)=>c.arrival==='college'},
@@ -78,18 +84,18 @@ const RULES=[
   test:(p,c)=>{const born=Number(p.born)||0;return born>=SEASON_START-21&&c.lines.some(x=>!NOT_EUROPE.has(x.league)&&(x.mpg||0)>=20&&(x.g||0)>=8);}}
  /* No "unsigned" badge: a missing 2026/27 club usually means the roster has not been entered yet, not that he is a free agent. */
 ];
-function context(p,m,mb){const keys=next(p,m,mb),ls=lines(p,keys.some(isEuropeClub)),c={lines:ls,next:keys,current:new Set(ls.map(x=>canonKey(x.league+'|'+x.team))),origin:origin(p),europe:ls.some(x=>!NOT_EUROPE.has(x.league))};c.arrival=arrival(c);return c;}
+function context(p,m,mb){const keys=next(p,m,mb),ls=lines(p,keys.some(isEuropeClub)),c={lines:ls,next:keys,current:new Set(ls.map(x=>canonKey(x.league+'|'+x.team))),origin:origin(p),europe:ls.some(x=>!NOT_EUROPE.has(x.league))};c.arrival=arrival(c);c.manualRookie=manualRookie(p);if(c.manualRookie===true)c.arrival='college';else if(c.manualRookie===false&&c.arrival==='college')c.arrival='';return c;}
 function of(p,m,mb){
  if(!p)return [];
  let c;try{c=context(p,m,mb);}catch(e){return [];}
- const out=[];for(const r of RULES){try{if(r.test(p,c))out.push({key:r.key,label:r.label,title:r.title});}catch(e){}if(out.length>=MAX)break;}
+ const out=[];for(const r of RULES){try{if(r.test(p,c))out.push({key:r.key,label:r.label,title:r.key==='college'&&c.manualRookie===true?'Rookie · manually set for '+SIGNAL_SEASON:r.title});}catch(e){}if(out.length>=MAX)break;}
  return out;
 }
 const html=p=>of(p).map(s=>'<span class="es-signal es-signal-'+s.key+'" title="'+escAttr(s.title)+'">'+esc(s.label)+'</span>').join('');
 // Signals within this group use OR; other player filters narrow the result.
 // Assignment maps are shared across a filtering pass to keep it responsive.
 function filter(pool,keys){const selected=new Set(keys||[]);if(!selected.size)return pool;const rules=RULES.filter(r=>selected.has(r.key)),m=next26Get(),mb=next26bGet();return pool.filter(p=>{try{const c=context(p,m,mb);return rules.some(r=>r.test(p,c));}catch(e){return false;}});}
-window.ESSignals={of,html,RULES,filter,loadHistory,historyReady:()=>!!arrivalHistory,FILTERS:RULES.filter(r=>['college','uspro','newteam'].includes(r.key))};
+window.ESSignals={of,html,RULES,filter,editorHTML,wireEditor,setManualRookie,manualRookie,loadHistory,historyReady:()=>!!arrivalHistory,FILTERS:RULES.filter(r=>['college','uspro','newteam'].includes(r.key))};
 
 /* Player profile: the same badges, beside the other pills. */
 const base=renderProfile;
@@ -99,6 +105,7 @@ renderProfile=function(){base();try{
  const identity=document.querySelector('#drawer .es-dossier-identity');
  if(!host&&identity){host=document.createElement('div');host.className='es-dossier-signals';identity.append(host);}
  if(host&&!host.querySelector('.es-signal'))host.insertAdjacentHTML('beforeend',html(p));
+ if(host&&!host.querySelector('[data-rookie-tag]')){host.insertAdjacentHTML('beforeend',editorHTML(p));wireEditor(host,p,()=>renderProfile());}
  // The dossier replaces the original hero, including its board button.
  const actions=document.querySelector('#drawer .es-profile-top-actions');
  if(actions&&!actions.querySelector('[data-signal-board]')){const board=document.createElement('button');board.type='button';board.className='btn primary sm';board.dataset.signalBoard='';board.textContent='＋ Board';board.onclick=()=>addToScoutBoard(p.id);actions.append(board);}

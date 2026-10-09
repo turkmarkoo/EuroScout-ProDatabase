@@ -59,3 +59,5 @@ html[data-theme=dark] .es-signal{color:#9fd4b6}
 .es-signal-unsigned,.es-signal-newteam{color:var(--accent-deep);background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 40%,transparent)}
 .ph-pills .es-signal{margin:2px 4px 2px 0}
 .liveScouting .mx-signals{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+
+.es-rookie-editor{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font:11px var(--body);margin-left:6px}.es-rookie-editor select{min-height:0;max-width:145px;padding:2px 18px 2px 5px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--txt);font:inherit}.es-rookie-status:empty{display:none}

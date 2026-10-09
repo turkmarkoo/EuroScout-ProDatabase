@@ -14,5 +14,5 @@ function iso(value){return byName.get(norm(value))||'';}
 function canonical(value){return byCode[iso(value)]||'';}
 function flag(value){const code=iso(value);return code.length===2?[...code].map(c=>String.fromCodePoint(127397+c.charCodeAt(0))).join(''):'';}
 function label(value){const name=canonical(value);return name?flag(name)+' '+name:'';}
-window.EuroScoutCountries={canonical,iso,flag,label,names:Object.values(byCode).sort((a,b)=>a.localeCompare(b))};
+window.EuroScoutCountries={canonical,iso,flag,label,names:Object.entries(byCode).filter(([code])=>code!=='SCG').map(([,name])=>name).sort((a,b)=>a.localeCompare(b))};
 })();

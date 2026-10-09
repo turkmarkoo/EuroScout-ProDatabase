@@ -2,9 +2,9 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 
-function signalsFor({player,rows,origins={college:[],usPro:[],otherNonEurope:[]},next=[],transfers=[]}){
+function signalsFor({player,rows,origins={college:[],usPro:[],otherNonEurope:[]},next=[],transfers=[],manualOverrides={}}){
  const context={
-  window:{EUROSCOUT_SIGNAL_ORIGINS:origins},STATE:{data:{transfers}},
+  OVR:{bio:manualOverrides},window:{EUROSCOUT_SIGNAL_ORIGINS:origins},STATE:{data:{transfers}},
   gid:p=>p.gid||p.id,allPlayersEvery:()=>rows,
   leagueOf:p=>({meta:{season:p.leagueSeason||'2025/26'}}),
   effective26keys:()=>next,next26Get:()=>({}),next26bGet:()=>({}),canonKey:k=>k,
@@ -98,3 +98,12 @@ for(const league of ['nbl','cba','naia','juco']){
  assert(signalsFor({player,rows:[],origins,transfers,next:['aba|NEW']}).includes('Rookie'),'verified individual NCAA origin supports a rookie without a statistics row');
 }
 console.log('PASS mutually exclusive NCAA and NBA/G League arrivals, other-league exclusion, season, identity and club checks.');
+
+{
+ const p={id:'manual-arrival',name:'Manual Arrival',born:2002},rows=[{...p,league:'gleague',team:'OLD'}];
+ const manualOverrides={[p.id]:{arrivalSignals:{'2026/27':{rookie:true}}}};
+ const labels=signalsFor({player:p,rows,next:['fec26|IRA'],manualOverrides});assert(labels.includes('Rookie'));assert(!labels.includes('Out of NBA/G League'),'Manual Rookie stays exclusive');
+ assert(!signalsFor({player:p,rows,next:['fec26|IRA'],manualOverrides:{[p.id]:{arrivalSignals:{'2025/26':{rookie:true}}}}}).includes('Rookie'),'Manual tags must remain season-specific');
+ const collegeRows=[{...p,league:'ncaam',team:'UNI'}];assert(!signalsFor({player:p,rows:collegeRows,next:['fec26|IRA'],manualOverrides:{[p.id]:{arrivalSignals:{'2026/27':{rookie:false}}}}}).includes('Rookie'),'A manual rejection suppresses the automatic tag');
+}
+console.log('PASS manual Rookie inclusion, removal, season scope and NBA/G League exclusivity.');

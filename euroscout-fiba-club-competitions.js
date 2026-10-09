@@ -28,6 +28,9 @@ for(const team of data.teams){
 }
 if(!base.checked||String(base.checked)<String(data.checked))base.checked=data.checked;
 
+// The accepted box-score feed uses the registered legal name for this club.
+for(const team of data.teams)if(team.competition==='fec'&&team.officialCode==='IRA')team.aliases=[...new Set([...(team.aliases||[]),'Iraklis BC','Gymnastikos Syllogos Agias Iraklis KAE'])];
+
 const directory=window.EUROSCOUT_CLUB_DIRECTORY||(window.EUROSCOUT_CLUB_DIRECTORY=[]);
 for(const team of data.teams.filter(t=>t.key.startsWith('directory|'))){
  const id=team.key.slice('directory|'.length),existing=directory.find(x=>x.id===id);

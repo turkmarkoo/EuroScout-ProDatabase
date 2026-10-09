@@ -136,6 +136,7 @@ function connectData(raw,data){
   const league=structuredClone(sourceLeague);league.meta={...league.meta,season:league.meta.season||'2026/27',statsSeason:'2026/27',privateOwnerFeed:true};
   for(const player of league.players||[]){
    player.league=league.meta.id;player.statsSeason='2026/27';player._dragonsData=true;player._verifiedExternal=true;player._sourceSeason=league.meta.season;
+   player._sourceTeamKey=teamMatch(player,directory)?.dbKey||null;
    const identity=resolve(player,directory,result);if(!identity)continue;
    if(identity.id){player.linkedEuroScoutId=identity.id;for(const id of identity.ids||[identity.id])links.push([player.id,id]);resolved.push(player.id);}
    if(identity.officialId){player._sourcePlayerId=identity.officialId;player._identitySource=identity.source;}
