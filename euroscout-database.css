@@ -95,3 +95,14 @@ body.es-redesign.es-database-page.es-nav-collapsed{--es-nav:72px!important;paddi
   .es-database-page .es-db-view button{flex:1}
   .es-database-page .es-db-toolbar-actions>button,.es-database-page .es-db-columns{flex:1}
 }
+
+/* Automatic signals and built-in rookie view. */
+.es-db-signals{border:1px solid var(--line);border-radius:8px;margin:0;padding:10px 12px;min-width:0}
+.es-db-signals legend{font-size:12px;font-weight:700;color:var(--txt);padding:0 4px}
+.es-db-signals .hint{font-size:11px;margin:0 0 8px;color:var(--muted)}
+.es-db-signals .es-db-toggle{margin:8px 0;align-items:flex-start}
+.es-db-active-signals{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.es-db-active-signals button{border:1px solid var(--line);border-radius:20px;padding:6px 12px;background:var(--chip);color:var(--txt);cursor:pointer}
+.es-db-active-signals button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.es-dossier-signals{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
