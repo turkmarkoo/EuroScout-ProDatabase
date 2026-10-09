@@ -6,6 +6,28 @@
   const labels={player:'Player',pos:'Pos',height:'HT',age:'Age',nationality:'Nationality',club:'Club',competition:'Competition',games:'GP',pts:'PTS',reb:'REB',ast:'AST',pir:'PIR',grade:'Grade'};
   const FILTER_VISIBILITY_KEY='euroscout:dbFiltersCollapsed:v1';
   const SEARCH_RESULT_LIMIT=160;
+  let signalEvidenceJob=null,signalEvidenceState='idle',signalEvidenceError='';
+  const needsSignalHistory=s=>s.signals?.has('college')||s.signals?.has('uspro');
+  const signalEvidenceReady=()=>window.EuroScoutCatalogueReady&&['pro','ncaa'].every(k=>STATE._extraLoaded?.includes(k))&&STATE.data?.leagues?.some(l=>l.meta.id==='ncaam')&&STATE.data?.leagues?.some(l=>l.meta.id==='nba');
+  function repaintSignals(){if(STATE.view!=='scout'||!STATE.scout.signals?.size)return;const active=document.activeElement;if(active?.closest('.scoutwrap')&&active.matches('input[type=text],input[type=number]')){setTimeout(repaintSignals,150);return;}renderScout();}
+  function ensureSignalEvidence(){
+    if(signalEvidenceJob||signalEvidenceState==='error')return;
+    const identities=window.EuroScoutMergeCenter?.automaticStatus?.();
+    if(signalEvidenceReady()&&!identities?.pending&&!identities?.running&&!identities?.failure){signalEvidenceState='ready';return;}
+    signalEvidenceState='loading';signalEvidenceError='';
+    signalEvidenceJob=(async()=>{
+      // Wait for the initial catalogue swap; otherwise it can discard packs
+      // loaded by an early saved-view click.
+      if(!window.EuroScoutCatalogueReady)await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{window.removeEventListener('euroscout:catalogue-ready',check);reject(Error('The player catalogue is still loading.'));},45000);const check=()=>{if(!window.EuroScoutCatalogueReady)return;clearTimeout(timer);window.removeEventListener('euroscout:catalogue-ready',check);resolve();};window.addEventListener('euroscout:catalogue-ready',check);check();});
+      await loadExtraLeagues();
+      if(!signalEvidenceReady())throw Error('NCAA or NBA/G League history could not be loaded.');
+      // Newly loaded histories also join the existing identity consolidation.
+      // Keep the list visibly incomplete until those links have settled.
+      const deadline=Date.now()+90000;
+      for(;;){const status=window.EuroScoutMergeCenter?.automaticStatus?.();if(status?.failure)throw Error('Player identity checks stopped: '+status.failure);if(!status?.running&&!status?.pending)break;if(Date.now()>deadline)throw Error('Player identity checks are still pending. Finish any active scouting session, then retry.');await new Promise(resolve=>setTimeout(resolve,100));}
+      signalEvidenceState='ready';
+    })().catch(e=>{signalEvidenceState='error';signalEvidenceError=e.message||'Player history could not be loaded.';}).finally(()=>{signalEvidenceJob=null;repaintSignals();});
+  }
   const searchIndex=new Map();
   let searchGeneration=0;
   let filtersCollapsed=false;
@@ -82,6 +104,7 @@
     const query=s.q||'';if(query)s.q='';
     document.body.classList.remove('fa2-active');document.body.classList.add('es-database-page');oldRender();
     s._dbSearchBase=(s._displayPool||[]).slice();s.q=query;
+    if(needsSignalHistory(s))ensureSignalEvidence();
     if(s.simRef)return;enhance();
     if(query){const wrap=$('#app .scoutwrap');if(wrap)scheduleSearchResults(wrap,s);}
   };
@@ -129,6 +152,11 @@
     const actions=document.createElement('div');actions.className='es-db-toolbar-actions';const saved=viewsGet(),active=saved.findIndex(viewIsActive);const viewPicker=select('Saved view',active<0?'':String(active),[['','Select a view…'],...saved.map((v,i)=>[String(i),v.name])],v=>{if(v!=='')applyView(viewsGet()[Number(v)]);});viewPicker.querySelector('select').id='esDbSavedView';actions.append(viewPicker);const save=document.createElement('button');save.textContent='♧  Save view';save.onclick=saveCurrentView;actions.append(save);
     actions.append(select('Sort',s.tsort?.key||'grade',[['grade','Stats grade'],['pts','Points'],['reb','Rebounds'],['ast','Assists'],['pir','PIR'],['name','Name'],['born','Birth year']],v=>{s.tsort={key:v,dir:v==='name'||v==='born'?1:-1};s.sort=v==='name'?'name':v==='pts'?'ppg':'grade';renderScout();}));
     if(s.view==='table'){const columns=document.createElement('details');columns.className='es-db-columns';columns.innerHTML='<summary>▦  Columns</summary>';const panel=document.createElement('div');for(const key of fields){const line=document.createElement('label'),cb=document.createElement('input');cb.type='checkbox';cb.checked=visible().includes(key);cb.disabled=key==='player';cb.onchange=()=>{s.dbColumns=cb.checked?[...new Set([...visible(),key])]:visible().filter(x=>x!==key);renderScout();};line.append(cb,document.createTextNode(labels[key]));panel.append(line);}columns.append(panel);actions.append(columns);}toolbar.append(actions);head.after(toolbar);
+    if(needsSignalHistory(s)&&signalEvidenceState!=='ready'){
+      const status=document.createElement('div');status.className='es-db-signal-status';status.setAttribute('role','status');
+      status.textContent=signalEvidenceState==='error'?'Rookie / NBA-G League list is incomplete. '+signalEvidenceError:'Loading NCAA and NBA/G League history across all leagues… Results below are incomplete until loading finishes.';
+      if(signalEvidenceState==='error'){const retry=document.createElement('button');retry.type='button';retry.textContent='Retry loading history';retry.onclick=()=>{signalEvidenceState='idle';renderScout();};status.append(retry);}toolbar.after(status);
+    }
     if(s.signals?.size){const active=document.createElement('div');active.className='es-db-active-signals';active.setAttribute('aria-label','Active scouting signals');for(const rule of window.ESSignals?.FILTERS||[]){if(!s.signals.has(rule.key))continue;const button=document.createElement('button');button.type='button';button.textContent=rule.label+' ×';button.setAttribute('aria-label','Remove '+rule.label+' filter');button.onclick=()=>{s.signals.delete(rule.key);renderScout();};active.append(button);}toolbar.after(active);}
     const content=wrap.querySelector('.scoutmain');content.addEventListener('click',e=>{const note=e.target.closest('[data-note]'),menu=e.target.closest('[data-menu]');if(note){e.stopPropagation();openProfile(note.dataset.note);esSelectTab('Notes');}else if(menu){e.stopPropagation();openProfile(menu.dataset.menu);}else if(e.target.matches('[data-select],#esSelectAll')){e.stopPropagation();if(e.target.id==='esSelectAll')content.querySelectorAll('[data-select]').forEach(c=>c.checked=e.target.checked);}},true);
     if(s.view==='table')esScrollbars(wrap);

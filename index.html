@@ -1757,7 +1757,7 @@ body.drawer-lock{overflow:hidden}
 .biTwoway{color:#7c5cff;font-weight:600}.biTwLg{opacity:.7;font-weight:400}.tpTwoway{color:#7c5cff;font-weight:600;border-top:1px solid rgba(124,92,255,.25);border-bottom:1px solid rgba(124,92,255,.25)}
 </style>
 <link rel="stylesheet" href="euroscout-ui.css?v=20260921-database-v3">
-<link rel="stylesheet" href="euroscout-database.css?v=20261009-signals-filter-v3">
+<link rel="stylesheet" href="euroscout-database.css?v=20261009-signals-history-v4">
 <link rel="stylesheet" href="euroscout-market.css?v=16"><link rel="stylesheet" href="euroscout-freeagents-v2.css?v=20260921-filters-columns"><link rel="stylesheet" href="euroscout-edit-player-v2.css?v=20260921-1"><link rel="stylesheet" href="euroscout-country-picker.css?v=20260922-1"><script src="search-fold.js?v=36"></script>
 <link rel="stylesheet" href="euroscout-ncaa.css?v=20260913"><script src="euroscout-ncaa.js?v=20260913"></script>
 <style>.membership-review{margin:12px 0 18px;padding:12px 16px;background:var(--card,#fff);border:1px solid var(--border,#d9e3df);border-radius:12px;color:var(--text,#193442);font-size:13px}.membership-review details{margin-top:8px}.membership-review summary{cursor:pointer}.membership-review-row{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 0;align-items:baseline}.membership-review-row>span{flex:1 1 250px}.membership-review-row>a{white-space:nowrap}.membership-review details[open]{max-height:340px;overflow:auto}.rbFilters>select{min-width:min(320px,100%);max-width:100%;height:auto;min-height:44px;padding:10px 36px 10px 12px}</style>
@@ -6448,8 +6448,9 @@ function scoutSeason(p){const v=String(p.statsSeason||p.season||leagueOf(p)?.met
 let seasonPoolCache=null;
 function scoutSeasonPool(s){
  const m=next26Get(),mb=next26bGet();allDbTeams();
- const signature=JSON.stringify([s.season,s.statsSeason,s.competition,[...s.leagues].sort(),m,mb,localStorage.getItem('euroscout:autoApplied:v1'),STATE.data.leagues.map(l=>[l.meta.id,l.players.length]),localStorage.getItem('euroscout:overrides')]);
- if(seasonPoolCache?.signature===signature&&seasonPoolCache.clubs===CLUBS&&seasonPoolCache.data===STATE.data)return seasonPoolCache.rows.map(p=>({...p}));
+ const signature=JSON.stringify([s.season,s.statsSeason,s.competition,[...s.leagues].sort(),personLinkRevision,m,mb,localStorage.getItem('euroscout:autoApplied:v1'),STATE.data.leagues.map(l=>[l.meta.id,l.players.length]),localStorage.getItem('euroscout:overrides')]);
+ const identityLinks=localStorage.getItem('euroscout:mergeCenter:v1')||'';
+ if(seasonPoolCache?.signature===signature&&seasonPoolCache.links===identityLinks&&seasonPoolCache.clubs===CLUBS&&seasonPoolCache.data===STATE.data)return seasonPoolCache.rows.map(p=>({...p}));
  const season=s.season||'2025/26',stats=s.statsSeason||season,groups=new Map();
  for(const p of allPlayersEvery()){if(isExhib(p))continue;const id=gid(p);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}
  const registrations=new Map(),data=window.EUROSCOUT_OFFICIAL_ROSTERS,byId=new Map(allPlayersEvery().map(p=>[p.id,p])),teamKeys=new Map((data?.teams||[]).map(t=>[t.id,canonKey(t.key)]));
@@ -6480,7 +6481,7 @@ function scoutSeasonPool(s){
   // Reuse current clubs resolved for this pool; prior NCAA/NBA lines come from the complete identity index, including leagues outside Europe.
   if(season==='2026/27')p._signalNextKeys=keys;out.push(p);
  }
- seasonPoolCache={signature,clubs:CLUBS,data:STATE.data,rows:out};return out.map(p=>({...p}));
+ seasonPoolCache={signature,links:identityLinks,clubs:CLUBS,data:STATE.data,rows:out};return out.map(p=>({...p}));
 }
 function scoutSeasonControls(s){const year=s.season||'2025/26',stats=s.statsSeason||year;return `<div class="seasonFilters"><label>Roster season<select id="scoutSeason"><option value="2025/26" ${year==='2025/26'?'selected':''}>2025/26</option><option value="2026/27" ${year==='2026/27'?'selected':''}>2026/27</option></select></label><label>Competition group<select id="scoutCompetition"><option value="all">All competitions</option><option value="bclq" ${s.competition==='bclq'?'selected':''}>BCL Qualifiers · 2026/27</option></select></label><label>Statistics season<select id="scoutStatsSeason"><option value="2025/26" ${stats==='2025/26'?'selected':''}>2025/26</option><option value="2026/27" ${stats==='2026/27'?'selected':''}>2026/27</option></select></label><p class="hint" style="flex-basis:100%;margin:0">Roster season selects the player group. Statistics season selects the numbers shown. Missing statistics stay blank. Open a profile for its full history.</p></div>`;}
 
@@ -7434,7 +7435,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-ui.js?v=20261008-dashboard-evidence-v9"></script>
 <script src="euroscout-diagnostics.js?v=20260920-diagnostics-1"></script>
 <script src="euroscout-workflow.js?v=20261008-dashboard-evidence-v9"></script>
-<script src="euroscout-database.js?v=20261009-signals-filter-v3"></script>
+<script src="euroscout-database.js?v=20261009-signals-history-v4"></script>
 
 <script src="euroscout-market-records.js?v=16"></script>
 <script src="euroscout-market.js?v=20260921-fa-v2"></script>
