@@ -8,23 +8,18 @@
   const SEARCH_RESULT_LIMIT=160;
   let signalEvidenceJob=null,signalEvidenceState='idle',signalEvidenceError='';
   const needsSignalHistory=s=>s.signals?.has('college')||s.signals?.has('uspro');
-  const signalEvidenceReady=()=>window.EuroScoutCatalogueReady&&['pro','ncaa'].every(k=>STATE._extraLoaded?.includes(k))&&STATE.data?.leagues?.some(l=>l.meta.id==='ncaam')&&STATE.data?.leagues?.some(l=>l.meta.id==='nba');
-  function repaintSignals(){if(STATE.view!=='scout'||!STATE.scout.signals?.size)return;const active=document.activeElement;if(active?.closest('.scoutwrap')&&active.matches('input[type=text],input[type=number]')){setTimeout(repaintSignals,150);return;}renderScout();}
+  const signalEvidenceReady=()=>window.EuroScoutCatalogueReady&&window.ESSignals?.historyReady();
+  function repaintSignals(){if(STATE.view!=='scout'||!STATE.scout.signals?.size)return;const active=document.activeElement,editing=active?.closest('.scoutwrap')&&active.matches('input:not([type=checkbox])'),saved=editing&&active.id?{id:active.id,value:active.value,start:active.selectionStart,end:active.selectionEnd}:null;renderScout();if(saved){const field=document.getElementById(saved.id);if(field){field.value=saved.value;field.focus({preventScroll:true});if(saved.start!=null&&field.setSelectionRange)try{field.setSelectionRange(saved.start,saved.end);}catch{}}}}
   function ensureSignalEvidence(){
     if(signalEvidenceJob||signalEvidenceState==='error')return;
-    const identities=window.EuroScoutMergeCenter?.automaticStatus?.();
-    if(signalEvidenceReady()&&!identities?.pending&&!identities?.running&&!identities?.failure){signalEvidenceState='ready';return;}
+    if(signalEvidenceReady()){signalEvidenceState='ready';return;}
     signalEvidenceState='loading';signalEvidenceError='';
     signalEvidenceJob=(async()=>{
       // Wait for the initial catalogue swap; otherwise it can discard packs
       // loaded by an early saved-view click.
       if(!window.EuroScoutCatalogueReady)await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{window.removeEventListener('euroscout:catalogue-ready',check);reject(Error('The player catalogue is still loading.'));},45000);const check=()=>{if(!window.EuroScoutCatalogueReady)return;clearTimeout(timer);window.removeEventListener('euroscout:catalogue-ready',check);resolve();};window.addEventListener('euroscout:catalogue-ready',check);check();});
-      await loadExtraLeagues();
-      if(!signalEvidenceReady())throw Error('NCAA or NBA/G League history could not be loaded.');
-      // Newly loaded histories also join the existing identity consolidation.
-      // Keep the list visibly incomplete until those links have settled.
-      const deadline=Date.now()+90000;
-      for(;;){const status=window.EuroScoutMergeCenter?.automaticStatus?.();if(status?.failure)throw Error('Player identity checks stopped: '+status.failure);if(!status?.running&&!status?.pending)break;if(Date.now()>deadline)throw Error('Player identity checks are still pending. Finish any active scouting session, then retry.');await new Promise(resolve=>setTimeout(resolve,100));}
+      await ESSignals.loadHistory();
+      if(!signalEvidenceReady())throw Error('Arrival history could not be loaded.');
       signalEvidenceState='ready';
     })().catch(e=>{signalEvidenceState='error';signalEvidenceError=e.message||'Player history could not be loaded.';}).finally(()=>{signalEvidenceJob=null;repaintSignals();});
   }
@@ -154,7 +149,7 @@
     if(s.view==='table'){const columns=document.createElement('details');columns.className='es-db-columns';columns.innerHTML='<summary>▦  Columns</summary>';const panel=document.createElement('div');for(const key of fields){const line=document.createElement('label'),cb=document.createElement('input');cb.type='checkbox';cb.checked=visible().includes(key);cb.disabled=key==='player';cb.onchange=()=>{s.dbColumns=cb.checked?[...new Set([...visible(),key])]:visible().filter(x=>x!==key);renderScout();};line.append(cb,document.createTextNode(labels[key]));panel.append(line);}columns.append(panel);actions.append(columns);}toolbar.append(actions);head.after(toolbar);
     if(needsSignalHistory(s)&&signalEvidenceState!=='ready'){
       const status=document.createElement('div');status.className='es-db-signal-status';status.setAttribute('role','status');
-      status.textContent=signalEvidenceState==='error'?'Rookie / NBA-G League list is incomplete. '+signalEvidenceError:'Loading NCAA and NBA/G League history across all leagues… Results below are incomplete until loading finishes.';
+      status.textContent=signalEvidenceState==='error'?'Rookie / NBA-G League list is incomplete. '+signalEvidenceError:'Loading arrival history across all leagues… Results below are incomplete until loading finishes.';
       if(signalEvidenceState==='error'){const retry=document.createElement('button');retry.type='button';retry.textContent='Retry loading history';retry.onclick=()=>{signalEvidenceState='idle';renderScout();};status.append(retry);}toolbar.after(status);
     }
     if(s.signals?.size){const active=document.createElement('div');active.className='es-db-active-signals';active.setAttribute('aria-label','Active scouting signals');for(const rule of window.ESSignals?.FILTERS||[]){if(!s.signals.has(rule.key))continue;const button=document.createElement('button');button.type='button';button.textContent=rule.label+' ×';button.setAttribute('aria-label','Remove '+rule.label+' filter');button.onclick=()=>{s.signals.delete(rule.key);renderScout();};active.append(button);}toolbar.after(active);}

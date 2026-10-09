@@ -14,7 +14,17 @@ const seasonLabel=value=>{const m=String(value||'').match(/(20\d{2})\s*[/–-]\s
 const playerSeason=x=>seasonLabel(x.statsScope||x.statsSeason||x.season||(typeof leagueOf==='function'?leagueOf(x)?.meta?.season:''));
 const currentRosterOnly=x=>playerSeason(x)==='2026/27'||x._fibaCurrent||x._rosterOnly||/^bclq-/.test(String(x.id||''))||
  ((!x.g||Number(x.g)===0)&&seasonLabel(x.currentRosterSeason||x._officialRoster?.season)==='2026/27');
-const lines=p=>{const rows=typeof personLines==='function'?personLines(p):allPlayersEvery().filter(x=>gid(x)===gid(p));return rows.filter(x=>x.league!=='sl'&&!currentRosterOnly(x));};
+let arrivalHistory=null,arrivalJob=null,historyIndex=null;
+async function loadHistory(){if(arrivalHistory)return;if(arrivalJob)return arrivalJob;arrivalJob=(async()=>{const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),12000);try{const response=await fetch('data/arrival-evidence-2026.json?v=20261009-readonly-v1',{cache:'no-cache',signal:ctl.signal});if(!response.ok)throw Error('Arrival history HTTP '+response.status);const data=await response.json();if(data.schema!==1||!Array.isArray(data.rows)||!Array.isArray(data.columns)||!['id','name','league','statsSeason'].every(k=>data.columns.includes(k)))throw Error('Invalid arrival history');arrivalHistory=data.rows.map(values=>Object.fromEntries(data.columns.map((k,i)=>[k,values[i]])));historyIndex=null;}finally{clearTimeout(timer);}})().catch(error=>{arrivalJob=null;throw error.name==='AbortError'?Error('Arrival history took too long to load. Try again.'):error;});return arrivalJob;}
+function evidenceEntity(p){return {id:p.id,name:p.name,born:p.born,birthDate:p.birthDate||p.dob,height:p.height,country:p.country,position:p.role||p.pos,team:p.teamName||p.team,player:p,external:typeof extOf==='function'?extOf(p):'',fiba:p.fibaId||''};}
+function historyCompatible(a,b){const year=v=>String(v||'').match(/(?:19|20)\d{2}/)?.[0],bornA=year(a.born),bornB=year(b.born),dateA=a.birthDate||a.dob,dateB=b.birthDate||b.dob;if(bornA&&bornB&&bornA!==bornB)return false;if(/^\d{4}-\d{2}-\d{2}$/.test(dateA||'')&&/^\d{4}-\d{2}-\d{2}$/.test(dateB||'')&&dateA!==dateB)return false;if(a.height&&b.height&&Math.abs(Number(a.height)-Number(b.height))>5)return false;const country=v=>fold(window.EuroScoutCountries?.canonical(v)||v);return !a.country||!b.country||country(a.country)===country(b.country);}
+function historyBucket(p){const tokens=nameKey(p.name).split(' ').filter(Boolean);return tokens.length>1?tokens[0][0]+'|'+tokens.at(-1):'';}
+function historicalRows(){const sources=STATE.data?.leagues||[],revision=typeof personLinkRevision==='number'?personLinkRevision:0;if(historyIndex&&historyIndex.history===arrivalHistory&&historyIndex.revision===revision&&historyIndex.sources.length===sources.length&&sources.every((l,i)=>historyIndex.sources[i].players===l.players&&historyIndex.sources[i].count===l.players.length))return historyIndex;
+ const buckets=new Map(),ids=new Map();for(const row of [...allPlayersEvery(),...(arrivalHistory||[])]){if(row.league==='sl'||currentRosterOnly(row))continue;const k=historyBucket(row);if(k){if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(row);}if(!ids.has(row.id))ids.set(row.id,[]);ids.get(row.id).push(row);}
+ return historyIndex={history:arrivalHistory,revision,sources:sources.map(l=>({players:l.players,count:l.players.length})),buckets,ids,matches:new WeakMap()};}
+/* Read-only bio checks reuse the existing conservative identity rule. They do
+   not create links, merge records, or wait for an active session to finish. */
+const lines=(p,useEvidence=true)=>{const aliases=typeof personLines==='function'?personLines(p):allPlayersEvery().filter(x=>gid(x)===gid(p)),rows=aliases.filter(x=>x.league!=='sl'&&!currentRosterOnly(x));if(!arrivalHistory||!useEvidence)return rows;const idx=historicalRows(),signature=JSON.stringify([p.name,p.born,p.height,p.country,p.role,p.pos,p.birthDate,p.dob,p._rgm,p.realgmId,p.team,p.teamName,p.profile_url]),cached=idx.matches.get(p);if(cached?.signature===signature)return cached.rows;const seen=new Set(rows.map(x=>x.id+'|'+playerSeason(x))),candidates=new Set();for(const a of [p,...aliases])for(const row of [...(idx.ids.get(a.id)||[]),...(idx.buckets.get(historyBucket(a))||[])])candidates.add(row);const ownIds=new Set([p.id,...aliases.map(x=>x.id)]),entities=[p,...aliases].map(evidenceEntity);for(const row of candidates){const key=row.id+'|'+playerSeason(row);if(seen.has(key))continue;if(ownIds.has(row.id)||[p,...aliases].every(a=>historyCompatible(a,row))&&entities.some(a=>window.EuroScoutMergeCenter?.automaticPlayerMatch?.(a,evidenceEntity(row)))){rows.push(row);seen.add(key);}}idx.matches.set(p,{signature,rows});return rows;};
 function next(p,m,mb){if(p._signalNextKeys)return p._signalNextKeys;try{return effective26keys(p,m||next26Get(),mb||next26bGet()).map(canonKey).filter(k=>k&&!String(k).startsWith('__'));}catch(e){return [];}}
 const isEuropeClub=k=>!NOT_EUROPE.has(String(k).split('|')[0]);
 /* Where a 2026/27 signing came from, read off the transfer list: most college and
@@ -68,7 +78,7 @@ const RULES=[
   test:(p,c)=>{const born=Number(p.born)||0;return born>=SEASON_START-21&&c.lines.some(x=>!NOT_EUROPE.has(x.league)&&(x.mpg||0)>=20&&(x.g||0)>=8);}}
  /* No "unsigned" badge: a missing 2026/27 club usually means the roster has not been entered yet, not that he is a free agent. */
 ];
-function context(p,m,mb){const ls=lines(p),c={lines:ls,next:next(p,m,mb),current:new Set(ls.map(x=>canonKey(x.league+'|'+x.team))),origin:origin(p),europe:ls.some(x=>!NOT_EUROPE.has(x.league))};c.arrival=arrival(c);return c;}
+function context(p,m,mb){const keys=next(p,m,mb),ls=lines(p,keys.some(isEuropeClub)),c={lines:ls,next:keys,current:new Set(ls.map(x=>canonKey(x.league+'|'+x.team))),origin:origin(p),europe:ls.some(x=>!NOT_EUROPE.has(x.league))};c.arrival=arrival(c);return c;}
 function of(p,m,mb){
  if(!p)return [];
  let c;try{c=context(p,m,mb);}catch(e){return [];}
@@ -79,7 +89,7 @@ const html=p=>of(p).map(s=>'<span class="es-signal es-signal-'+s.key+'" title="'
 // Signals within this group use OR; other player filters narrow the result.
 // Assignment maps are shared across a filtering pass to keep it responsive.
 function filter(pool,keys){const selected=new Set(keys||[]);if(!selected.size)return pool;const rules=RULES.filter(r=>selected.has(r.key)),m=next26Get(),mb=next26bGet();return pool.filter(p=>{try{const c=context(p,m,mb);return rules.some(r=>r.test(p,c));}catch(e){return false;}});}
-window.ESSignals={of,html,RULES,filter,FILTERS:RULES.filter(r=>['college','uspro','newteam'].includes(r.key))};
+window.ESSignals={of,html,RULES,filter,loadHistory,historyReady:()=>!!arrivalHistory,FILTERS:RULES.filter(r=>['college','uspro','newteam'].includes(r.key))};
 
 /* Player profile: the same badges, beside the other pills. */
 const base=renderProfile;

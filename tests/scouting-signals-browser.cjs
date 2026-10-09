@@ -13,7 +13,7 @@ const{chromium}=require('C:/Users/PC/.cache/codex-runtimes/codex-primary-runtime
   await page.goto('https://hub.test/',{waitUntil:'domcontentloaded'});const app=await(await page.locator('iframe').elementHandle()).contentFrame();
   await app.waitForFunction(()=>window.EuroScoutCatalogueReady&&window.ESSignals&&STATE.data?.rumors?.signalsTestReady&&!document.querySelector('#coreLoadStatus'),{},{timeout:90000});
   const baseline=await app.evaluate(async()=>{
-   await loadExtraLeagues();
+   await loadExtraLeagues();await ESSignals.loadHistory();
    const real=scoutSeasonPool(STATE.scout),started=performance.now(),rookies=ESSignals.filter(real,['college']),uspro=ESSignals.filter(real,['uspro']);
    const catalog={players:real.length,rookies:rookies.length,uspro:uspro.length,filterMs:performance.now()-started,mismatches:[...rookies.map(p=>[p,'college']),...uspro.map(p=>[p,'uspro'])].filter(([p,key])=>!ESSignals.of(player(p.id)).some(s=>s.key===key)).map(([p,key])=>({name:p.name,id:p.id,key}))};
    const club=allClubs().find(c=>(c.leagues||[]).some(l=>l.id==='aba'))||allClubs()[0];
