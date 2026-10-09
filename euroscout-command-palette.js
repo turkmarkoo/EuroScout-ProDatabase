@@ -3,7 +3,8 @@
   let palette=null,cache=null,backgroundQueued=false;
   const api=()=>window.GlobalCommandPalette;
   const folded=value=>api().fold(value);
-  const searchKeys=new WeakMap();
+  let searchKeys=new WeakMap();
+  window.addEventListener("euroscout:profile-fields-updated",()=>{searchKeys=new WeakMap();matchCache.clear();palette?.refresh();});
   const matchCache=new Map();
   function scored(query,items,title,extra,scope){
     const q=folded(query),words=q.split(/\s+/).filter(Boolean),best=[];
@@ -94,7 +95,7 @@
     if(!STATE.data?.leagues)return {};
     if(folded(query).length<2)return {};
     const {players,dupes,clubs,agencies,competitions,notes,sessions}=index();
-    const playerMatches=scored(query,players,x=>x.p.name,x=>[x.p.teamName,x.p.country,x.L.meta.name].join(' '),'players');
+    const playerMatches=scored(query,players,x=>x.p.name,x=>[x.p.teamName,x.p.country,x.L.meta.name,...(window.PlayerScouting&&window.ESPlayerScouting?PlayerScouting.rolesOf(ESPlayerScouting.values(x.p)):[])].join(' '),'players');
     const clubMatches=scored(query,clubs,x=>x.name,x=>[x.country,...x.leagues.map(l=>l.name)].join(' '),'clubs');
     const agencyMatches=scored(query,agencies,x=>x.name,x=>[x.last?.player,x.last?.from,x.last?.to].join(' '),'agencies');
     const compMatches=scored(query,competitions,x=>x.name,x=>[x.season,x.id].join(' '),'competitions');
@@ -103,7 +104,7 @@
     if(folded(query).length>=3)queueBackgroundIndex();
     const agencyLogo=name=>{try{const map=JSON.parse(localStorage.getItem('euroscout:agencyLogos:v1')||'{}');return map[folded(name).replace(/[^a-z0-9]+/g,' ')]?.data||'';}catch{return '';}};
     return {
-      Players:{total:playerMatches.total,items:playerMatches.items.map(({item})=>playerItem(item.p,dupes)),seeAll:()=>goView('scout')},
+      Players:{total:playerMatches.total,items:playerMatches.items.map(({item})=>playerItem(item.p,dupes)),seeAll:()=>{STATE.scout.q=query;STATE.scout.basketballRole='';goView('scout');}},
       Clubs:{total:clubMatches.total,items:clubMatches.items.map(({item:c})=>({type:'club',title:c.name,subtitle:countryLabel(c.country)||c.country,logo:clubLogo(c),chips:c.leagues.map(l=>l.name),openLabel:'View club',onOpen:()=>{const t=c.teams.find(t=>t.lg!=='directory')||c.teams[0];if(t)openTeamIn(t.lg,t.code);}})),seeAll:()=>goView('teams')},
       Agencies:{total:agencyMatches.total,items:agencyMatches.items.map(({item:a})=>({type:'agency',title:a.name,subtitle:a.players.length+' players · '+a.agents.size+' agents',logo:agencyLogo(a.name),openLabel:'View agency',onOpen:()=>openAgencyPage('agency',a.name)})),seeAll:()=>goView('agencies')},
       Competitions:{total:compMatches.total,items:compMatches.items.map(({item:m})=>({type:'competition',title:m.name,subtitle:season(m.season),chips:m.season?['Season '+season(m.season)]:[],openLabel:'View competition',onOpen:()=>{STATE.league=STATE.data.leagues.find(L=>L.meta.id===m.id)||STATE.league;STATE.allLeagues=false;goView('players');}})),seeAll:()=>goView('players')},

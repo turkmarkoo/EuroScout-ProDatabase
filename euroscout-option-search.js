@@ -33,7 +33,7 @@ function openCompact(s,initial=''){
  document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',keys,true);window.addEventListener('resize',position);input.oninput=()=>{limit=80;paint();};input.value=initial;position();paint();input.focus();
 }
 function open(s,initial=''){
- if(s.closest('.liveScouting,#sxStart')||s.matches('[data-rookie-tag]'))return openCompact(s,initial);
+ if(s.closest('.liveScouting,#sxStart'))return openCompact(s,initial);
  if(current)current.close();
  const restore=document.activeElement,overlay=document.createElement('div');overlay.className='es-option-overlay';
  const title=s.getAttribute('aria-label')||document.querySelector('label[for="'+CSS.escape(s.id)+'"]')?.textContent||s.closest('label')?.childNodes[0]?.textContent||s.options[0]?.textContent||'Choose an option';

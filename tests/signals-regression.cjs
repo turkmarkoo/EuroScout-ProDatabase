@@ -95,15 +95,12 @@ for(const league of ['nbl','cba','naia','juco']){
  const transfers=[{player:player.name,from:'Some College',status:'signed',season:'2026/27',league:'ABA'}];
  assert(!signalsFor({player,rows:[],origins,transfers,next:['aba|NEW']}).includes('Rookie'),'a general college-name list alone is not NCAA proof');
  origins.players={'unclassified college':{type:'college',season:'2025/26',birth_year:2003,from:'Verified NCAA School',source:'official-school-roster'}};
+ assert.ok(!signalsFor({player,rows:[],origins,transfers,next:['aba|NEW']}).includes('Rookie'),'Roster membership alone cannot establish participation');
+ origins.players['unclassified college'].played=true;
  assert(signalsFor({player,rows:[],origins,transfers,next:['aba|NEW']}).includes('Rookie'),'verified individual NCAA origin supports a rookie without a statistics row');
 }
 console.log('PASS mutually exclusive NCAA and NBA/G League arrivals, other-league exclusion, season, identity and club checks.');
 
-{
- const p={id:'manual-arrival',name:'Manual Arrival',born:2002},rows=[{...p,league:'gleague',team:'OLD'}];
- const manualOverrides={[p.id]:{arrivalSignals:{'2026/27':{rookie:true}}}};
- const labels=signalsFor({player:p,rows,next:['fec26|IRA'],manualOverrides});assert(labels.includes('Rookie'));assert(!labels.includes('Out of NBA/G League'),'Manual Rookie stays exclusive');
- assert(!signalsFor({player:p,rows,next:['fec26|IRA'],manualOverrides:{[p.id]:{arrivalSignals:{'2025/26':{rookie:true}}}}}).includes('Rookie'),'Manual tags must remain season-specific');
- const collegeRows=[{...p,league:'ncaam',team:'UNI'}];assert(!signalsFor({player:p,rows:collegeRows,next:['fec26|IRA'],manualOverrides:{[p.id]:{arrivalSignals:{'2026/27':{rookie:false}}}}}).includes('Rookie'),'A manual rejection suppresses the automatic tag');
-}
-console.log('PASS manual Rookie inclusion, removal, season scope and NBA/G League exclusivity.');
+{const p={id:'old-manual',name:'Legacy Manual',born:2002},rows=[{...p,league:'gleague',team:'OLD'}];const manualOverrides={[p.id]:{arrivalSignals:{'2026/27':{rookie:true}}}};const labels=signalsFor({player:p,rows,next:['fec26|IRA'],manualOverrides});assert.ok(!labels.includes('Rookie'),'Legacy manual flags cannot turn a G League player into an NCAA rookie');assert.ok(labels.includes('Out of NBA/G League'));const collegeRows=[{...p,league:'ncaam',team:'UNI',g:20}];assert.ok(signalsFor({player:p,rows:collegeRows,next:['fec26|IRA'],manualOverrides:{[p.id]:{arrivalSignals:{'2026/27':{rookie:false}}}}}).includes('Rookie'),'NCAA evidence determines the automatic tag');assert.ok(!signalsFor({player:p,rows:[{...p,league:'ncaam',team:'UNI',g:0}],next:['fec26|IRA']}).includes('Rookie'),'Zero games is not NCAA participation');assert.ok(!signalsFor({player:p,rows:[{...p,league:'ncaam',team:'UNI',g:20,leagueSeason:'2024/25'}],next:['fec26|IRA']}).includes('Rookie'),'Older NCAA seasons do not establish the current Rookie tag');}
+{const p={id:'verified-zero',name:'Verified Zero',born:2003};const origins={players:{'verified zero':{type:'college',season:'2025/26',birth_year:2003,source:'official-school-roster',played:true}}};assert.ok(!signalsFor({player:p,origins,rows:[{...p,league:'ncaam',team:'UNI',g:0}],next:['aba|NEW']}).includes('Rookie'),'Explicit zero games overrides a roster-only NCAA origin');}
+console.log('PASS automatic NCAA-only Rookie tags; no legacy manual flag override, zero-game or old-season qualification.');

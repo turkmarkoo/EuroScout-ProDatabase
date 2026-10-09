@@ -15,7 +15,7 @@ const playerSeason=x=>seasonLabel(x.statsScope||x.statsSeason||x.season||(typeof
 const currentRosterOnly=x=>playerSeason(x)==='2026/27'||x._fibaCurrent||x._rosterOnly||/^bclq-/.test(String(x.id||''))||
  ((!x.g||Number(x.g)===0)&&seasonLabel(x.currentRosterSeason||x._officialRoster?.season)==='2026/27');
 let arrivalHistory=null,arrivalJob=null,historyIndex=null;
-async function loadHistory(){if(arrivalHistory)return;if(arrivalJob)return arrivalJob;arrivalJob=(async()=>{const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),12000);try{const response=await fetch('data/arrival-evidence-2026.json?v=20261009-readonly-v1',{cache:'no-cache',signal:ctl.signal});if(!response.ok)throw Error('Arrival history HTTP '+response.status);const data=await response.json();if(data.schema!==1||!Array.isArray(data.rows)||!Array.isArray(data.columns)||!['id','name','league','statsSeason'].every(k=>data.columns.includes(k)))throw Error('Invalid arrival history');arrivalHistory=data.rows.map(values=>Object.fromEntries(data.columns.map((k,i)=>[k,values[i]])));historyIndex=null;}finally{clearTimeout(timer);}})().catch(error=>{arrivalJob=null;throw error.name==='AbortError'?Error('Arrival history took too long to load. Try again.'):error;});return arrivalJob;}
+async function loadHistory(){if(arrivalHistory)return;if(arrivalJob)return arrivalJob;arrivalJob=(async()=>{const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),12000);try{const response=await fetch('data/arrival-evidence-2026.json?v=20261009-participation-v2',{cache:'no-cache',signal:ctl.signal});if(!response.ok)throw Error('Arrival history HTTP '+response.status);const data=await response.json();if(data.schema!==1||!Array.isArray(data.rows)||!Array.isArray(data.columns)||!['id','name','league','statsSeason'].every(k=>data.columns.includes(k)))throw Error('Invalid arrival history');arrivalHistory=data.rows.map(values=>Object.fromEntries(data.columns.map((k,i)=>[k,values[i]])));historyIndex=null;}finally{clearTimeout(timer);}})().catch(error=>{arrivalJob=null;throw error.name==='AbortError'?Error('Arrival history took too long to load. Try again.'):error;});return arrivalJob;}
 function evidenceEntity(p){return {id:p.id,name:p.name,born:p.born,birthDate:p.birthDate||p.dob,height:p.height,country:p.country,position:p.role||p.pos,team:p.teamName||p.team,player:p,external:typeof extOf==='function'?extOf(p):'',fiba:p.fibaId||''};}
 function historyCompatible(a,b){const year=v=>String(v||'').match(/(?:19|20)\d{2}/)?.[0],bornA=year(a.born),bornB=year(b.born),dateA=a.birthDate||a.dob,dateB=b.birthDate||b.dob;if(bornA&&bornB&&bornA!==bornB)return false;if(/^\d{4}-\d{2}-\d{2}$/.test(dateA||'')&&/^\d{4}-\d{2}-\d{2}$/.test(dateB||'')&&dateA!==dateB)return false;if(a.height&&b.height&&Math.abs(Number(a.height)-Number(b.height))>5)return false;const country=v=>fold(window.EuroScoutCountries?.canonical(v)||v);return !a.country||!b.country||country(a.country)===country(b.country);}
 function historyBucket(p){const tokens=nameKey(p.name).split(' ').filter(Boolean);return tokens.length>1?tokens[0][0]+'|'+tokens.at(-1):'';}
@@ -44,32 +44,26 @@ function origin(p){
  index();const hits=(byName.get(nameKey(p.name))||[]).filter(t=>!t.birth_year||!p.born||Number(t.birth_year)===Number(p.born));
  const types=new Set();
  for(const t of hits){const f=fold(t.from);types.add(origins.college.has(f)?'college':origins.usPro.has(f)?'usPro':origins.other.has(f)?'overseas':'other');}
- const verified=playerOrigins.get(nameKey(p.name));if(verified&&seasonLabel(verified.season)==='2025/26'&&(!verified.birth_year||!p.born||Number(verified.birth_year)===Number(p.born))){types.add(verified.type||'other');if(types.size===1&&verified.type==='college')return 'ncaa';}
+ const verified=playerOrigins.get(nameKey(p.name));if(verified&&seasonLabel(verified.season)==='2025/26'&&(!verified.birth_year||!p.born||Number(verified.birth_year)===Number(p.born))){types.add(verified.type||'other');if(types.size===1&&verified.type==='college'&&(verified.played===true||Number(verified.games)>0||Number(verified.appearances)>0))return 'ncaa';}
  return types.size===1?[...types][0]:types.size?'conflict':'';
 }
 function arrival(c){
  if(!c.next.some(isEuropeClub))return '';
- const recent=c.lines.filter(x=>playerSeason(x)==='2025/26');
+ const recent=c.lines.filter(x=>playerSeason(x)==='2025/26');const playedNCAA=recent.filter(x=>NCAA.has(x.league)&&(x.g==null||Number(x.g)>0));
  // Conflicting evidence stays silent. A professional stop after NCAA is not
  // a direct NCAA arrival, even if older college statistics are available.
  if(c.origin==='conflict'||c.origin==='other'||c.origin==='overseas')return '';
- if(c.origin==='ncaa')return recent.some(x=>!NCAA.has(x.league))?'':'college';
+ if(c.origin==='ncaa')return recent.some(x=>!NCAA.has(x.league))||recent.length&&!playedNCAA.length?'':'college';
  // The legacy college-name list also contains NAIA/JUCO schools. Require
  // a linked NCAA season rather than treating every college transfer as NCAA.
- if(c.origin==='college')return recent.length&&recent.every(x=>NCAA.has(x.league))?'college':'';
+ if(c.origin==='college')return playedNCAA.length&&recent.every(x=>NCAA.has(x.league))?'college':'';
  if(c.origin==='usPro')return 'uspro';
- if(recent.length&&recent.every(x=>NCAA.has(x.league)))return 'college';
+ if(playedNCAA.length&&recent.every(x=>NCAA.has(x.league)))return 'college';
  if(recent.some(x=>US_PRO.has(x.league))&&recent.every(x=>US_PRO.has(x.league)||NCAA.has(x.league)))return 'uspro';
  return '';
 }
-const SIGNAL_SEASON=SEASON_START+'/'+String(SEASON_START+1).slice(-2);
-function manualSignalRecord(p){const bio=typeof OVR==='undefined'?{}:OVR.bio||{},ids=[gid(p),p.id,...(p._grp||[]).map(x=>x.id)];for(const id of ids)if(Object.hasOwn(bio[id]||{},'arrivalSignals'))return bio[id].arrivalSignals||{};return {};}
-function manualRookie(p){const value=manualSignalRecord(p)[SIGNAL_SEASON]?.rookie;return typeof value==='boolean'?value:undefined;}
-async function setManualRookie(p,mode){if(!Store.canEdit())throw Error('Editing access required.');if(!['auto','yes','no'].includes(mode))throw Error('Invalid Rookie tag option.');await window.wfFlushReport?.();const existing=manualSignalRecord(p),season={...(existing[SIGNAL_SEASON]||{})};if(mode==='auto')delete season.rookie;else season.rookie=mode==='yes';ovrSaveLocal({bio:{[gid(p)||p.id]:{arrivalSignals:{...existing,[SIGNAL_SEASON]:season}}}},{players:typeof personLines==='function'?personLines(p):[p]});await window.ESStorage?.flush();}
-function editorHTML(p){if(typeof Store==='undefined'||!Store.canEdit())return '';const value=manualRookie(p),mode=value===true?'yes':value===false?'no':'auto';return '<label class="es-rookie-editor"><span>Rookie tag</span><select aria-label="Rookie tag · '+SIGNAL_SEASON+'" data-rookie-tag data-option-search>'+[['auto','Automatic'],['yes','Rookie'],['no','Not a rookie']].map(([v,label])=>'<option value="'+v+'"'+(v===mode?' selected':'')+'>'+label+'</option>').join('')+'</select><span class="es-rookie-status" role="status"></span></label>';}
-function wireEditor(host,p,onSaved){const field=host?.querySelector('[data-rookie-tag]');if(!field)return;field.onchange=async()=>{field.disabled=true;try{await setManualRookie(p,field.value);onSaved?.();}catch(error){field.disabled=false;const status=host.querySelector('.es-rookie-status');if(status)status.textContent='Could not save Rookie tag. Please retry.';console.warn('Rookie tag save failed',error);}};}
 const RULES=[
- {key:'college',label:'Rookie',title:'Arrives directly from NCAA basketball for a confirmed European club in 2026/27',
+ {key:'college',label:'Rookie',title:'Played NCAA basketball in 2025/26 and arrives directly at a confirmed European club for 2026/27',
   test:(p,c)=>c.arrival==='college'},
  {key:'uspro',label:'Out of NBA/G League',title:'Arrives from the NBA or NBA G League for a confirmed European club in 2026/27',
   test:(p,c)=>c.arrival==='uspro'},
@@ -84,18 +78,18 @@ const RULES=[
   test:(p,c)=>{const born=Number(p.born)||0;return born>=SEASON_START-21&&c.lines.some(x=>!NOT_EUROPE.has(x.league)&&(x.mpg||0)>=20&&(x.g||0)>=8);}}
  /* No "unsigned" badge: a missing 2026/27 club usually means the roster has not been entered yet, not that he is a free agent. */
 ];
-function context(p,m,mb){const keys=next(p,m,mb),ls=lines(p,keys.some(isEuropeClub)),c={lines:ls,next:keys,current:new Set(ls.map(x=>canonKey(x.league+'|'+x.team))),origin:origin(p),europe:ls.some(x=>!NOT_EUROPE.has(x.league))};c.arrival=arrival(c);c.manualRookie=manualRookie(p);if(c.manualRookie===true)c.arrival='college';else if(c.manualRookie===false&&c.arrival==='college')c.arrival='';return c;}
+function context(p,m,mb){const keys=next(p,m,mb),ls=lines(p,keys.some(isEuropeClub)),c={lines:ls,next:keys,current:new Set(ls.map(x=>canonKey(x.league+'|'+x.team))),origin:origin(p),europe:ls.some(x=>!NOT_EUROPE.has(x.league))};c.arrival=arrival(c);return c;}
 function of(p,m,mb){
  if(!p)return [];
  let c;try{c=context(p,m,mb);}catch(e){return [];}
- const out=[];for(const r of RULES){try{if(r.test(p,c))out.push({key:r.key,label:r.label,title:r.key==='college'&&c.manualRookie===true?'Rookie · manually set for '+SIGNAL_SEASON:r.title});}catch(e){}if(out.length>=MAX)break;}
+ const out=[];for(const r of RULES){try{if(r.test(p,c))out.push({key:r.key,label:r.label,title:r.title});}catch(e){}if(out.length>=MAX)break;}
  return out;
 }
 const html=p=>of(p).map(s=>'<span class="es-signal es-signal-'+s.key+'" title="'+escAttr(s.title)+'">'+esc(s.label)+'</span>').join('');
 // Signals within this group use OR; other player filters narrow the result.
 // Assignment maps are shared across a filtering pass to keep it responsive.
 function filter(pool,keys){const selected=new Set(keys||[]);if(!selected.size)return pool;const rules=RULES.filter(r=>selected.has(r.key)),m=next26Get(),mb=next26bGet();return pool.filter(p=>{try{const c=context(p,m,mb);return rules.some(r=>r.test(p,c));}catch(e){return false;}});}
-window.ESSignals={of,html,RULES,filter,editorHTML,wireEditor,setManualRookie,manualRookie,loadHistory,historyReady:()=>!!arrivalHistory,FILTERS:RULES.filter(r=>['college','uspro','newteam'].includes(r.key))};
+window.ESSignals={of,html,RULES,filter,loadHistory,historyReady:()=>!!arrivalHistory,FILTERS:RULES.filter(r=>['college','uspro','newteam'].includes(r.key))};
 
 /* Player profile: the same badges, beside the other pills. */
 const base=renderProfile;
@@ -105,7 +99,6 @@ renderProfile=function(){base();try{
  const identity=document.querySelector('#drawer .es-dossier-identity');
  if(!host&&identity){host=document.createElement('div');host.className='es-dossier-signals';identity.append(host);}
  if(host&&!host.querySelector('.es-signal'))host.insertAdjacentHTML('beforeend',html(p));
- if(host&&!host.querySelector('[data-rookie-tag]')){host.insertAdjacentHTML('beforeend',editorHTML(p));wireEditor(host,p,()=>renderProfile());}
  // The dossier replaces the original hero, including its board button.
  const actions=document.querySelector('#drawer .es-profile-top-actions');
  if(actions&&!actions.querySelector('[data-signal-board]')){const board=document.createElement('button');board.type='button';board.className='btn primary sm';board.dataset.signalBoard='';board.textContent='＋ Board';board.onclick=()=>addToScoutBoard(p.id);actions.append(board);}
