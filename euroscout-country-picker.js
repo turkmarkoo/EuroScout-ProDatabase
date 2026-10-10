@@ -62,7 +62,9 @@
       if (input.value.trim()) input.value = countries.find(c => fold(c)===fold(input.value.trim())) || selected;
       close();
     }, 100));
-    document.addEventListener('pointerdown', event => { if (!wrapper.contains(event.target)) close(); });
+    const outside = event => { if (!wrapper.contains(event.target)) close(); };
+    document.addEventListener('pointerdown', outside);
+    return () => { document.removeEventListener('pointerdown', outside); close(); };
   }
   function mountAll(root = document) { root.querySelectorAll('[data-country-picker]').forEach(input => mount(input)); }
   window.EuroScoutCountryPicker = {mount, mountAll};

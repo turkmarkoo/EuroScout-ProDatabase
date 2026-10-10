@@ -630,7 +630,8 @@
     document.getElementById('mcMerge').onclick=async e=>{e.currentTarget.disabled=true;try{await merge(candidate,view.survivor,view.options);}catch(error){toast(error.message);e.currentTarget.disabled=false;}};
   }
   function invalidateCatalogue(){detectionCache={};entityCache={};view.detectionReady={};automaticAttempted='';}
-  function scheduleAutomatic(){if(automaticTimer!==null)clearTimeout(automaticTimer);automaticTimer=setTimeout(()=>{automaticTimer=null;if(window.ESSessions?.active?.()){scheduleAutomaticDeferred();return;}runAutomatic().catch(error=>console.warn('Automatic identity consolidation delayed',error));},250);}
+  function automaticBlocked(){return !!(window.ESSessions?.active?.()||document.querySelector(".ep2-overlay.open"));}
+  function scheduleAutomatic(){if(automaticTimer!==null)clearTimeout(automaticTimer);automaticTimer=setTimeout(()=>{automaticTimer=null;if(automaticBlocked()){scheduleAutomaticDeferred();return;}runAutomatic().catch(error=>console.warn('Automatic identity consolidation delayed',error));},250);}
   function scheduleAutomaticDeferred(){if(automaticTimer!==null)return;automaticTimer=setTimeout(()=>{automaticTimer=null;scheduleAutomatic();},30000);}
   function linkedRecordPlan(){
     const pairs=window.EuroScoutDragons?.recordLinks?.()||[],out=[],seen=new Set();
@@ -644,9 +645,10 @@
     }return out;
   }
   async function runAutomatic(){
-    if(!Store.canEdit()||automaticRunning||automaticFailure||window.ESSessions?.active?.())return 0;
+    if(!Store.canEdit()||automaticRunning||automaticFailure)return 0;
+    if(automaticBlocked()){scheduleAutomaticDeferred();return 0;}
     automaticRunning=true;let count=0;
-    try{await window.wfFlushReport?.();for(let pass=0;pass<6;pass++){if(window.ESSessions?.active?.()){scheduleAutomaticDeferred();break;}const plan=[...linkedRecordPlan(),...automaticPlan(detect(true,'player').player)];if(!plan.length)break;automaticAttempted=plan.map(item=>item.candidate.id).join('|');const merged=await autoMergeBatch(plan);count+=merged;if(!merged)break;await new Promise(resolve=>setTimeout(resolve,0));}automaticMerged+=count;return count;}
+    try{await window.wfFlushReport?.();for(let pass=0;pass<6;pass++){if(automaticBlocked()){scheduleAutomaticDeferred();break;}const plan=[...linkedRecordPlan(),...automaticPlan(detect(true,'player').player)];if(!plan.length)break;automaticAttempted=plan.map(item=>item.candidate.id).join('|');const merged=await autoMergeBatch(plan);count+=merged;if(!merged)break;await new Promise(resolve=>setTimeout(resolve,0));}automaticMerged+=count;return count;}
     catch(error){automaticFailure=error.message;automaticAttempted='';toast('Automatic merges stopped: '+error.message+' Review Merge Center before retrying.');throw error;}
     finally{automaticRunning=false;if(count||automaticFailure){if(STATE.view==='mergecenter')setTimeout(renderMergeCenter,0);else if(count){render();if(typeof DRAWER_OPEN!=='undefined'&&DRAWER_OPEN)renderProfile();toast(count+' clear player duplicates merged. Undo is available in Merge Center.');automaticMerged=0;}}}
   }

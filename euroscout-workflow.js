@@ -38,7 +38,7 @@ function wfQueuePanel(full=false){const panel=esPanel('Review queue'),list=wfQue
 const wfDashBase=renderDashboard;renderDashboard=function(){wfDashBase();};
 const wfRenderBase=render;render=function(){if(STATE.view==='reviewqueue'){$('#app').replaceChildren(wfQueuePanel(true));esAfterRender();}else wfRenderBase();};
 const wfSetupBase=esSetup;esSetup=function(){wfSetupBase();const b=esButton('Review queue',()=>goView('reviewqueue'));b.dataset.view='reviewqueue';b.dataset.navIcon='☑';b.title='Review queue';$('#tabs [data-view=watchlist]').after(b);};
-const wfBioBase=ovrSaveLocal;ovrSaveLocal=function(patch){if(!Store.canEdit())return;wfBioBase(patch);if(patch.bio)Object.keys(patch.bio).forEach(id=>{const p=player(id);if(p){const r=wfReport(p);saveRec(p,{report:JSON.stringify({...r,_workflow:{...r._workflow,bioEditedAt:wfNow()}})});}});};
+const wfBioBase=ovrSaveLocal;ovrSaveLocal=function(patch,options){if(!Store.canEdit())return;wfBioBase(patch,options);if(patch.bio)Object.keys(patch.bio).forEach(id=>{const p=player(id);if(p){const r=wfReport(p);saveRec(p,{report:JSON.stringify({...r,_workflow:{...r._workflow,bioEditedAt:wfNow()}})});}});};
 Object.assign(window,{saveRec,renderProfile,renderDashboard,render,esSetup,noteText,ovrSaveLocal});
 
 
