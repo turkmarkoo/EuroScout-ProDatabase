@@ -1,0 +1,33 @@
+/* Compact profile controls; keep the scouting checklist and existing save flows. */
+.es-redesign .dq-chevron{display:inline-flex;align-items:center;justify-content:center;flex:none;width:12px;height:12px;color:#73877a}
+.es-redesign .dq-chevron svg{width:12px;height:12px;display:block}
+.es-redesign #drawer .dq-field-button{display:inline-flex;align-items:center;justify-content:space-between;gap:10px;min-height:30px;height:30px;padding:0 9px;border-radius:7px;line-height:1.2;font-size:12px;white-space:nowrap}
+.es-redesign #drawer .dq-field-button .dq-chevron{margin:0}
+.es-redesign #drawer .es-dossier-field{min-height:42px}
+.es-redesign #drawer .es-dossier-field.dq-missing{background:transparent!important;border:0!important;border-bottom:1px solid #e4ebe7!important;border-radius:0!important;color:inherit!important}
+.es-redesign #drawer .es-dossier-field.dq-missing .dq-field-button{background:#FFF8E8!important;border:1px solid #e8c68a!important;color:#9b641f}
+.es-redesign #drawer .es-dossier-clubline[data-profile-field]{display:inline-flex;align-items:center;gap:10px;width:fit-content;max-width:100%;min-height:30px;box-sizing:border-box;margin:10px 0 4px;padding:4px 9px;border:1px solid #dce5df;border-radius:7px;font-size:12px;line-height:1.4;cursor:pointer}
+.es-redesign #drawer .dq-role-row{gap:16px;margin:8px 0 4px}
+.es-redesign .dq-role-line{gap:0;min-height:28px;border:1px solid #cedad2;border-radius:7px;background:#f5f7f6;width:fit-content}
+.es-redesign .dq-role-line:has(.primary:not(.dq-missing)){background:#17674f;border-color:#17674f}
+.es-redesign .dq-role-line:has(.dq-missing){background:#FFF8E8;border-color:#e8c68a}
+.es-redesign .dq-role-line .dq-role-chip{min-height:28px;height:28px;padding:0 9px;border:0!important;border-radius:6px!important;line-height:1.2;background:transparent!important}
+.es-redesign .dq-role-line .dq-role-edit{display:inline-flex;align-items:center;justify-content:center;min-height:28px;height:28px;width:25px;padding:0;border:0;border-radius:0 6px 6px 0}
+.es-redesign .dq-role-line:has(.primary:not(.dq-missing)) .dq-role-edit{color:#fff}
+.es-redesign .dq-role-line:has(.dq-missing) .dq-role-edit{color:#bd7a24}
+.es-redesign .dq-role-line .dq-role-edit .dq-chevron{color:inherit}
+.es-redesign .dq-role-line button:hover{background:#17674f0a!important}
+.es-redesign #drawer .es-level-picker{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Cpath d='m3 4.5 3 3 3-3' stroke='%2373877a' fill='none' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center}
+.es-redesign #drawer select.es-level-picker.dq-missing{background-position:right 9px center!important}
+.es-redesign .dq-popover{padding:10px;border-radius:10px;box-shadow:0 8px 28px #15332620;font:13px/1.4 var(--body,Inter,system-ui,sans-serif)}
+.es-redesign .dq-popover header{position:static;display:flex;min-height:24px;margin:0 0 8px;padding:0;border:0;background:transparent;box-shadow:none}
+.es-redesign .dq-popover header b{font-size:12px}
+.es-redesign .dq-popover header button{display:flex;align-items:center;justify-content:center;min-height:24px;height:24px;width:24px;padding:0;border-radius:5px;font-size:19px}
+.es-redesign .dq-popover input{min-height:34px;height:34px;padding:7px 9px;border:1px solid #d5e0d9;border-radius:7px;background:#f7faf8;outline:none;font:inherit}
+.es-redesign .dq-popover input:focus{border-color:#17674f;box-shadow:0 0 0 2px #18654e18}
+.es-redesign .dq-popover .dq-options{margin-top:6px;max-height:280px}
+.es-redesign .dq-popover .dq-option,.es-redesign .dq-popover .dq-checklist-item{min-height:32px;padding:6px 9px;border-radius:6px;font:inherit;line-height:1.4}
+.es-redesign .dq-popover .dq-option[aria-selected=true]{background:#e5f3ed;color:#176348;font-weight:600}
+.es-redesign .dq-popover .dq-status:empty{display:none}
+.es-redesign .ep2-add-club{display:inline-flex;align-items:center;min-height:30px;margin:7px 0 10px;padding:4px 9px;border:1px solid #ceded5;border-radius:7px;background:#fff;color:#176348;font:600 12px var(--body,Inter,system-ui,sans-serif);cursor:pointer}
+.es-redesign .ep2-add-club:hover{background:#edf8f2}
