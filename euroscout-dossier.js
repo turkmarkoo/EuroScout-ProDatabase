@@ -13,7 +13,7 @@ function basic(original){
 }
 function details(id){
  const p=player(id)||assignPool().find(x=>gid(x)===id);if(!p)return null;
- const out={...basic(p),canonicalId:String(gid(p)),id:String(id)},rows=personLines(p).filter(x=>!isOtherLeague(leagueOf(x)?.meta)&&Number(x.g)>0),seasons=[...new Set(rows.map(x=>ESQuickStats.seasonOf(x)).filter(x=>x!=='Season unknown'))].sort().reverse().slice(0,3);
+ const out={...basic(p),canonicalId:String(gid(p)),id:String(id),currentSeason:'2026/27'},rows=personLines(p).filter(x=>!isOtherLeague(leagueOf(x)?.meta)&&Number(x.g)>0),seasons=['2026/27','2025/26'];
  out.stats=ESQuickStats.distinctLines(rows.filter(x=>seasons.includes(ESQuickStats.seasonOf(x)))).sort((a,b)=>ESQuickStats.seasonOf(b).localeCompare(ESQuickStats.seasonOf(a))).map(x=>({season:ESQuickStats.seasonOf(x),club:ESQuickStats.clubNameOf(x),competition:ESQuickStats.competitionOf(x).name,g:x.g,mpg:x.mpg,pts:x.ppg,reb:x.rpg,ast:x.apg,stl:x.spg,blk:x.bpg,fg:x.fgp,three:x.f3p,ft:x.ftp}));
  const reports=reportRecords(p).map(r=>parseReport(r.report)),seed=effectiveReport(p),rep=window.ESRecordMerge?ESRecordMerge.mergeReports([seed,...reports]):seed;
  const notes=value=>window.ESRecordMerge?.notes(value)||bulletParse(value);
