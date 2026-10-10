@@ -31,3 +31,8 @@
 .es-redesign .dq-popover .dq-status:empty{display:none}
 .es-redesign .ep2-add-club{display:inline-flex;align-items:center;min-height:30px;margin:7px 0 10px;padding:4px 9px;border:1px solid #ceded5;border-radius:7px;background:#fff;color:#176348;font:600 12px var(--body,Inter,system-ui,sans-serif);cursor:pointer}
 .es-redesign .ep2-add-club:hover{background:#edf8f2}
+
+/* Height, weight and hand share a row; the two role fields share the next row. */
+.ep2-basics>.ep2-field:has(#ep2Height),.ep2-basics>.ep2-field:has(#ep2Weight),.ep2-basics>.ep2-field:has(.ep2-hand){grid-column:span 2}
+.ep2-basics>.ep2-field:has(#ep2PrimaryRole),.ep2-basics>.ep2-field:has(#ep2SecondaryRole){grid-column:span 3}
+@media(max-width:560px){.ep2-basics>.ep2-field:has(#ep2Height),.ep2-basics>.ep2-field:has(#ep2Weight){grid-column:span 3}.ep2-basics>.ep2-field:has(.ep2-hand){grid-column:span 6}}
