@@ -76,14 +76,25 @@
       else if(assignment){club=typeof clubByKey==='function'?clubByKey(assignment):null;currentClub=club?.name||'';}
       if(club)currentLeague=typeof comps2627Label==='function'?comps2627Label(club):'';
     } catch {}
-    const external=[...new Set(group.flatMap(p=>[p._ext,p._rgm,p._proballers,p._otherLink]).filter(Boolean))].join('\n');
+    const external=[...new Set(group.flatMap(p=>[p._ext,p._rgm,p.profile_url,p._proballers,p._otherLink]).filter(Boolean))].join('\n');
     const fiba=group.map(p=>p.fibaId||p._fiba).find(Boolean)||'';
+    const manual=typeof personBio==='function'?personBio(profile):null;
+    const evidence=group.map(p=>window.EuroScoutIdentityBio?.resolve?.(p)).filter(Boolean);
+    const dates=[...new Set(evidence.map(p=>p.birthDate))],rgIds=[...new Set(evidence.map(p=>p.realgmId).filter(Boolean))];
+    const supported=dates.length===1?evidence[0]:null;
+    const known=supported&&!Object.hasOwn(manual||{},'born')&&!Object.hasOwn(manual||{},'birthDate')?supported:null;
+    const dated=group.find(p=>p.birthDate||p.birthdate||p.dob);
+    const date=Object.hasOwn(manual||{},'birthDate')?profile.birthDate||'':profile.birthDate||profile.birthdate||profile.dob||dated?.birthDate||dated?.birthdate||dated?.dob||known?.birthDate||'';
+    const value=key=>Object.hasOwn(manual||{},key)?profile[key]||'':profile[key]||group.find(p=>p[key])?.[key]||'';
+    const born=Object.hasOwn(manual||{},'born')?profile.born||'':value('born')||birthYear(date);
+    const position=Object.hasOwn(manual||{},'role')||Object.hasOwn(manual||{},'pos')?profile.role||profile.pos||'':value('role')||value('pos');
     return {
-      id,name:profile.name||fallback?.name||'',born:profile.born||'',birthDate:profile.birthDate||group.find(p=>p.birthDate)?.birthDate||'',country:profile.country||'',
-      height:profile.height||'',position:profile.role||profile.pos||'',team:currentClub,league:currentLeague,
+      id,name:profile.name||fallback?.name||'',born,birthDate:date,country:value('country'),
+      identityEvidence:supported?{realgmId:rgIds.length===1?rgIds[0]:'',source:supported.source,checked:supported.checked}:null,
+      height:value('height'),position,team:currentClub,league:currentLeague,
       photo:(typeof photoOf==='function'?photoOf(profile):profile.photo)||'',external,fiba,player:profile,
       report:Store.get(id)||{report:'{}',rating:0,watch:false,eye:{}},sources:{
-        profile:'Player Profile · canonical record',current:'Player Profile · 2026/27',
+        profile:known?'Verified identity · '+known.source:'Player Profile · canonical record',current:'Player Profile · 2026/27',
         scouting:'Player Profile · saved scouting data',statistics:'Imported statistics · preserved entries'
       }
     };
@@ -120,13 +131,18 @@
   }
   function externalId(value, provider) {
     const text=String(value||'');
-    const match=provider==='eurobasket'?text.match(/(?:eurobasket\.com\/player\/[^?#]*?\/)(\d+)(?:[/?#]|$)/i):text.match(/(?:fiba\.basketball\/[^?#]*?\/players?\/)([\w-]+)(?:[/?#]|$)/i);
-    return match?match[1]:text&&!text.includes('/')?text:'';
+    const pattern=provider==='eurobasket'?/eurobasket\.com\/player\/[^?#\s]*?\/(\d+)(?:[/?#]|$)/gi:/fiba\.basketball\/(?:[^?#\s]*?\/)?players?\/(\d+)(?:[-/?#]|$)/gi;
+    const ids=[...new Set(Array.from(text.matchAll(pattern),m=>m[1]))];
+    return ids.length===1?ids[0]:ids.length?'conflict:'+ids.sort().join(','):text&&!/[\/\s]/.test(text)?text:'';
   }
   function playerConfidence(a,b) {
+    const rgA=realgmId(a),rgB=realgmId(b);
+    if(rgA.startsWith('conflict:')||rgB.startsWith('conflict:')||rgA&&rgB&&rgA!==rgB)return 0;
+    if(a.birthDate&&b.birthDate&&a.birthDate!==b.birthDate)return 0;
+    if(a.born&&b.born&&birthYear(a.born)!==birthYear(b.born))return 0;
     const euroA=externalId(a.external,'eurobasket'),euroB=externalId(b.external,'eurobasket');
     const fibaA=externalId(a.fiba,'fiba'),fibaB=externalId(b.fiba,'fiba');
-    if(euroA&&euroB&&euroA!==euroB || fibaA&&fibaB&&fibaA!==fibaB)return 0;
+    if([euroA,euroB,fibaA,fibaB].some(id=>id.startsWith('conflict:'))||euroA&&euroB&&euroA!==euroB || fibaA&&fibaB&&fibaA!==fibaB)return 0;
     if(euroA&&euroB&&euroA===euroB || fibaA&&fibaB&&fibaA===fibaB)return 99;
     const nameA=playerFold(a.name),nameB=playerFold(b.name);const _tA=nameA.split(' ').filter(Boolean),_tB=nameB.split(' ').filter(Boolean);const _sameSet=_tA.length===_tB.length&&_tA.length>1&&[..._tA].sort().join(' ')===[..._tB].sort().join(' ');const exactName=!!nameA&&(nameA===nameB||_sameSet);
     const lastA=nameA.split(' ').at(-1),lastB=nameB.split(' ').at(-1);
@@ -143,7 +159,7 @@
   const birthYear=value=>String(value||'').match(/(?:19|20)\d{2}/)?.[0]||'';
   const countryKey=value=>fold(window.EuroScoutCountries?.canonical(value)||value);
   function positionKey(value){const p=fold(value);if(/\b(guard|pg|sg|point|shooting)\b/.test(p)||p==='g')return 'guard';if(/\b(center|centre|big)\b/.test(p)||p==='c')return 'big';if(/\b(forward|wing|sf|pf)\b/.test(p)||p==='f')return 'forward';return '';}
-  function realgmId(entity){const p=entity.player||{};const ids=[...new Set((p._grp||[p]).map(row=>String(row.realgmId||row.realGMId||[row.profile_url,row._rgm,entity.external].filter(Boolean).join('\n').match(/\/(?:Summary|GameLogs|NBA)\/(\d+)/i)?.[1]||'')).filter(Boolean))];return ids.length===1?ids[0]:ids.length?'conflict:'+ids.sort().join(','):'';}
+  function realgmId(entity){const p=entity.player||{};const ids=[...new Set([entity.identityEvidence?.realgmId,...(p._grp||[p]).map(row=>String(row.realgmId||row.realGMId||[row.profile_url,row._rgm].filter(Boolean).join('\n').match(/\/(?:Summary|GameLogs|NBA)\/(\d+)/i)?.[1]||'')),...Array.from(String(entity.external||'').matchAll(/\/(?:Summary|GameLogs|NBA)\/(\d+)/gi),m=>m[1])].filter(Boolean))];return ids.length===1?ids[0]:ids.length?'conflict:'+ids.sort().join(','):'';}
   function sameClubContext(a,b){const words=value=>new Set(fold(value).split(' ').filter(word=>word.length>3&&!['basketball','club','team'].includes(word)));const left=words(a.team),right=words(b.team);if(!left.size||!right.size)return false;const shared=[...left].filter(word=>right.has(word)).length;return shared>=2||shared>=1&&Math.min(left.size,right.size)===1;}
   function automaticPlayerMatch(a,b){
     if(!a||!b||a.id===b.id)return false;
@@ -157,15 +173,17 @@
     const bornA=birthYear(a.born),bornB=birthYear(b.born);if(bornA&&bornB&&bornA!==bornB)return false;
     const dateA=a.birthDate||a.player?.birthDate,dateB=b.birthDate||b.player?.birthDate;if(/^\d{4}-\d{2}-\d{2}$/.test(dateA||'')&&/^\d{4}-\d{2}-\d{2}$/.test(dateB||'')&&dateA!==dateB)return false;
     const heightA=Number(a.height),heightB=Number(b.height),heightKnown=!!(heightA&&heightB);
-    if(heightKnown&&Math.abs(heightA-heightB)>5)return false;
     const countryA=countryKey(a.country),countryB=countryKey(b.country),countryKnown=!!(countryA&&countryB);
     if(countryKnown&&countryA!==countryB)return false;
     const positionA=positionKey(a.position),positionB=positionKey(b.position);
     const realgmA=realgmId(a),realgmB=realgmId(b);if(realgmA.startsWith('conflict:')||realgmB.startsWith('conflict:')||realgmA&&realgmB&&realgmA!==realgmB)return false;
-    const euroA=externalId(a.external,'eurobasket'),euroB=externalId(b.external,'eurobasket');if(euroA&&euroB&&euroA!==euroB)return false;
-    const fibaA=externalId(a.fiba,'fiba'),fibaB=externalId(b.fiba,'fiba');if(fibaA&&fibaB&&fibaA!==fibaB)return false;
+    const euroA=externalId(a.external,'eurobasket'),euroB=externalId(b.external,'eurobasket');if(euroA.startsWith('conflict:')||euroB.startsWith('conflict:')||euroA&&euroB&&euroA!==euroB)return false;
+    const fibaA=externalId(a.fiba,'fiba'),fibaB=externalId(b.fiba,'fiba');if(fibaA.startsWith('conflict:')||fibaB.startsWith('conflict:')||fibaA&&fibaB&&fibaA!==fibaB)return false;
     const sharedProfile=!!(realgmA&&realgmA===realgmB||euroA&&euroA===euroB||fibaA&&fibaA===fibaB);
+    // A verified shared provider identity resolves feed measurement differences;
+    // names, dates and conflicting provider IDs above still cannot be bypassed.
     if(sharedProfile)return true;
+    if(heightKnown&&Math.abs(heightA-heightB)>5)return false;
     const signals=Number(heightKnown&&Math.abs(heightA-heightB)<=3)+Number(countryKnown&&countryA===countryB)+
       Number(positionA&&positionA===positionB)+Number(sameClubContext(a,b));
     // An equal known birth year plus an exact normalized name is a clear identity
@@ -421,7 +439,8 @@
       if(next.reviewed[candidate.id]||existingPairs.has(candidate.id))continue;
       if(!override.links.some(link=>link.includes(survivor)&&link.includes(source)))override.links.push([survivor,source]);
       next.merges.push({id:crypto.randomUUID(),type:'player',survivor,source,at,
-        admin:Store.user?.email||window.ESAccess?.user?.email||'Administrator',options:AUTO_OPTIONS,auto:true,batchId});
+        admin:Store.user?.email||window.ESAccess?.user?.email||'Administrator',options:AUTO_OPTIONS,auto:true,batchId,
+        identitySources:[candidate.a,candidate.b].filter(x=>x?.identityEvidence).map(x=>({id:x.id,...x.identityEvidence}))});
       next.reviewed[candidate.id]='merged';
       existingPairs.add(candidate.id);
     }
