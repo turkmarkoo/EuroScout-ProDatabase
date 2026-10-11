@@ -501,6 +501,21 @@ let tab = 'sessions', showUnscouted = false, upComp = '', upDays = 14, upMode = 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 function dayLabel(v) { const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? DAYS[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] + ' ' + fmtDate(v) : v; }
 window.addEventListener('euroscout-fixtures', () => { if (STATE.view === 'scoutlog' && tab === 'upcoming' && !document.getElementById('sxMask')) renderLog(); });
+/* Match saved scouting evidence by game date, both clubs and competition. */
+function fixtureScoutIndex(sessions,fixtures){
+ const nameKey=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(),byName=new Map(),known=competitionsKnown(),compIds=new Map(),compNames=new Map();
+ allClubs().forEach(c=>{for(const name of [c.name,...(c.teams||[]).flatMap(t=>[t.name,...(t.searchAliases||[])])]){const n=nameKey(name),k=canonKey(c.key);if(n)byName.set(n,byName.has(n)&&byName.get(n)!==k?null:k);}});
+ known.forEach(c=>{c.aliasIds.forEach(id=>compIds.set(id,c.id));compNames.set(competitionNameKey(c.name),c.id);});
+ const team=t=>{const k=t?.key?canonKey(t.key):'',n=nameKey(t?.name);return k&&club(k)?k:byName.get(n)||(!k&&n?'name:'+n:k);};
+ const date=v=>{const value=String(v||''),iso=value.match(/^(\d{4}-\d{2}-\d{2})(?:$|T| )/);if(iso)return iso[1];const eu=value.match(/^(\d{2})[/.](\d{2})[/.](\d{4})$/);return eu?eu[3]+'-'+eu[2]+'-'+eu[1]:'';};
+ const comp=c=>compIds.get(c?.id)||compNames.get(competitionNameKey(c?.name))||(c?.name?'name:'+competitionNameKey(c.name):c?.id?'id:'+c.id:'');
+ const pair=(a,b,d)=>{const A=team(a),B=team(b),day=date(d);return A&&B&&A!==B&&day?day+'|'+[A,B].sort().join('~'):'';};
+ const games=new Map();for(const g of fixtures){const k=pair(g.home,g.away,g.date);if(k){if(!games.has(k))games.set(k,new Set());games.get(k).add(comp({id:g.comp,name:g.compName}));}}
+ const exact=new Map(),withoutCompetition=new Map();for(const session of sessions){if(session.removed)continue;const k=pair(session.a,session.b,session.gameDate);if(!k)continue;const c=comp(session.competition);if(c){const key=k+'|'+c;if(!exact.has(key))exact.set(key,session);}else if(games.get(k)?.size===1&&!withoutCompetition.has(k))withoutCompetition.set(k,session);}
+ return g=>{const k=pair(g.home,g.away,g.date);return exact.get(k+'|'+comp({id:g.comp,name:g.compName}))||withoutCompetition.get(k)||null;};
+}
+function fixtureAction(g,scouted){return scouted?'<button type="button" class="sx-scouted-chip" data-session="'+escAttr(scouted.id)+'" title="Open saved scouting session">✓ Scouted</button>':canEdit()&&g.home.key&&g.away.key?'<button type="button" class="btn ghost sm" data-scout="'+escAttr([g.home.key,g.away.key,g.date,g.comp].join('~'))+'">Scout this game</button>':'';}
+
 function renderLog() {
   const sessions = everything();
   const teamKeys = new Set(); sessions.forEach(s => { if (s.a.key) teamKeys.add(s.a.key); if (s.b.key) teamKeys.add(s.b.key); });
@@ -522,10 +537,11 @@ function renderLog() {
       : '<div class="empty">Team logs appear once a session is finished.</div>';
   } else if (tab === 'upcoming') {
     const FX = window.ESFixtures, list = FX ? FX[upMode](upDays, upComp) : [], cs = FX ? FX.competitions() : [];
+    const scoutedGame=fixtureScoutIndex(sessions,FX?.all?.()||list);
     const byDay = new Map(); list.forEach(g => { if (!byDay.has(g.date)) byDay.set(g.date, []); byDay.get(g.date).push(g); });
     body = '<div class="sx-filters"><label>Show <select id="sxUpMode"><option value="recent"' + (upMode === 'recent' ? ' selected' : '') + '>Played games</option><option value="upcoming"' + (upMode === 'upcoming' ? ' selected' : '') + '>Upcoming games</option></select></label><label>Competition <select id="sxUpComp"><option value="">All (' + cs.length + ')</option>' + cs.map(c => '<option value="' + escAttr(c.id) + '"' + (c.id === upComp ? ' selected' : '') + '>' + esc(c.name) + ' · ' + c.games + ' games</option>').join('') + '</select></label><label>Window <select id="sxUpDays">' + [7, 14, 30, 60].map(n => '<option value="' + n + '"' + (n === upDays ? ' selected' : '') + '>' + (upMode === 'recent' ? 'last ' : 'next ') + n + ' days</option>').join('') + '</select></label><button type="button" class="btn ghost sm" id="sxUpRefresh">Refresh schedule</button><span class="sx-hint" style="margin:0">' + (FX && FX.loadedAt() ? 'Schedule checked ' + fmtDate(new Date(FX.loadedAt()).toISOString()) + ' ' + fmtTime(FX.loadedAt()) : FX && FX.state() === 'loading' ? 'Loading the schedule…' : '') + '</span></div>' +
       (FX && FX.problems().length ? '<details class="sx-problems"><summary>' + FX.problems().length + ' thing' + (FX.problems().length === 1 ? '' : 's') + ' to check</summary><ul>' + FX.problems().map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></details>' : '') +
-      (list.length ? [...byDay.entries()].map(([d, gs]) => '<h4 class="sx-sub">' + dayLabel(d) + '</h4><div class="sx-tablewrap"><table class="sx-table sx-fixt"><tbody>' + gs.map(g => '<tr><td class="sx-ftime">' + esc(g.time || '—') + '</td><td class="sx-fcomp">' + esc(g.compName) + (g.group ? ' · ' + esc(g.group) : '') + ' <span class="sx-hint">R' + esc(g.round) + '</span></td><td><b>' + esc(g.home.name) + '</b> vs <b>' + esc(g.away.name) + '</b>' + (g.played ? ' <span class="sx-hint">' + esc(g.hs + '–' + g.as) + '</span>' : '') + '</td><td class="sx-hint">' + esc(g.venue) + '</td><td class="sx-fact">' + (canEdit() && g.home.key && g.away.key ? '<button type="button" class="btn ghost sm" data-scout="' + escAttr([g.home.key, g.away.key, g.date, g.comp].join('~')) + '">Scout this game</button>' : '') + '</td></tr>').join('') + '</tbody></table></div>').join('')
+      (list.length ? [...byDay.entries()].map(([d, gs]) => '<h4 class="sx-sub">' + dayLabel(d) + '</h4><div class="sx-tablewrap"><table class="sx-table sx-fixt"><tbody>' + gs.map(g => '<tr><td class="sx-ftime">' + esc(g.time || '—') + '</td><td class="sx-fcomp">' + esc(g.compName) + (g.group ? ' · ' + esc(g.group) : '') + ' <span class="sx-hint">R' + esc(g.round) + '</span></td><td><b>' + esc(g.home.name) + '</b> vs <b>' + esc(g.away.name) + '</b>' + (g.played ? ' <span class="sx-hint">' + esc(g.hs + '–' + g.as) + '</span>' : '') + '</td><td class="sx-hint">' + esc(g.venue) + '</td><td class="sx-fact">' + fixtureAction(g,scoutedGame(g)) + '</td></tr>').join('') + '</tbody></table></div>').join('')
         : '<div class="empty">' + (FX && FX.state() === 'loading' ? 'Loading the schedule…' : 'No games in this window.') + '</div>') +
       '<p class="sx-hint">EuroLeague and EuroCup come live from the official schedule, with final scores as games finish. Other leagues appear here once their results are in <code>data/fixtures-2627.js</code>.</p>';
   } else {
@@ -723,5 +739,5 @@ renderTeam = function () {
 
 window.addEventListener?.('euroscout:rosters-ready',fresh);
 window.ESSessions = { STATUS, DWELL_MS, active, start, update, select, setStock, stockOf, markOf, review, finish, discard, remove, adopt, saveEdit, merge, openEdit, openMerge, all, everything,
-  me, teamLog, teamLogs, coverage, compsFor, knownGames, timeline, openStart, openFinish, openTeamLog, openPlayerLog, openSession, fmtDate, fmtTime, clock, modal, closeModal, hash };
+  fixtureScoutIndex, fixtureAction, me, teamLog, teamLogs, coverage, compsFor, knownGames, timeline, openStart, openFinish, openTeamLog, openPlayerLog, openSession, fmtDate, fmtTime, clock, modal, closeModal, hash };
 })();
