@@ -161,6 +161,12 @@ async function apply(raw){
  catch(error){problem='Dragons Data could not load. Existing EuroScout data is unchanged.';console.warn(problem,error);}
  return raw;
 }
+let refreshJob=null,lastSourceCheck=0,lastSnapshot='';
+async function refresh(){
+ if(!reader()||typeof STATE==='undefined'||!STATE.data)return false;
+ if(refreshJob)return refreshJob;if(Date.now()-lastSourceCheck<60000)return false;lastSourceCheck=Date.now();
+ refreshJob=(async()=>{const head=await ESAccess.get('dragonsDataState/current');if(!head)return false;const id=ESAccess.field(head,'snapshot');if(!/^[a-f0-9]{32}$/.test(id||''))throw Error('Invalid statistics snapshot pointer.');if(id===lastSnapshot)return false;const data=Object.assign(valid(JSON.parse(await ESAccess.readPayload('dragonsDataSnapshots',id))),{_sourceLabel:'cloud snapshot'});if(!reader())return false;lastSnapshot=id;if(data.generated&&data.generated===feed?.generated)return false;STATE.data=connectData(STATE.data,data);STATE._idx=null;seasonPoolCache=null;rebuildLinks();applyOverrides();finish(STATE.data);return true;})();try{return await refreshJob;}finally{refreshJob=null;}
+}
 function key(player){const ids=[player.id,player.linkedEuroScoutId,...(player._grp||[]).map(p=>p.id)].filter(Boolean);return ids.map(id=>registrations.get(id)).filter(Boolean).sort((a,b)=>b.date.localeCompare(a.date))[0]?.key||null;}
 function link(unite){for(const [left,right] of links)unite(left,right);}
 function renderBadge(){
@@ -176,5 +182,5 @@ function finish(raw){
  for(const league of raw.leagues||[])if(league.meta.privateOwnerFeed)for(const player of league.players||[])for(const [key,value] of Object.entries(player.dragonsTotals||{}))player['t_'+({p3m:'f3m',p3a:'f3a'}[key]||key)]=value;
  renderBadge();
 }
-window.EuroScoutDragons={apply,link,key,recordLinks:()=>links.filter(([source])=>source.startsWith('dragons-')),finish,connectData,resolve,fetchLocal,fixtures(){return reader()&&feed?feed.fixtures:[];},active(){return !!(reader()&&feed);}};
+window.EuroScoutDragons={apply,refresh,generated:()=>feed?.generated||'',link,key,recordLinks:()=>links.filter(([source])=>source.startsWith('dragons-')),finish,connectData,resolve,fetchLocal,fixtures(){return reader()&&feed?feed.fixtures:[];},active(){return !!(reader()&&feed);}};
 })();

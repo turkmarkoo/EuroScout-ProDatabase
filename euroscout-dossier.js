@@ -14,7 +14,7 @@ function basic(original){
 function details(id){
  const p=player(id)||assignPool().find(x=>gid(x)===id);if(!p)return null;
  const out={...basic(p),canonicalId:String(gid(p)),id:String(id),currentSeason:'2026/27'},rows=personLines(p).filter(x=>!isOtherLeague(leagueOf(x)?.meta)&&Number(x.g)>0),seasons=['2026/27','2025/26'];
- out.stats=ESQuickStats.distinctLines(rows.filter(x=>seasons.includes(ESQuickStats.seasonOf(x)))).sort((a,b)=>ESQuickStats.seasonOf(b).localeCompare(ESQuickStats.seasonOf(a))).map(x=>({season:ESQuickStats.seasonOf(x),club:ESQuickStats.clubNameOf(x),competition:ESQuickStats.competitionOf(x).name,g:x.g,mpg:x.mpg,pts:x.ppg,reb:x.rpg,ast:x.apg,stl:x.spg,blk:x.bpg,fg:x.fgp,three:x.f3p,ft:x.ftp}));
+ out.stats=ESQuickStats.distinctLines(rows.filter(x=>seasons.includes(ESQuickStats.seasonOf(x)))).sort((a,b)=>ESQuickStats.seasonOf(b).localeCompare(ESQuickStats.seasonOf(a))).map(x=>({season:ESQuickStats.seasonOf(x),club:ESQuickStats.clubNameOf(x),competition:leagueOf(x)?.meta?.dragonsCompetition||ESQuickStats.competitionOf(x).name,sourceUpdatedAt:x._dragonsData?window.EuroScoutDragons?.generated?.()||'':'',g:x.g,mpg:x.mpg,pts:x.ppg,reb:x.rpg,ast:x.apg,pir:x.pir,stl:x.spg,blk:x.bpg,fg:x.fgp,three:x.f3p,ft:x.ftp}));
  const reports=reportRecords(p).map(r=>parseReport(r.report)),seed=effectiveReport(p),rep=window.ESRecordMerge?ESRecordMerge.mergeReports([seed,...reports]):seed;
  const notes=value=>window.ESRecordMerge?.notes(value)||bulletParse(value);
  out.strengths=notes(rep.nStrengths);out.improve=notes(rep.nImprove);
@@ -29,7 +29,7 @@ async function ready(){
  if(!window.ESQuickStats)throw Error('Statistics module unavailable.');
 }
 async function respond(msg){
- await ready();await Store.refreshPrivate?.();window.EuroScoutMarketRecords?.refresh?.();
+ await ready();await Store.refreshPrivate?.();await window.EuroScoutDragons?.refresh?.();window.EuroScoutMarketRecords?.refresh?.();
  if(msg.action==='inventory'){await loadCoreEnrichmentScripts();await loadMatchupRosterScripts();rebuildLinks();applyOverrides();return {players:assignPool().map(basic).filter(p=>p.name),checkedAt:new Date().toISOString()};}
  if(msg.action==='players'){requested=[...new Set((msg.ids||[]).filter(x=>typeof x==='string'))].slice(0,100);return {players:requested.map(details).filter(Boolean),checkedAt:new Date().toISOString()};}
  throw Error('Unknown dossier action');
@@ -37,6 +37,6 @@ async function respond(msg){
 window.addEventListener('message',async e=>{const msg=e.data;if(e.origin!==HUB||e.source!==parent||!active||msg?.type!=='dragonshub:dossier-request'||typeof msg.requestId!=='string'||msg.requestId.length>100)return;
  try{const result=await respond(msg);parent.postMessage({type:'euroscout:dossier-result',requestId:msg.requestId,result},HUB);}catch(error){parent.postMessage({type:'euroscout:dossier-result',requestId:msg.requestId,error:error.message},HUB);}
 });
-if(active){document.documentElement.classList.add('dossier-source-mode');setInterval(async()=>{if(inFlight||!requested.length||!window.ESAccess?.internal||document.visibilityState!=='visible')return;inFlight=true;try{await Store.refreshPrivate?.();window.EuroScoutMarketRecords?.refresh?.();const result={players:requested.map(details).filter(Boolean),checkedAt:new Date().toISOString()},stamp=JSON.stringify(result.players);if(stamp!==lastInventory){lastInventory=stamp;parent.postMessage({type:'euroscout:dossier-live',result},HUB);}}catch{}finally{inFlight=false;}},10000);}
+if(active){document.documentElement.classList.add('dossier-source-mode');setInterval(async()=>{if(inFlight||!requested.length||!window.ESAccess?.internal||document.visibilityState!=='visible')return;inFlight=true;try{await Store.refreshPrivate?.();await window.EuroScoutDragons?.refresh?.();window.EuroScoutMarketRecords?.refresh?.();const result={players:requested.map(details).filter(Boolean),checkedAt:new Date().toISOString()},stamp=JSON.stringify(result.players);if(stamp!==lastInventory){lastInventory=stamp;parent.postMessage({type:'euroscout:dossier-live',result},HUB);}}catch{}finally{inFlight=false;}},10000);}
 window.ESDossierSource={basic,details,safeURL};
 })();
