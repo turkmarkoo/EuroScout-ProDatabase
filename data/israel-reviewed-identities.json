@@ -1,0 +1,142 @@
+[
+  {
+    "sourcePlayerId": "26197",
+    "name": "Christian Coleman",
+    "dob": "2000-08-28",
+    "ids": [
+      "ncaam-1934"
+    ],
+    "sourceIdentityIds": [
+      "basket.co.il:26197",
+      "realgm:186805",
+      "espn:4901961",
+      "okstate:13783"
+    ],
+    "evidence": "Reviewed full identity: official Israeli profile gives 28 August 2000 and 203 cm; RealGM 186805 has the same date, height and Beer Sheva club plus Oklahoma State 2025/26 career line (34 games, 10.3 points, 5.6 rebounds). Official Oklahoma State profile confirms the 2025/26 player and 6 ft 8 height. Existing NCAA code 4901961 is the same full-name Oklahoma State player, not Isaiah Coleman.",
+    "sources": [
+      "https://basket.co.il/player.asp?PlayerId=26197&lang=en",
+      "https://basketball.realgm.com/player/Christian-Coleman/Summary/186805",
+      "https://okstate.com/sports/mens-basketball/roster/christian-coleman/13783",
+      "https://www.espn.com/mens-college-basketball/player/_/id/4901961/christian-coleman"
+    ]
+  },
+  {
+    "sourcePlayerId": "25996",
+    "name": "Gabriel \"Iffe\" Lundberg",
+    "dob": "1994-12-04",
+    "ids": [
+      "euroleague-010781"
+    ],
+    "aliases": [
+      "Gabriel \"Iffe\" Lundberg",
+      "Iffe Lundberg"
+    ],
+    "evidence": "Reviewed cross-provider name variant: exact full birth date and same current club; official Israeli registration and official international competition roster agree. Preserve both provider IDs and history.",
+    "sources": [
+      "https://basket.co.il/player.asp?PlayerId=25996&lang=en",
+      "https://www.euroleaguebasketball.net/euroleague/players/-/010781/"
+    ]
+  },
+  {
+    "sourcePlayerId": "25999",
+    "name": "Gur Lavy",
+    "dob": "2001-03-27",
+    "ids": [
+      "euroleague-014120"
+    ],
+    "aliases": [
+      "Gur Lavy",
+      "Gur Lavi"
+    ],
+    "evidence": "Reviewed cross-provider name variant: exact full birth date and same current club; official Israeli registration and official international competition roster agree. Preserve both provider IDs and history.",
+    "sources": [
+      "https://basket.co.il/player.asp?PlayerId=25999&lang=en",
+      "https://www.euroleaguebasketball.net/euroleague/players/-/014120/"
+    ]
+  },
+  {
+    "sourcePlayerId": "26156",
+    "name": "Shahar Luberboim",
+    "dob": "2008-07-22",
+    "ids": [
+      "eurocup-015211"
+    ],
+    "aliases": [
+      "Shahar Luberboim",
+      "Shachar Loberboum"
+    ],
+    "evidence": "Reviewed cross-provider name variant: exact full birth date and same current club; official Israeli registration and official international competition roster agree. Preserve both provider IDs and history.",
+    "sources": [
+      "https://basket.co.il/player.asp?PlayerId=26156&lang=en",
+      "https://www.euroleaguebasketball.net/en/eurocup/players/shachar-loberboum/015211/"
+    ]
+  },
+  {
+    "sourcePlayerId": "26048",
+    "name": "Kenneth Lofton Jr.",
+    "dob": "2002-08-14",
+    "ids": [
+      "eurocup-014903"
+    ],
+    "aliases": [
+      "Kenneth Lofton Jr.",
+      "Kenny Lofton, Jr."
+    ],
+    "evidence": "Reviewed cross-provider name variant: exact full birth date and same current club; official Israeli registration and official international competition roster agree. Preserve both provider IDs and history.",
+    "sources": [
+      "https://basket.co.il/player.asp?PlayerId=26048&lang=en",
+      "https://www.euroleaguebasketball.net/en/eurocup/players/kenny-lofton-jr/014903/"
+    ]
+  },
+  {
+    "sourcePlayerId": "26068",
+    "name": "Yair Kravitz",
+    "dob": "1999-03-03",
+    "ids": [
+      "fiba-bcl-218231"
+    ],
+    "aliases": [
+      "Yair Kravitz",
+      "Yair Kravits"
+    ],
+    "evidence": "Reviewed cross-provider name variant: exact full birth date and same current club; official Israeli registration and official international competition roster agree. Preserve both provider IDs and history.",
+    "sources": [
+      "https://basket.co.il/player.asp?PlayerId=26068&lang=en",
+      "https://www.championsleague.basketball/en/teams/hapoel-maoz-daniel-holon"
+    ]
+  },
+  {
+    "sourcePlayerId": "26062",
+    "name": "DJ Brewton",
+    "dob": "2000-01-15",
+    "ids": [
+      "fiba-bcl-375613"
+    ],
+    "aliases": [
+      "DJ Brewton",
+      "D.J. Brewton III"
+    ],
+    "evidence": "Reviewed cross-provider name variant: exact full birth date and same current club; official Israeli registration and official international competition roster agree. Preserve both provider IDs and history.",
+    "sources": [
+      "https://basket.co.il/player.asp?PlayerId=26062&lang=en",
+      "https://www.championsleague.basketball/en/teams/bnei-penlink-herzliya"
+    ]
+  },
+  {
+    "sourcePlayerId": "27211",
+    "name": "Emry Kagan",
+    "dob": "2005-02-22",
+    "ids": [
+      "fiba-bcl-272884"
+    ],
+    "aliases": [
+      "Emry Kagan",
+      "Emery Kagan"
+    ],
+    "evidence": "Reviewed cross-provider name variant: exact full birth date and same current club; official Israeli registration and official international competition roster agree. Preserve both provider IDs and history.",
+    "sources": [
+      "https://basket.co.il/player.asp?PlayerId=27211&lang=en",
+      "https://www.championsleague.basketball/en/teams/bnei-penlink-herzliya"
+    ]
+  }
+]

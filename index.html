@@ -1956,7 +1956,7 @@ function next26Set(m){try{localStorage.setItem(NEXT26_KEY,JSON.stringify(m));}ca
   try{Sync.stampKey(NEXT26_KEY);}catch(e){} try{Store.pushAppKey(NEXT26_KEY);}catch(e){}}
 function effective26(p,m){m=m||next26Get();
   const k=m[gid(p)]||m[p.id]||((p._grp||[]).map(x=>m[x.id]).find(Boolean));
-  const registration=p=>window.EuroScoutKzsPro?.key(p)||window.EuroScoutEuroCup?.key(p)||window.EuroScoutOfficialRosters?.key(p)||window.EuroScoutBBL?.key(p)||window.EuroScoutTransferConfirmations?.key(p)||window.EuroScoutABA?.key(p)||window.EuroScoutElite2?.key(p)||window.EuroScoutExpansion?.key(p)||window.EuroScoutNCAA?.key(p);
+  const registration=p=>window.EuroScoutKzsPro?.key(p)||window.EuroScoutIsrael?.key(p)||window.EuroScoutEuroCup?.key(p)||window.EuroScoutOfficialRosters?.key(p)||window.EuroScoutBBL?.key(p)||window.EuroScoutTransferConfirmations?.key(p)||window.EuroScoutABA?.key(p)||window.EuroScoutElite2?.key(p)||window.EuroScoutExpansion?.key(p)||window.EuroScoutNCAA?.key(p);
   const registered=window.EuroScoutDragons?.key(p)||registration(p)||(p._grp||[]).filter(person=>person!==p).map(registration).find(Boolean)||(typeof recordIds==='function'?recordIds(p).filter(id=>id!==p.id&&!(p._grp||[]).some(person=>person.id===id)).map(id=>player(id)).filter(Boolean).map(registration).find(Boolean):null);
   // A current official roster registration supersedes an older manual free-agent flag.
   // Explicit club and retirement edits still remain authoritative.
@@ -2016,7 +2016,7 @@ function showsTeams(m){return !!(m&&!m.exhibition&&(
 // stat-scope leagues: the ones that belong in stats filters/percentiles (never the browse-only ones)
 function isStatLeague(m){return !!(m&&!isOtherLeague(m)&&!m.teamsOnly);}
 function allDbTeams(){if(DBTEAM_LIST)return DBTEAM_LIST;const out=[];(STATE.data.leagues||[]).forEach(L=>{if(!showsTeams(L.meta))return;(L.teams||[]).forEach(t=>{const lg=L.meta.id;const country=t.country||(lg==='nba'?(t.name==='Toronto Raptors'?'Canada':'United States'):lg==='gleague'?(t.name==='Raptors 905'?'Canada':/Mexico|México/i.test(t.name)?'Mexico':'United States'):'');const logo=t.logo||(lg==='nba'&&/^161061\d{4}$/.test(String(t.code))?'https://cdn.nba.com/logos/nba/'+t.code+'/primary/L/logo.svg':null);out.push({key:lg+"|"+t.code,name:t.name,city:t.city||"",country,lg,lgName:L.meta.name,conf:t.conference||null,code:t.code,logo});});});EuroScoutClubs.extend(out);
-  DBTEAM_LIST=out;DBTEAM_BYKEY=new Map(out.map(t=>[t.key,t]));buildClubs();EuroScoutClubs.linkAliases(DBTEAM_BYKEY,CLUB_BY_TEAMKEY);window.EuroScoutMemberships?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutEuroCup?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutBBL?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutOfficialRosters?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutKzsPro?.decorate(CLUBS,CLUB_BY_TEAMKEY);DOM27=null;NEXTCOMP=null;return out;}
+  DBTEAM_LIST=out;DBTEAM_BYKEY=new Map(out.map(t=>[t.key,t]));buildClubs();EuroScoutClubs.linkAliases(DBTEAM_BYKEY,CLUB_BY_TEAMKEY);window.EuroScoutMemberships?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutEuroCup?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutBBL?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutOfficialRosters?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutIsrael?.decorate(CLUBS,CLUB_BY_TEAMKEY);window.EuroScoutKzsPro?.decorate(CLUBS,CLUB_BY_TEAMKEY);DOM27=null;NEXTCOMP=null;return out;}
 
 /* ---------- clubs: one entry per real club, tagged with every competition it plays ---------- */
 let CLUBS=null, CLUB_BY_TEAMKEY=null;
@@ -2662,7 +2662,7 @@ function rebuildLinks(){
     const m=Math.min(a.length,b.length);
     if(m>=3&&a.slice(0,m)===b.slice(0,m))uni(arr[i].id,arr[j].id);}});
   window.EuroScoutABA?.link(uni);window.EuroScoutEuroCup?.link(uni);
-  window.EuroScoutBBL?.link(uni);window.EuroScoutOfficialRosters?.link(uni);window.EuroScoutKzsPro?.link(uni);window.EuroScoutBCLQ?.link(uni);window.EuroScoutFIBAClub?.link(uni);
+  window.EuroScoutIsrael?.link(uni);window.EuroScoutBBL?.link(uni);window.EuroScoutOfficialRosters?.link(uni);window.EuroScoutKzsPro?.link(uni);window.EuroScoutBCLQ?.link(uni);window.EuroScoutFIBAClub?.link(uni);
   window.EuroScoutFEB?.link(uni);
   window.EuroScoutElite2?.link(uni);
   window.EuroScoutExpansion?.link(uni);
@@ -2960,13 +2960,14 @@ function loadMatchupRosterScripts(){
     if(STATE.data){
       window.EuroScoutEuroCup?.apply(STATE.data);
       window.EuroScoutFIBAClub?.apply(STATE.data);
-      window.EuroScoutOfficialRosters?.apply(STATE.data);
+      window.EuroScoutOfficialRosters?.apply(STATE.data);window.EuroScoutIsrael?.apply(STATE.data);
       DBTEAM_LIST=null;DBTEAM_BYKEY=null;CLUBS=null;CLUB_BY_TEAMKEY=null;DOM27=null;NEXTCOMP=null;PLAYER_BY_NAME=null;
       STATE._idx=null;seasonPoolCache=null;rebuildLinks();
     }
     window.dispatchEvent(new Event("euroscout:rosters-ready"));
   };
   const packs=[
+    loadCoreScriptChain(["data/israel-rosters-2026.js?v=20261012-israel-v1","euroscout-israel-rosters.js?v=20261012-israel-v1"]),
     loadCoreScriptChain(["eurocup-rosters-2026.js?v=20261008-current-season-key-v5","euroscout-eurocup-rosters.js?v=20261008-current-season-key-v5"]),
     loadCoreScriptChain(["official-rosters-2026.js?v=20261008-current-season-key-v5","current-contract-updates-2026.js?v=20261007-vtb-bursa","euroleague-rosters-2026.js?v=20261002-official","data/fiba-club-competitions-2026.js?v=20261007-nationality-fix","euroscout-fiba-club-competitions.js?v=20261009-tags-stats-v14","euroscout-official-rosters.js?v=20261008-current-season-key-v5"])
   ];
@@ -2980,6 +2981,7 @@ function loadCoreEnrichmentScripts(){
     "expansion-seriea2.js","expansion-proa.js","expansion-tbl.js","expansion-britain.js","expansion-swiss.js","expansion-denmark.js","expansion-slovakia.js","expansion-bosnia.js","expansion-montenegro.js","expansion-macedonia.js","expansion-kosovo.js","expansion-iceland.js"
   ].map(file=>loadCoreScript(file+"?v=20260913-expansion")));await loadCoreScript("euroscout-expansion.js?v=20260913-expansion");};
   CORE_ENRICHMENT_PROMISE=Promise.allSettled([
+    loadCoreScriptChain(["data/israel-rosters-2026.js?v=20261012-israel-v1","euroscout-israel-rosters.js?v=20261012-israel-v1"]),
     loadCoreScriptChain(["feb-data.js?v=20260913","feb-rosters-2026.js?v=20260920","euroscout-feb.js?v=20260920-fix"]),
     loadCoreScriptChain(["elite2-data.js?v=20260913","euroscout-elite2.js?v=20260913"]),
     expansion(),
@@ -3034,7 +3036,7 @@ function applyCoreRosterModules(raw){
   // Current FIBA leagues must exist before the official roster module places
   // their full rosters. Otherwise 2026/27 players leak into historical leagues.
   window.EuroScoutFIBAClub?.apply(raw);window.EuroScoutOfficialRosters?.apply(raw);
-  window.EuroScoutKzsPro?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
+  window.EuroScoutIsrael?.apply(raw);window.EuroScoutKzsPro?.apply(raw);window.EuroScoutBCLQ?.apply(raw);
 }
 async function prepareCoreData(raw,includePrivate,includeLiveStats=true,includeRosters=true){
   for(const L of raw?.leagues||[])for(const p of L.players||[])if(p.img&&!isPlayerPhoto(p.img))p.img=null;
@@ -4177,6 +4179,7 @@ function scopePool(p){
   if(STATE.profileScope==="all"){const a=[];STATE.data.leagues.forEach(L=>{if(L.meta.exhibition||L.meta.qualifier||L.meta.teamsOnly)return;L.players.forEach(x=>{if(x.qualified)a.push(x);});});return a;}
   return leagueOf(p).players.filter(x=>x.qualified);}
 function rankOf(pool,k,p){const lower=LOWER_BETTER.has(k);
+  if(p._israelCurrent){pool=pool.filter(x=>scoutSeason(x)===scoutSeason(p));if(p.qualified===false||Number(p.g)<5||pool.length<20)return{rank:null,total:pool.length,pct:null};}
   const vals=pool.map(x=>x[k]).filter(v=>v!=null&&!isNaN(v));const total=vals.length,v=p[k];
   if(v==null||isNaN(v)||total<=1)return{rank:null,total,pct:null};
   let better=0;for(const u of vals)if(lower?u<v:u>v)better++;

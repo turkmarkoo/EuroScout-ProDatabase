@@ -1,0 +1,13 @@
+# Israeli Super League 2026/27 roster refresh
+
+Prepared from the official basket.co.il standings, all 14 club rosters and 220 player profiles on 12 October 2026. The final pack contains 219 active players, 83 published regular-season statistics lines and 136 registered players without published league statistics. The old 2025/26 league and all historical statistics remain separate and unchanged. The import does not write private notes, ratings, levels, manual club assignments, saved views or scouting history.
+
+Lucas Goldenberg was listed twice by the source. The official 9 October announcement confirms the move from Haemek to Bnei Herzliya; the old registration is retained under superseded source evidence and linked to the active profile. Eight reviewed provider aliases, including Christian Coleman’s Oklahoma State identity, are linked using full identity context, exact birth dates and official profile/roster evidence. Coleman is searchable in Players and the Israeli club roster with his official photo, birth year, height, nationality, position and 2026/27 league statistics. His 34-game NCAA history is preserved.
+
+Official cup games are excluded from the regular-season figures. Game log dates and scores come from the official game pages and team box-score totals, avoiding the reversed score order in the site's English header. Small first-round samples are not ranked against historical 2025/26 players. Source placeholders are kept unavailable rather than treated as zero statistics.
+
+The current-season all-competition Israeli filter has 220 people: 219 official domestic registrations plus the pre-existing Ilane Fibleuil BCL-only draft registration. He is not listed as a confirmed Israeli domestic registration by this import; his separate BCL evidence remains preserved. Absence from a domestic roster is not a departure announcement.
+
+Validation: all 14 official source rosters and 220 profile identities checked; unique active aliases; idempotent import; historical-statistic and private-field preservation; Coleman’s official game totals/date and NCAA linkage; real catalogue/search/profile browser flow with zero page errors; three existing competition/transfer/duplicate regressions passed. The older current-season-profile test has three pre-existing stale asset-version assertions that also fail on the untouched published baseline; they are recorded separately, not treated as new failures.
+
+Refresh script: scripts/sync-israel-rosters.cjs (Node with system certificates and jsdom dependency). --refresh re-fetches all source pages; otherwise only source snapshots younger than one hour are reused. A scrape/identity/season failure prevents writing a replacement roster pack.
