@@ -12,15 +12,15 @@ vm.runInContext(fs.readFileSync(path.join(root,'euroscout-official-rosters.js'),
 const data=context.window.EUROSCOUT_FIBA_CLUB_2026;
 assert.equal(data.competitions.bcl.teams.length,32);
 assert.equal(data.competitions.fec.teams.length,50);
-assert.equal(data.roster.filter(x=>x.competition==='bcl').length,473);
+assert.equal(data.roster.filter(x=>x.competition==='bcl').length,472);
 assert.equal(data.roster.filter(x=>x.competition==='fec').length,695);
-assert.equal(data.roster.filter(x=>x.number!==''&&x.number!=null).length,676);
-assert.equal(data.roster.filter(x=>x.finalRoster).length,676);
+assert.equal(data.roster.filter(x=>x.number!==''&&x.number!=null).length,675);
+assert.equal(data.roster.filter(x=>x.finalRoster).length,675);
 assert.ok(data.roster.filter(x=>x.finalRoster).every(x=>x.number!==''&&x.number!=null));
 assert.equal(data.roster.filter(x=>x.img).length,1133);
-assert.equal(data.competitions.bcl.statsPlayers.length,189);
+assert.equal(data.competitions.bcl.statsPlayers.length,346);
 assert.equal(data.competitions.fec.statsPlayers.length,225);
-assert.ok(data.roster.every(x=>x.country==null),'FIBA team country must never be stored as player nationality');
+assert.ok(data.roster.filter(x=>x.competition==='fec').every(x=>x.country==null),'Unrefreshed FEC country evidence unchanged');assert.equal(data.roster.find(x=>x.fibaId===347670).country,'USA','Use the official player nationality, not his Greek club country');
 assert.equal(context.window.EUROSCOUT_MEMBERSHIPS.leagues.bcl.teams.length,32);
 assert.equal(context.window.EUROSCOUT_MEMBERSHIPS.leagues.fec.teams.length,50);
 assert.equal(context.window.EUROSCOUT_MEMBERSHIPS.leagues.bcl.complete,true);
@@ -38,7 +38,7 @@ assert.equal(pinckney._officialRoster.number,'0');
 assert.ok(pinckney.img.includes('headshot--person_347670'));
 const raw={leagues:[]};
 context.window.EuroScoutFIBAClub.apply(raw);
-assert.equal(raw.leagues.find(x=>x.meta.id==='bcl26').players.length,189);
+assert.equal(raw.leagues.find(x=>x.meta.id==='bcl26').players.length,346);
 assert.equal(raw.leagues.find(x=>x.meta.id==='fec26').players.length,225);
 const enriched={leagues:[{meta:{id:'verified'},teams:[],players:[{id:'verified-jpl',name:'Josh Pierre-Louis',born:null,country:'United States'}]}]};
 context.window.EuroScoutFIBAClub.apply(enriched);
@@ -69,3 +69,4 @@ assert.ok(html.includes('applyCoreRosterModules(STATE.data)'),'late league loads
 assert.ok(!/goView,renderAgencies,openAgencyPage/.test(html),'boot must not reference the agencies renderer before its script loads');
 assert.ok(/STATE\.data=full[\s\S]{0,700}DBTEAM_LIST=null;DBTEAM_BYKEY=null;CLUBS=null;CLUB_BY_TEAMKEY=null/.test(html),'full catalogue swap must invalidate the first-paint club index');
 console.log('Official BCL and FIBA Europe Cup rosters, shirt numbers, portraits, memberships and statistics are wired.');
+

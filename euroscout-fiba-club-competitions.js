@@ -4,15 +4,17 @@ const data=window.EUROSCOUT_FIBA_CLUB_2026;if(!data)return;
 if(data.format==='compact-v1'){
  const teamById=new Map(data.teams.map(team=>[team.id,team]));
  for(const team of data.teams){team.canonicalKey=team.key;team.currentKey=team.competition+'26|'+team.officialCode;}
- data.roster=data.roster.map(row=>{const [competition,fibaId,ids,name,teamId,born,dob,height,number,img,finalRoster,position,country]=row,team=teamById.get(teamId),league=competition+'26';
-  return{id:`fiba-${competition}-${fibaId}`,ids,name,teamId,teamName:team.name,league,born,dob,height,number,img,source:team.source,profile:team.source,existing:ids.length>1,fibaId,competition,competitionId:team.competitionId,finalRoster,position,country};});
- data.players=data.roster.map(row=>{const team=teamById.get(row.teamId),code=team.officialCode,role=/center|centre/i.test(row.position)?'Big':/forward/i.test(row.position)?'Forward':'Guard';
-  return{id:row.id,code:String(row.fibaId),fibaId:row.fibaId,name:row.name,league:row.league,team:code,teamName:row.teamName,born:row.born,dob:row.dob,height:row.height,country:row.country,pos:row.position||'',role,jersey:row.number,img:row.img,_rosterOnly:true,_strictIdentity:true,qualified:false,g:null,gameLog:[],pct:{},z:{},arch:[]};});
- const rosterByCompetitionId=new Map(data.roster.map(row=>[row.competition+'|'+row.fibaId,row]));
+ const unpackRoster=(row,registered=true)=>{const [competition,fibaId,ids,name,teamId,born,dob,height,number,img,finalRoster,position,country]=row,team=teamById.get(teamId),league=competition+'26';
+  return{id:`fiba-${competition}-${fibaId}`,ids,name,teamId,teamName:team.name,league,born,dob,height,number,img,source:team.source,profile:team.source,existing:ids.length>1,fibaId,competition,competitionId:team.competitionId,finalRoster,position,country,registered,checked:data.competitions[competition]?.checked||data.checked};};
+ data.roster=data.roster.map(row=>unpackRoster(row));
+ data.historicalRoster=(data.historicalRoster||[]).map(row=>unpackRoster(row,false));
+ data.players=[...data.roster,...data.historicalRoster].map(row=>{const team=teamById.get(row.teamId),code=team.officialCode,role=/center|centre/i.test(row.position)?'Big':/forward/i.test(row.position)?'Forward':'Guard';
+  return{id:row.id,code:String(row.fibaId),fibaId:row.fibaId,name:row.name,league:row.league,team:code,teamName:row.teamName,born:row.born,dob:row.dob,height:row.height,country:row.country,pos:row.position||'',role,jersey:row.number,img:row.img,_rosterOnly:true,_strictIdentity:true,_historicalRosterOnly:row.registered===false,qualified:false,g:null,gameLog:[],pct:{},z:{},arch:[]};});
+ const rosterByCompetitionId=new Map([...data.roster,...data.historicalRoster].map(row=>[row.competition+'|'+row.fibaId,row]));
  for(const competition of Object.values(data.competitions)){
   competition.teams=competition.teamIds.map(id=>teamById.get(id));delete competition.teamIds;
   competition.statsPlayers=competition.stats.map(values=>{const [fibaId,g,min,mpg,pts,ppg,reb,rpg,ast,apg,stl,spg,blk,bpg,tov,topg,eff,fgm,fga,f2m,f2a,f3m,f3a,ftm,fta,fgp,f2p,f3p,ftp,plusMinus]=values,row=rosterByCompetitionId.get(competition.id+'|'+fibaId),team=teamById.get(row.teamId);
-   return{id:`fiba-stat-${competition.id}-${fibaId}`,primary:row.id,fibaId,name:row.name,teamCode:team.officialCode,teamName:team.name,teamId:team.fibaTeamId,born:row.dob,height:row.height,jersey:row.number,nationality:row.country,position:row.position,img:row.img,source:team.source,g,min,mpg,pts,ppg,reb,rpg,ast,apg,stl,spg,blk,bpg,tov,topg,eff,fgm,fga,f2m,f2a,f3m,f3a,ftm,fta,fgp,f2p,f3p,ftp,plusMinus,finalRoster:row.finalRoster};});
+   return{id:`fiba-stat-${competition.id}-${fibaId}`,primary:row.id,fibaId,name:row.name,teamCode:team.officialCode,teamName:team.name,teamId:team.fibaTeamId,born:row.dob,height:row.height,jersey:row.number,nationality:row.country,position:row.position,img:row.img,source:team.source,g,min,mpg,pts,ppg,reb,rpg,ast,apg,stl,spg,blk,bpg,tov,topg,eff,fgm,fga,f2m,f2a,f3m,f3a,ftm,fta,fgp,f2p,f3p,ftp,plusMinus,finalRoster:row.registered&&row.finalRoster,registered:row.registered};});
   delete competition.stats;
  }
  delete data.format;
@@ -20,13 +22,17 @@ if(data.format==='compact-v1'){
 const base=window.EUROSCOUT_OFFICIAL_ROSTERS;if(!base)return;
 const merge=(target,rows,key)=>{const seen=new Set(target.map(key));for(const row of rows||[]){const id=key(row);if(!seen.has(id)){target.push(row);seen.add(id);}}};
 base.teams=base.teams||[];base.roster=base.roster||[];base.players=base.players||[];
+// Qualifier appearances remain historical evidence, not current BCL registration.
+const historicalIds=new Set((data.historicalRoster||[]).flatMap(r=>r.ids));
+for(const row of base.roster)if(String(row.source||'').includes('championsleague.basketball/en/qualifiers/')&&row.ids?.some(id=>historicalIds.has(id)))row.currentRegistration=false;
 merge(base.teams,data.teams,t=>t.id);merge(base.roster,data.roster,r=>r.id);merge(base.players,data.players,p=>p.id);
 base.identityPairs=base.identityPairs||[];
 for(const team of data.teams){
  const pair=[team.currentKey,team.canonicalKey];
  if(pair[0]!==pair[1]&&!base.identityPairs.some(row=>pair.every(key=>row.includes(key))))base.identityPairs.push(pair);
 }
-if(!base.checked||String(base.checked)<String(data.checked))base.checked=data.checked;
+// Per-competition refreshes must not advance unrelated domestic source dates.
+if(!Object.values(data.competitions).some(c=>c.checked)&&(!base.checked||String(base.checked)<String(data.checked)))base.checked=data.checked;
 
 // The accepted box-score feed uses the registered legal name for this club.
 for(const team of data.teams)if(team.competition==='fec'&&team.officialCode==='IRA')team.aliases=[...new Set([...(team.aliases||[]),'Iraklis BC','Gymnastikos Syllogos Agias Iraklis KAE'])];
@@ -34,13 +40,13 @@ for(const team of data.teams)if(team.competition==='fec'&&team.officialCode==='I
 const directory=window.EUROSCOUT_CLUB_DIRECTORY||(window.EUROSCOUT_CLUB_DIRECTORY=[]);
 for(const team of data.teams.filter(t=>t.key.startsWith('directory|'))){
  const id=team.key.slice('directory|'.length),existing=directory.find(x=>x.id===id);
- const row={id,name:team.name,country:team.country,league:team.competition==='bcl'?'Basketball Champions League':'FIBA Europe Cup',aliases:team.aliases,source:team.source,checked:data.checked};
+ const row={id,name:team.name,country:team.country,league:team.competition==='bcl'?'Basketball Champions League':'FIBA Europe Cup',aliases:team.aliases,source:team.source,checked:data.competitions[team.competition]?.checked||data.checked};
  if(existing)Object.assign(existing,row);else directory.push(row);
 }
 const memberships=window.EUROSCOUT_MEMBERSHIPS?.leagues;
 if(memberships)for(const [id,competition] of Object.entries(data.competitions)){
  const previous=memberships[id]||{};
- memberships[id]={...previous,id,name:competition.name,season:data.season,checked:String(data.checked).slice(0,10),confirmed:true,complete:true,international:true,source:competition.source,
+ memberships[id]={...previous,id,name:competition.name,season:data.season,checked:String(competition.checked||data.checked).slice(0,10),confirmed:true,complete:true,international:true,source:competition.source,
   note:'Current official competition field and team registrations from FIBA team pages.',teams:competition.teams.map(team=>({key:team.currentKey,name:team.name,stage:'RS'}))};
 }
 
@@ -62,6 +68,7 @@ function enrichPlayerNationalities(raw){
   if(!byName.has(key))byName.set(key,[]);byName.get(key).push({country,born});
  }
  const resolve=player=>{
+  if(data.competitions[player.competition]?.playerNationalitySource==='nationality'&&player.country)return window.EuroScoutCountries?.canonical(player.country)||player.country;
   const verified=verifiedCountryByFibaId.get(Number(player.fibaId));if(verified)return verified;
   const candidates=byName.get(bioName(player.name))||[];if(!candidates.length)return null;
   const born=Number(player.born||String(player.dob||'').slice(0,4))||null;
@@ -93,27 +100,33 @@ function record(raw,competition){
   t_fgm:fgm??null,t_fga:fga??null,t_f3m:f3m??null,t_f3a:f3a??null,t_ftm:ftm??null,t_fta:fta??null,
   pts40:g&&min?round(40*raw.pts/min):null,reb40:g&&min?round(40*raw.reb/min):null,ast40:g&&min?round(40*raw.ast/min):null,
   stl40:g&&min?round(40*raw.stl/min):null,blk40:g&&min?round(40*raw.blk/min):null,tov40:g&&min?round(40*raw.tov/min):null,
-  gameLog:[],pct:{},z:{},arch:[],_officialFIBA:{source:raw.source,checked:data.checked,personId:raw.fibaId,teamId:raw.teamId,number:raw.jersey,position:raw.position,games:g,plusMinus:raw.plusMinus??null,finalRoster:raw.finalRoster}};
+  gameLog:[],pct:{},z:{},arch:[],_officialFIBA:{source:raw.source,checked:competition.checked||data.checked,currentRegistration:raw.registered!==false,personId:raw.fibaId,teamId:raw.teamId,number:raw.jersey,position:raw.position,games:g,plusMinus:raw.plusMinus??null,finalRoster:raw.finalRoster}};
 }
 function apply(raw){
  if(!raw?.leagues)return;
  enrichPlayerNationalities(raw);
+ const currentRosterById=new Map(data.roster.map(r=>[r.id,r]));
+ for(const league of raw.leagues)for(const p of league.players){const r=currentRosterById.get(p.id);if(r?.competition==='bcl'&&r.country&&!p.country)p.country=window.EuroScoutCountries?.canonical(r.country)||r.country;}
+ // Clear only a cached BCL source attribution that is no longer registered.
+ // Preserve its identity and appearances; private assignment maps are separate.
+ const historicalById=new Map((data.historicalRoster||[]).flatMap(r=>[...r.ids,`fiba-stat-${r.competition}-${r.fibaId}`].map(id=>[id,r])));
+ for(const league of raw.leagues)for(const p of league.players){const previous=historicalById.get(p.id);if(!previous||p._officialRoster?.source!==previous.source)continue;p._previousOfficialRoster={...p._officialRoster,unlistedAt:data.competitions.bcl.checked||data.checked};delete p._officialRoster;if(p.currentRosterSource===previous.source){if(p.currentClub===previous.teamName)delete p.currentClub;delete p.currentRosterSeason;delete p.currentRosterSource;delete p.currentRosterProfile;}}
  for(const competition of Object.values(data.competitions)){
   raw.season2627=raw.season2627||{};raw.season2627.comps=raw.season2627.comps||{};
   // This pack can load before membership-data.js. Its verified entries must
   // replace stale private-core membership without depending on script order.
-  raw.season2627.comps[competition.id]={id:competition.id,name:competition.name,season:data.season,checked:data.checked,confirmed:true,complete:true,international:true,source:competition.source,
+  raw.season2627.comps[competition.id]={id:competition.id,name:competition.name,season:data.season,checked:competition.checked||data.checked,confirmed:true,complete:true,international:true,source:competition.source,
    teams:competition.teams.map(team=>({key:team.currentKey,name:team.name,stage:'RS'}))};
   const leagueId=competition.id+'26',teams=competition.teams.map(team=>({code:team.officialCode,name:team.name,source:team.source,logo:team.logo||null,country:team.country||'',canonicalKey:team.canonicalKey}));
   let league=raw.leagues.find(item=>item.meta.id===leagueId);
-  if(!league){league={meta:{id:leagueId,name:competition.name+' 2026/27',season:data.season,source:competition.source,checked:data.checked,current:true},teams,players:[]};raw.leagues.push(league);}
-  Object.assign(league.meta,{id:leagueId,name:competition.name+' 2026/27',season:data.season,source:competition.source,checked:data.checked,current:true});
+  if(!league){league={meta:{id:leagueId,name:competition.name+' 2026/27',season:data.season,source:competition.source,checked:competition.checked||data.checked,current:true},teams,players:[]};raw.leagues.push(league);}
+  Object.assign(league.meta,{id:leagueId,name:competition.name+' 2026/27',season:data.season,source:competition.source,checked:competition.checked||data.checked,current:true});
   league.teams=teams;
   const existing=new Map(league.players.map(player=>[player.id,player]));
-  for(const row of competition.statsPlayers){const fresh=record(row,competition),current=existing.get(fresh.id);if(current)Object.assign(current,fresh);else{league.players.push(fresh);existing.set(fresh.id,fresh);}}
+  for(const row of competition.statsPlayers){const fresh=record(row,competition),current=existing.get(fresh.id);if(current){if(current.gameLog?.length)fresh.gameLog=current.gameLog;Object.assign(current,fresh);}else{league.players.push(fresh);existing.set(fresh.id,fresh);}}
   league.meta.playerCount=league.players.length;
  }
 }
-function link(uni){for(const competition of Object.values(data.competitions))for(const player of competition.statsPlayers)uni(player.id,player.primary);}
+function link(uni){for(const r of data.historicalRoster||[])for(const id of r.ids)if(id!==r.id)uni(r.id,id);for(const competition of Object.values(data.competitions))for(const player of competition.statsPlayers)uni(player.id,player.primary);}
 window.EuroScoutFIBAClub={apply,link,data};
 })();

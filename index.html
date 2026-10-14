@@ -2969,7 +2969,7 @@ function loadMatchupRosterScripts(){
   const packs=[
     loadCoreScriptChain(["data/israel-rosters-2026.js?v=20261012-israel-v1","euroscout-israel-rosters.js?v=20261012-israel-v1"]),
     loadCoreScriptChain(["eurocup-rosters-2026.js?v=20261008-current-season-key-v5","euroscout-eurocup-rosters.js?v=20261008-current-season-key-v5"]),
-    loadCoreScriptChain(["official-rosters-2026.js?v=20261008-current-season-key-v5","current-contract-updates-2026.js?v=20261007-vtb-bursa","euroleague-rosters-2026.js?v=20261002-official","data/fiba-club-competitions-2026.js?v=20261007-nationality-fix","euroscout-fiba-club-competitions.js?v=20261009-tags-stats-v14","euroscout-official-rosters.js?v=20261008-current-season-key-v5"])
+    loadCoreScriptChain(["official-rosters-2026.js?v=20261008-current-season-key-v5","current-contract-updates-2026.js?v=20261007-vtb-bursa","euroleague-rosters-2026.js?v=20261002-official","data/fiba-club-competitions-2026.js?v=20261014-bcl-refresh-v1","euroscout-fiba-club-competitions.js?v=20261014-bcl-history-v1","euroscout-official-rosters.js?v=20261014-competition-dates-v1"])
   ];
   MATCHUP_ROSTER_PROMISE=Promise.allSettled(packs).then(results=>{if(results.every(result=>result.status==="rejected"))throw results[0].reason;ready();}).catch(error=>{MATCHUP_ROSTER_PROMISE=null;throw error;});
   return MATCHUP_ROSTER_PROMISE;
@@ -2990,7 +2990,7 @@ function loadCoreEnrichmentScripts(){
     loadCoreScriptChain(["data/realgm-representation.js?v=20260907-13","euroscout-representation.js?v=20260907-13"]),
     loadCoreScriptChain(["data/aba-rosters-2026.js?v=20260910-1","euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"]),
     loadCoreScriptChain(["eurocup-rosters-2026.js?v=20260930-cowan-merge","euroscout-eurocup-rosters.js?v=20260930-identities"]),
-    loadCoreScriptChain(["official-rosters-2026.js?v=20260914-bclq-release","current-contract-updates-2026.js?v=20261007-vtb-bursa","euroleague-rosters-2026.js?v=20261002-official","data/fiba-club-competitions-2026.js?v=20261007-nationality-fix","euroscout-fiba-club-competitions.js?v=20261009-tags-stats-v14","euroscout-official-rosters.js?v=20261007-registry-repair"]),
+    loadCoreScriptChain(["official-rosters-2026.js?v=20260914-bclq-release","current-contract-updates-2026.js?v=20261007-vtb-bursa","euroleague-rosters-2026.js?v=20261002-official","data/fiba-club-competitions-2026.js?v=20261014-bcl-refresh-v1","euroscout-fiba-club-competitions.js?v=20261014-bcl-history-v1","euroscout-official-rosters.js?v=20261014-competition-dates-v1"]),
     loadCoreScriptChain(["data/kzs-pro-2026.js?v=20261005-gorica-logo","euroscout-kzs-pro.js?v=20261004-live-stats"]),
     loadCoreScriptChain(["data/bclq-2026.js?v=20260921-final","euroscout-bclq-2026.js?v=20260930-profile-stats"])
   ]).then(results=>{for(const result of results)if(result.status==="rejected")console.warn("A background competition pack is delayed",result.reason);});return CORE_ENRICHMENT_PROMISE;
