@@ -1834,7 +1834,9 @@ body.drawer-lock{overflow:hidden}
 <script src="euroscout-clubs.js?v=20260914-virtus-merge"></script>
 <script src="euroscout-countries.js?v=20261009-tags-stats-v14"></script>
 <script src="config.js"></script><script src="euroscout-record-merge.js?v=20261008-history-recovery"></script>
-<script src="euroscout-access.js?v=20261005-fast-start"></script>
+<link rel="stylesheet" href="euroscout-cloud-sync.css?v=20261014-durable-sync-v1">
+<script src="euroscout-cloud-sync.js?v=20261014-durable-sync-v1"></script>
+<script src="euroscout-access.js?v=20261014-durable-sync-v1"></script>
 <!-- Manual overrides are loaded from the authorized snapshot. -->
 <script src="data/exhibitions.js"></script>
 <!-- Scouting seeds are loaded from the authorized snapshot. -->
@@ -2354,12 +2356,12 @@ function applyEuroScoutSeed(k,v){if(BUNDLED_ROSTER_SEEDS.has(k))return;if(k==='E
 const Store = (()=>{
   const cfg = window.EUROSCOUT_CONFIG||{};
   const enabled = !!(window.ESAccess || (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY));
-  let sb=null, user=null, role=null, member=false, cache={};
+  let sb=null, user=null, role=null, member=false, cache={},privateSync=null,privateReady=false;
   const LKEY="euroscout:records";
   const APP_KEYS=["euroscout:sessions:v1","euroscout:shortcuts:v1","euroscout:names:v1","euroscout:watchAlertsSeen:v1","euroscout:overrides","euroscout:agents","euroscout:agencies","euroscout:views","euroscout:matchup","euroscout:next26:v1","euroscout:next26b:v1","euroscout:trHandled:v1","euroscout:notionApplied:v1","euroscout:dashboardOrder:v1","euroscout:market:v1","euroscout:mergeCenter:v1","euroscout:agencyLogos:v1","euroscout:agencyNotes:v1","euroscout:manualPlayers:v1"];
   const local = {
     all(){try{return JSON.parse(localStorage.getItem(LKEY))||{}}catch(e){return{}}},
-    set(o){localStorage.setItem(LKEY,JSON.stringify(o))}
+    set(o){if(window.ESAccess?.user?.uid)localStorage.setItem('euroscout:cloud-owner:v1',ESAccess.user.uid);localStorage.setItem(LKEY,JSON.stringify(o))}
   };
   async function ackHydrated(pending={}){await window.ESStorage?.flush();await window.ESStorage?.ack(Object.fromEntries([LKEY,...APP_KEYS].filter(k=>!Object.hasOwn(pending,k)).map(k=>[k,localStorage.getItem(k)])));}
   async function initSB(){
@@ -2367,9 +2369,29 @@ const Store = (()=>{
     if(window.ESAccess){
       const access=await ESAccess.ready;
       if(access.internal){user=access.user;member=true;role=access.owner?'editor':'viewer';
-        const state=access.state,pending=window.ESStorage?.pending()||{};cache={...state.records,...JSON.parse(pending[LKEY]||'{}')};local.set(cache);
-        for(const k of APP_KEYS){if(Object.hasOwn(pending,k))continue;if(Object.hasOwn(state.appData,k)&&state.appData[k]!=null)localStorage.setItem(k,JSON.stringify(state.appData[k]));else localStorage.removeItem(k);}
-        await ackHydrated(pending);
+        const state=access.state,pending=window.ESStorage?.pending()||{};
+        for(const k of Object.keys(state.appData||{}))if(!APP_KEYS.includes(k))APP_KEYS.push(k);
+        if(!window.ESCloudSync)throw Error('Safe cloud saving could not load. Your local data has been left intact.');
+        const ownerKey='euroscout:cloud-owner:v1',previousOwner=localStorage.getItem(ownerKey);
+        const legacy={records:local.all(),appData:{}};
+        for(const k of APP_KEYS){try{legacy.appData[k]=JSON.parse(localStorage.getItem(k)||'null');}catch{}}
+        const tab=await ESCloudSync.tabId(access.user.uid);
+        const initial={...state,appData:Object.fromEntries(APP_KEYS.map(k=>[k,state.appData[k]??null]))};
+        privateSync=ESCloudSync.create({account:access.user.uid,tab,initial,canSync:()=>canEdit(),
+          applyLocal:value=>{cache=value.records;local.set(cache);for(const k of APP_KEYS){const v=value.appData[k];if(v!=null)localStorage.setItem(k,JSON.stringify(v));else localStorage.removeItem(k);}},
+          flushLocal:()=>window.ESStorage?.flush(),
+          refreshCloud:async()=>{await ESAccess.refresh();for(const k of Object.keys(ESAccess.state.appData||{}))if(!APP_KEYS.includes(k))APP_KEYS.push(k);return {...ESAccess.state,appData:Object.fromEntries(APP_KEYS.map(k=>[k,ESAccess.state.appData[k]??null]))};},
+          saveCloud:(value,options)=>ESAccess.saveState({...ESAccess.state,...value},options),
+          backupExtras:()=>localStorage.getItem(ownerKey)===access.user.uid?Object.fromEntries(['euroscout:session:active:v1','euroscout:sessions:v1:last-good'].map(k=>[k,localStorage.getItem(k)])):{},
+          ackLocal:async value=>{await window.ESStorage?.flush();await window.ESStorage?.ack(Object.fromEntries([[LKEY,JSON.stringify(value.records)],...Object.entries(value.appData).map(([k,v])=>[k,v==null?null:JSON.stringify(v)])]));},
+          onStatus:status=>{privateDirty=privateSync?.dirty||false;window.dispatchEvent(new CustomEvent('euroscout:cloud-status',{detail:status}));},
+          onError:error=>console.warn('Cloud sync paused; pending edits remain in the recovery journal.',error.message)
+        });
+        window.EuroScoutCloudSync=privateSync;
+        // Read and protect the previous local cache before the first cloud hydration.
+        await privateSync.init(!previousOwner||previousOwner===access.user.uid?legacy:null,Object.keys(pending).some(k=>k===LKEY||APP_KEYS.includes(k)));
+        localStorage.setItem(ownerKey,access.user.uid);privateReady=true;
+        ESCloudSync.mount(privateSync);
         for(const [k,v] of Object.entries(state.seeds||{}))if(/^EUROSCOUT_[A-Z_]+$/.test(k))applyEuroScoutSeed(k,v);
       }
       return;
@@ -2397,7 +2419,7 @@ const Store = (()=>{
       if(!error&&data){member=true;role=(data.role==="editor")?"editor":"viewer";
         try{localStorage.setItem("es:wasmember:"+(email||"").toLowerCase(),"1");}catch(e){}}}catch(e){}
   }
-  function canEdit(){ if(new URLSearchParams(location.search).get('dossier')==='1')return false;if(window.ESAccess)return ESAccess.internal&&ESAccess.owner;return !enabled ? true : (member && role==="editor"); }
+  function canEdit(){ if(new URLSearchParams(location.search).get('dossier')==='1')return false;if(window.ESAccess)return ESAccess.internal&&ESAccess.owner&&privateReady&&ESAccess.user?.uid===user?.uid;return !enabled ? true : (member && role==="editor"); }
   // pull the whole shared dataset into the local cache
   async function load(){
     if(window.ESAccess)return ESAccess.internal?cache:{};
@@ -2424,10 +2446,11 @@ const Store = (()=>{
     }catch(e){}
   }
   function get(id){if(window.ESAccess&&!ESAccess.internal)return {report:"",rating:0,tags:[],watch:false,board:null,eye:{}};return cache[id]||{report:"",rating:0,tags:[],watch:false,board:null,eye:{}};}
-  async function save(id,rec){
+  async function save(id,rec,{waitForCloud=false}={}){
     if(enabled && !canEdit()) return;    // viewers cannot write
-    cache[id]={...get(id),...rec}; local.set(cache);await window.ESStorage?.flush();
-    if(window.ESAccess){return await persistPrivate();}
+    cache[id]={...get(id),...rec}; local.set(cache);
+    if(window.ESAccess){return await persistPrivate(waitForCloud);}
+    await window.ESStorage?.flush();
     if(sb && user && canEdit()){
       const r=cache[id];
       try{await sb.from("scouting").upsert({player_id:id,report:r.report,rating:r.rating,
@@ -2439,8 +2462,9 @@ const Store = (()=>{
     if(enabled && !canEdit()) return 0;
     if(!items||!items.length) return 0;
     items.forEach(it=>{cache[it.id]={...get(it.id),...it.rec};});
-    local.set(cache);await window.ESStorage?.flush();
-    if(window.ESAccess){return await persistPrivate()?items.length:false;}
+    local.set(cache);
+    if(window.ESAccess){return await persistPrivate(false)?items.length:false;}
+    await window.ESStorage?.flush();
     if(sb && user && canEdit()){
       const rows=items.map(it=>{const r=cache[it.id];return{player_id:it.id,report:r.report,rating:r.rating,
         tags:r.tags,watch:r.watch,board:r.board,eye:r.eye,updated_at:new Date().toISOString(),updated_by:user.email};});
@@ -2448,33 +2472,31 @@ const Store = (()=>{
     }
     return items.length;
   }
-  async function pushAppKey(k){
+  async function pushAppKey(k,{waitForCloud=true}={}){
+    if(typeof k==='string'&&k.startsWith('euroscout:')&&!APP_KEYS.includes(k))APP_KEYS.push(k);
+    if(window.ESAccess)return persistPrivate(waitForCloud);
     await window.ESStorage?.flush();
-    if(window.ESAccess)return persistPrivate();
     if(!enabled)return true;
     if(!sb||!user||!canEdit())return false;
     let v=null;try{v=JSON.parse(localStorage.getItem(k));}catch(e){v=localStorage.getItem(k);}
     try{const {error}=await sb.from("appdata").upsert({k,v,updated_at:new Date().toISOString()},{onConflict:"k"});return !error;}catch(e){return false;}
   }
-  let privateTimer,privateWaiters=[],privateDirty=false;
-  function persistPrivate(){
-    if(!ESAccess.internal||!canEdit())return Promise.resolve(false);
-    privateDirty=true;clearTimeout(privateTimer);const promise=new Promise(resolve=>privateWaiters.push(resolve));
-    privateTimer=setTimeout(async()=>{const waiters=privateWaiters;privateWaiters=[];
-      const appData={};for(const k of APP_KEYS){try{appData[k]=JSON.parse(localStorage.getItem(k)||'null');}catch{}}
-      const snapshot={...ESAccess.state,records:structuredClone(cache),appData};
-      try{await window.ESStorage?.flush();await ESAccess.saveState(snapshot);await window.ESStorage?.ack(Object.fromEntries([[LKEY,JSON.stringify(snapshot.records)],...Object.entries(snapshot.appData).map(([k,v])=>[k,v==null?null:JSON.stringify(v)])]));privateDirty=privateWaiters.length>0;waiters.forEach(r=>r(true));}
-      catch(e){toast('Cloud save failed: '+e.message+' Your local changes are retained.');waiters.forEach(r=>r(false));}
-    },500);return promise;
+  let privateDirty=false;
+  function persistPrivate(waitForCloud=true){
+    if(!ESAccess.internal||!canEdit()||!privateSync)return Promise.resolve(false);
+    privateDirty=true;const appData={};for(const k of APP_KEYS){try{appData[k]=JSON.parse(localStorage.getItem(k)||'null');}catch{}}
+    return privateSync.save({records:structuredClone(cache),appData},waitForCloud);
   }
   async function refreshPrivate(){
-    if(!window.ESAccess?.internal||STATE.view==='scouting'||privateDirty||Object.keys(window.ESStorage?.pending()||{}).some(k=>k===LKEY||APP_KEYS.includes(k))||document.visibilityState!=='visible'||document.activeElement?.matches('input,textarea,select,[contenteditable=true]')||document.querySelector('#modal.open'))return;
-    try{if(!await ESAccess.refresh())return;cache=ESAccess.state.records;local.set(cache);for(const k of APP_KEYS){if(Object.hasOwn(ESAccess.state.appData,k)&&ESAccess.state.appData[k]!=null)localStorage.setItem(k,JSON.stringify(ESAccess.state.appData[k]));else localStorage.removeItem(k);}
-      await ackHydrated();OVR=ovrMerged();rebuildLinks();applyOverrides();if(CLUBS){buildClubs();NEXTCOMP=null;DOM27=null;}EuroScoutMarketRecords.refresh();render();if(CURRENT)renderProfile();
+    if(!window.ESAccess?.internal||!privateReady||STATE.view==='scouting'||privateDirty||privateSync?.dirty||Object.keys(window.ESStorage?.pending()||{}).some(k=>k===LKEY||APP_KEYS.includes(k))||document.visibilityState!=='visible'||document.activeElement?.matches('input,textarea,select,[contenteditable=true]')||document.querySelector('#modal.open'))return;
+    try{if(!await ESAccess.refresh())return;await privateSync.acceptRemote(ESAccess.state);OVR=ovrMerged();rebuildLinks();applyOverrides();if(CLUBS){buildClubs();NEXTCOMP=null;DOM27=null;}EuroScoutMarketRecords.refresh();render();if(CURRENT)renderProfile();
     }catch(e){console.warn('Shared refresh unavailable:',e.message);}
   }
   window.addEventListener('es-access-role',()=>{applyRoleClass();renderHeaderAuth();if(STATE.league)render();});
-  window.addEventListener('storage',e=>{if(e.key!==LKEY||privateDirty)return;cache=local.all();if(DRAWER_OPEN&&CURRENT)renderProfile();else if(STATE.league)render();});
+  window.addEventListener('storage',e=>{if(e.key!==LKEY||privateDirty||window.ESAccess&&localStorage.getItem('euroscout:cloud-owner:v1')!==ESAccess.user?.uid)return;cache=local.all();if(DRAWER_OPEN&&CURRENT)renderProfile();else if(STATE.league)render();});
+  window.addEventListener('online',()=>privateSync?.resume());
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')privateSync?.resume();});
+  window.addEventListener('beforeunload',e=>{if(privateSync?.savingLocal){e.preventDefault();e.returnValue='';}});
   setInterval(refreshPrivate,10000);document.addEventListener('visibilitychange',refreshPrivate);window.addEventListener('focus',refreshPrivate);
   // first-run migration: if the shared DB is empty and this editor has local work, push it up
   async function migrateLocalUp(){
@@ -2491,6 +2513,7 @@ const Store = (()=>{
   }
   return {
     get enabled(){return enabled}, get user(){return user}, get role(){return role}, get member(){return member},
+    get localProtectionReady(){return !window.ESAccess||privateReady;},
     canEdit, initSB, load, get, save, bulkSet, pushAppKey, migrateLocalUp, resolveMembership, refreshPrivate,
     async signIn(email){if(!sb)return;const redirect=location.origin+location.pathname;
       const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:redirect}});if(error)throw error;},
@@ -2540,7 +2563,7 @@ const Store = (()=>{
 })();
 /* every record write funnels through Store.save(gid,rec); stamp it so sync can merge per-player */
 (function(){const _save=Store.save;
-  Store.save=function(id,rec){const r=_save.call(Store,id,rec);
+  Store.save=function(id,rec,options){const r=_save.call(Store,id,rec,options);
     try{Sync.stampRecord(id);}catch(e){}return r;};})();
 
 /* ---------------------------- boot ---------------------------- */
@@ -3104,13 +3127,18 @@ async function boot(){
   // Private state is still applied only after ESAccess has verified the session.
   setCoreLoadStage("Opening the first competition…");
   const rawPromise=loadCoreData();
-  const storePromise=Store.initSB().catch(e=>console.warn("Access initialization delayed",e));
+  let storeError='';const storePromise=Store.initSB().catch(e=>{storeError=e.message;console.warn("Access initialization delayed",e);});
   // Never let a large private snapshot win the first-paint race. It is merged
   // after the first competition is interactive.
   let raw=await Promise.race([rawPromise,new Promise(resolve=>setTimeout(()=>resolve(null),30000))]);
   // The embedded sign-in handoff can take up to 12 seconds. Keep the loading
   // state until it settles so the wrong access state never flashes briefly.
   await storePromise;
+  if(ESAccess.internal&&!Store.localProtectionReady){
+    $('#app').innerHTML='<section class="empty"><h2>Local protection could not start</h2><p>Your existing browser data has been left intact. Keep this tab open.</p><p>'+esc(storeError||'Safe saving could not load.')+'</p><button type="button" class="btn" id="esUnsafeBackup">Download local recovery copy</button></section>';
+    document.getElementById('esUnsafeBackup').onclick=async()=>{const owner=localStorage.getItem('euroscout:cloud-owner:v1'),keys=Object.keys(localStorage).concat((window.ESStorage?.usage()||[]).map(r=>r.key)),localCopy=!owner||owner===ESAccess.user.uid?Object.fromEntries([...new Set(keys)].filter(k=>k.startsWith('euroscout:')&&!k.startsWith('euroscout:cloud-outbox:')).map(k=>[k,localStorage.getItem(k)])):{};const value={account:ESAccess.user.uid,localCopy,pending:await window.EuroScoutCloudSync?.backup()},url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='EuroScout-local-recovery.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);};
+    document.documentElement.classList.remove('es-preload');revealFirstCorePaint();return;
+  }
   if(!ESAccess.internal){
     ESAccess.external(raw);
     return;
@@ -5557,9 +5585,9 @@ function renderProfile(){
   const readField=k=>bulletEditors[k]?bulletEditors[k].serialize():"";
   const gather=()=>{const o={};NKEYS.forEach(k=>{o[k]=readField(k);});return o;};
   let wfDirty=false;
-  const saveReport=async(msg)=>{clearTimeout(tmr);wfDirty=false;await saveRec(p,{report:JSON.stringify(gather())});const ss=$("#saveState");if(ss)ss.textContent="✓ "+(msg||"saved")+" "+new Date().toLocaleTimeString();};
+  const saveReport=async(msg)=>{clearTimeout(tmr);wfDirty=false;await saveRec(p,{report:JSON.stringify(gather())});const ss=$("#saveState");if(ss)ss.textContent=window.EuroScoutCloudSync?.state.message||("✓ "+(msg||"saved")+" "+new Date().toLocaleTimeString());};
   window.wfFlushReport=()=>wfDirty?saveReport('saved'):Promise.resolve();
-  const markDirty=()=>{wfDirty=true;const ss=$("#saveState");if(ss)ss.textContent="editing…";clearTimeout(tmr);tmr=setTimeout(()=>saveReport("autosaved"),500);};
+  const markDirty=()=>{wfDirty=true;const ss=$("#saveState");if(ss)ss.textContent="Saving locally…";clearTimeout(tmr);saveReport("saved locally").catch(error=>{wfDirty=true;if(ss)ss.textContent='Could not protect this edit. Keep this tab open. '+error.message;});};
   const canEditRep=Store.canEdit();
   NKEYS.forEach(k=>{const host=$("#"+k);if(host){const init=(k==="nProj"?(rep.nProj||rep.overall):rep[k])||"";
     bulletEditors[k]=makeBulletList(host,init,host.dataset.ph||"",markDirty);
@@ -7463,7 +7491,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-market-records.js?v=16"></script>
 <script src="euroscout-market.js?v=20260921-fa-v2"></script>
 <script src="euroscout-freeagents-v2.js?v=20260921-filters-columns"></script>
-<script src="euroscout-country-picker.js?v=20261010-editor-dropdowns-v1"></script><script src="euroscout-edit-player-v2.js?v=20261010-editor-dropdowns-v1"></script>
+<script src="euroscout-country-picker.js?v=20261010-editor-dropdowns-v1"></script><script src="euroscout-edit-player-v2.js?v=20261014-durable-sync-v1"></script>
 <script src="euroscout-transfers.js?v=20260908-1"></script>
 <script src="euroscout-transfer-confirmations.js?v=20261001-dash-sem"></script>
 <script src="euroscout-transfer-verification.js?v=20261002-official-signings"></script>
@@ -7476,7 +7504,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-team-workspace.js?v=20260922-1"></script>
 <link rel="stylesheet" href="euroscout-teams-2627.css?v=20260921-entry-dialog">
 <script src="euroscout-teams-2627.js?v=20260921-roster-fix"></script>
-<link rel="stylesheet" href="euroscout-merge-center.css?v=20260921-1"><script src="euroscout-identity-bio.js?v=20261011-identity-evidence-v2"></script><script src="euroscout-merge-center.js?v=20261011-identity-evidence-v2"></script>
+<link rel="stylesheet" href="euroscout-merge-center.css?v=20260921-1"><script src="euroscout-identity-bio.js?v=20261011-identity-evidence-v2"></script><script src="euroscout-merge-center.js?v=20261014-durable-sync-v1"></script>
 <link rel="stylesheet" href="euroscout-agencies-v2.css?v=20261001-agent-edit"><script src="euroscout-agencies-v2.js?v=20261001-agent-edit"></script><script src="global-command-palette.js?v=20260922-performance"></script><script src="euroscout-manual-players.js?v=20260929-nathan-soliman"></script><script src="euroscout-command-palette.js?v=20261009-profile-roles-v15"></script><script src="data/acb-verified-identities-20261008.js?v=20261008-full-player-identity-v11"></script><script src="euroscout-dragons.js?v=20261011-notebook-live-v2"></script><script>esSetup();boot().catch(function(error){console.error('EuroScout initialization failed',error);document.getElementById('app').textContent='EuroScout could not finish loading. Please reload.';}).finally(function(){var root=document.documentElement;root.classList.remove('es-preload');root.classList.add('es-ready');setTimeout(function(){document.getElementById('esSplash')?.remove();},300);});</script>
-<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20261010-editor-dropdowns-v1"></script><script src="euroscout-export.js?v=20261009-tags-stats-v14"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20261011-notebook-report-v3"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20261009-matchup-safe-v12"></script><script src="euroscout-fixtures.js?v=20261009-matchup-safe-v12"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-sessions.js?v=20261011-notebook-report-v3"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20261009-header-v13"><link rel="stylesheet" href="team-selection-workspace.css?v=20260930-1"><link rel="stylesheet" href="euroscout-quickstats.css?v=20261009-tags-stats-v14"><script src="data/signal-origins.js?v=20261009-participation-v2"></script><script src="euroscout-signals.js?v=20261009-auto-rookie-bio-v17"></script><script src="euroscout-quickstats.js?v=20261009-tags-stats-v14"></script><script src="data/competition-assets.js?v=20261007-picker-leagues"></script><script src="team-selection-workspace-20261007d.js?v=20261009-picker-fast-v3"></script><script src="euroscout-live-notes.js?v=20261009-auto-rookie-bio-v17"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script><script src="euroscout-player-scouting.js?v=20261010-position-roles-v3"></script><link rel="stylesheet" href="euroscout-profile-controls.css?v=20261010-position-roles-v3"><script src="euroscout-dossier.js?v=20261011-notebook-live-v2"></script>
+<script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20261010-editor-dropdowns-v1"></script><script src="euroscout-export.js?v=20261009-tags-stats-v14"></script><script src="euroscout-agent-identities.js"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20261011-notebook-report-v3"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20261009-matchup-safe-v12"></script><script src="euroscout-fixtures.js?v=20261009-matchup-safe-v12"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-sessions.js?v=20261011-notebook-report-v3"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20261009-header-v13"><link rel="stylesheet" href="team-selection-workspace.css?v=20260930-1"><link rel="stylesheet" href="euroscout-quickstats.css?v=20261009-tags-stats-v14"><script src="data/signal-origins.js?v=20261009-participation-v2"></script><script src="euroscout-signals.js?v=20261009-auto-rookie-bio-v17"></script><script src="euroscout-quickstats.js?v=20261009-tags-stats-v14"></script><script src="data/competition-assets.js?v=20261007-picker-leagues"></script><script src="team-selection-workspace-20261007d.js?v=20261009-picker-fast-v3"></script><script src="euroscout-live-notes.js?v=20261014-durable-sync-v1"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script><script src="euroscout-player-scouting.js?v=20261010-position-roles-v3"></script><link rel="stylesheet" href="euroscout-profile-controls.css?v=20261010-position-roles-v3"><script src="euroscout-dossier.js?v=20261011-notebook-live-v2"></script>
 </body></html>

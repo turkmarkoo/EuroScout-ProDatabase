@@ -1,0 +1,6 @@
+.es-cloud-sync{position:fixed;bottom:12px;left:12px;z-index:10002;display:flex;align-items:center;gap:8px;max-width:calc(100vw - 180px);padding:6px 10px;border:1px solid #cbdad2;border-radius:9px;background:var(--panel,#fff);color:var(--txt,#15382f);font:12px system-ui;box-shadow:0 2px 8px #1232}
+.es-cloud-sync[data-kind=pending],.es-cloud-sync[data-kind=offline],.es-cloud-sync[data-kind=retry],.es-cloud-sync[data-kind=conflict],.es-cloud-sync[data-kind=blocked]{background:#fff8e8;border-color:#e8c47b;color:#805512}
+.es-cloud-sync button,.es-sync-dialog button{font:inherit;color:inherit;background:var(--panel,#fff);border:1px solid #cbdad2;border-radius:7px;padding:6px 9px;cursor:pointer;white-space:normal}
+.es-sync-dialog{width:min(520px,calc(100vw - 40px));max-height:calc(100dvh - 64px);overflow-y:auto;box-sizing:border-box;background:var(--panel,#fff);color:var(--txt,#15382f);border:1px solid #cbdad2;border-radius:12px;padding:22px;font:14px/1.5 system-ui}
+.es-sync-dialog::backdrop{background:#102d2866}.es-sync-dialog h3{margin-top:0}.es-sync-actions,.es-sync-recover{display:flex;gap:8px;flex-wrap:wrap}.es-sync-recover{margin-top:12px}
+@media(max-width:600px){.es-cloud-sync{bottom:48px;max-width:calc(100vw - 44px);flex-wrap:wrap}.es-cloud-sync span{flex:1 1 100%}}

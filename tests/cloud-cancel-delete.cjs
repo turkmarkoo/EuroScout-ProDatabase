@@ -1,0 +1,7 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync(path.join(__dirname,'../euroscout-edit-player-v2.js'),'utf8');
+const handler=source.split('\n').find(line=>line.includes("$('#ep2Delete').onclick=async"));assert(handler);
+const key='euroscout:registry-deleted:v1',values=new Map([[key,JSON.stringify(['previous-hidden-id'])]]),calls=[],button={},messages=[];
+const context={$:()=>button,window:{confirm:()=>true},p:{name:'Fixture player',id:'new-id'},DELETE_KEY:key,readDeleted:()=>new Set(JSON.parse(values.get(key))),localStorage:{getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)},Sync:{stampKey:()=>{}},toast:m=>messages.push(m),Store:{pushAppKey:async(k,options)=>{calls.push({k,options,value:values.get(k)});return options?.waitForCloud===false;}},prune:()=>{throw Error('A cancelled deletion must not prune any profile');}};
+vm.runInNewContext(handler,context);
+(async()=>{await button.onclick();assert.equal(calls.length,2);assert(calls[0].value.includes('new-id'));assert.equal(calls[1].options.waitForCloud,false);assert.equal(calls[1].value,JSON.stringify(['previous-hidden-id']));assert.equal(values.get(key),JSON.stringify(['previous-hidden-id']));assert(messages.some(m=>m.includes('Player was kept')));console.log('PASS cancelled deletion replaces pending cloud intent with the protected rollback; existing hidden IDs and the player are retained.');})().catch(e=>{console.error(e);process.exitCode=1;});
