@@ -124,7 +124,7 @@ function create(options){
   try{writeDraft(entry);}catch(error){storageError(error);return Promise.reject(error);}
   drafts.set(id,entry);front.records[id]=copy(value);savingLocal++;dirty=true;
   const applied=serial(async()=>{const result=reconcile({records:observed===undefined?{}:{[id]:observed},appData:{}},entry.local,{records:{[id]:local.records[id]},appData:{}},'local');local.records[id]=result.value.records[id];revision++;});
-  if(draftTimer)timers.clearTimeout(draftTimer);draftTimer=timers.setTimeout(()=>{draftTimer=null;flushDrafts().catch(storageError);},350);
+  if(draftTimer)timers.clearTimeout(draftTimer);draftTimer=timers.setTimeout(()=>{draftTimer=null;flushDrafts().catch(storageError);},1200);
   if(!blocked)status('pending','Saved locally · waiting to sync');
   return applied.then(()=>options.flushLocal?.()).then(()=>true).catch(error=>{storageError(error);throw error;}).finally(()=>{savingLocal--;});
  }
@@ -207,21 +207,21 @@ function create(options){
 }
 function statusDock(){
  const doc=root.document;let dock=doc.getElementById('esStatusDock');
- if(!dock){dock=doc.createElement('div');dock.id='esStatusDock';dock.className='es-status-dock';doc.body.appendChild(dock);const badge=doc.getElementById('esAccessBadge');if(badge)dock.appendChild(badge);}
+ if(!dock){dock=doc.createElement('div');dock.id='esStatusDock';dock.className='es-status-dock';const header=doc.querySelector('body > header .hwrap');if(header)header.appendChild(dock);else doc.body.prepend(dock);const badge=doc.getElementById('esAccessBadge');if(badge)dock.appendChild(badge);}
  return dock;
 }
 function mount(sync){
- const doc=root.document,bar=doc.createElement('div');bar.id='esCloudSyncStatus';bar.className='es-cloud-sync';bar.innerHTML='<span role="status" aria-live="polite"></span><button type="button" data-retry hidden>Retry sync</button><button type="button" data-review>Recovery</button>';statusDock().prepend(bar);
- const paint=()=>{bar.dataset.kind=sync.state.kind;bar.querySelector('span').textContent=sync.state.message;for(const id of ['liveStatus','saveState']){const label=doc.getElementById(id);if(label)label.textContent=sync.state.message;}bar.querySelector('[data-retry]').hidden=!['retry','offline','blocked'].includes(sync.state.kind);};
+ const doc=root.document,bar=doc.createElement('div');bar.id='esCloudSyncStatus';bar.className='es-cloud-sync';bar.innerHTML='<button type="button" data-review><i class="es-sync-dot" aria-hidden="true"></i><span data-label></span></button><span class="es-sync-sr" role="status" aria-live="polite"></span>';statusDock().prepend(bar);
+ const paint=()=>{const {kind,message}=sync.state;bar.dataset.kind=kind;const button=bar.querySelector('[data-review]'),text=({synced:'Saved',recovery:'Saved',pending:'Saved locally',saving:'Syncing',offline:'Offline',retry:'Sync pending',conflict:'Needs review',blocked:'Sync paused','storage-error':'Save needs attention'})[kind]||'Saving';bar.querySelector('[data-label]').textContent=text;button.title=message+'\nClick for saving and recovery.';button.setAttribute('aria-label',text+' · Recovery');bar.querySelector('[role=status]').textContent=message;for(const id of ['liveStatus','saveState']){const label=doc.getElementById(id);if(label&&label.textContent!==message)label.textContent=message;}};
  root.addEventListener('euroscout:cloud-status',paint);paint();
- bar.querySelector('[data-retry]').onclick=()=>sync.retry();
  async function download(){const backup=await sync.backup(),url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'})),a=doc.createElement('a');a.href=url;a.download='EuroScout-private-recovery-'+new Date().toISOString().slice(0,10)+'.json';a.click();root.setTimeout(()=>URL.revokeObjectURL(url),60000);}
  bar.querySelector('[data-review]').onclick=async()=>{
   const backup=await sync.backup(),dialog=doc.createElement('dialog');dialog.className='es-sync-dialog';
-  dialog.innerHTML='<h3>Saving & recovery</h3><p class="es-sync-message"></p><p>Your pending edits and recovery copies are stored on this device. The download contains private scouting information.</p><div class="es-sync-actions"><button type="button" data-download>Download recovery copy</button><button type="button" data-local hidden>Keep this device’s conflicting values</button><button type="button" data-cloud hidden>Use cloud’s conflicting values</button><button type="button" data-close>Close</button></div><div class="es-sync-recover"></div><p role="status"></p>';
+  dialog.innerHTML='<h3>Saving & recovery</h3><p class="es-sync-message"></p><p>Your pending edits and recovery copies are stored on this device. The download contains private scouting information.</p><div class="es-sync-actions"><button type="button" data-download>Download recovery copy</button><button type="button" data-retry hidden>Retry sync</button><button type="button" data-local hidden>Keep this device’s conflicting values</button><button type="button" data-cloud hidden>Use cloud’s conflicting values</button><button type="button" data-close>Close</button></div><div class="es-sync-recover"></div><p role="status"></p>';
   dialog.querySelector('.es-sync-message').textContent=sync.state.message;
   dialog.querySelector('[data-download]').onclick=download;
   const act=fn=>async()=>{try{await fn();dialog.close();dialog.remove();paint();}catch(e){dialog.querySelector('[role=status]').textContent=e.message;}};
+  const retry=dialog.querySelector('[data-retry]');retry.hidden=!['retry','offline','blocked'].includes(sync.state.kind);retry.onclick=act(()=>sync.retry());
   for(const [name,choice]of [['local','local'],['cloud','remote']]){const button=dialog.querySelector('[data-'+name+']');button.hidden=sync.state.kind!=='conflict';button.onclick=act(()=>sync.resolve(choice));}
   for(const row of backup.journals.filter(r=>r.dirty&&r.tab!==sync.tab)){const button=doc.createElement('button');button.type='button';button.textContent='Recover pending edits from '+new Date(row.at).toLocaleString();button.onclick=act(()=>sync.recover(row.id));dialog.querySelector('.es-sync-recover').appendChild(button);}
   const own=backup.journals.find(r=>r.tab===sync.tab);for(const [i,entry]of (own?.recovery||[]).entries()){if(!entry.value?.records)continue;const button=doc.createElement('button');button.type='button';button.textContent='Review recovery copy from '+new Date(entry.at).toLocaleString();button.onclick=act(()=>sync.restoreLegacy(i));dialog.querySelector('.es-sync-recover').appendChild(button);}

@@ -120,5 +120,11 @@ assert.equal(report._notesUpdated,'2026-10-07T10:00:00Z');assert.deepEqual(repor
   const snapshot=local.get('euroscout:mergeCenter:v1'),overrides=local.get('euroscout:overrides'),before=JSON.stringify(records.get('a'));context.Store.pushAppKey=async()=>false;
   await assert.rejects(api.autoMergeBatch([{candidate:{id:'player:a|b',type:'player',a:entity(rows[0]),b:entity(rows[1])},survivor:'a',source:'b'}]),/could not be saved/);
   assert.equal(local.get('euroscout:mergeCenter:v1'),snapshot);assert.equal(local.get('euroscout:overrides'),overrides);assert.equal(JSON.stringify(records.get('a')),before);assert.equal(local.get('euroscout:sessions:v1'),laterSessions);
+  // A batch can finish its durable save after the scout starts typing. Its
+  // identity index must wait; the merged notes remain protected meanwhile.
+  let busy=false,rebuilds=0;const timers=[];context.setTimeout=fn=>{timers.push(fn);return timers.length;};context.clearTimeout=()=>{};context.rebuildLinks=()=>{rebuilds++;};context.window.ESMatchupBusy=()=>busy;context.Store.pushAppKey=async(key,options)=>{assert.equal(options.waitForCloud,false);return true;};const bulk=context.Store.bulkSet;context.Store.bulkSet=async items=>{const result=await bulk(items);busy=true;return result;};
+  records.set('idle-source',{report:JSON.stringify({nOff:'Source note stays safe'})});records.set('idle-target',{report:JSON.stringify({nDef:'Target note stays safe'})});
+  await api.autoMergeBatch([{candidate:{id:'player:idle-source|idle-target'},survivor:'idle-target',source:'idle-source'}]);assert.equal(rebuilds,0);assert.equal(timers.length,1);assert(records.get('idle-target').report.includes('Source note stays safe'));assert(records.get('idle-target').report.includes('Target note stays safe'));
+  busy=false;timers.shift()();assert.equal(rebuilds,1,'deferred catalogue refresh runs once when scouting is idle');
   console.log('PASS automatic identity matching, cache refresh, hard conflicts, note dates, revisions, additive merge, undo and save-failure rollback.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

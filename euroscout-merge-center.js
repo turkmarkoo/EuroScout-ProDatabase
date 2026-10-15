@@ -380,7 +380,7 @@
     const items=Object.entries(records).map(([id,rec])=>({id,rec}));
     try{Sync.stampKey('euroscout:overrides');items.forEach(item=>Sync.stampRecord(item.id));}catch{}
     const recordsSaved=Store.bulkSet?Store.bulkSet(items):Promise.all(items.map(item=>Store.save(item.id,item.rec)));
-    const saved=await Promise.all([recordsSaved,Store.pushAppKey('euroscout:overrides'),Store.pushAppKey(KEY)]);
+    const saved=await Promise.all([recordsSaved,Store.pushAppKey('euroscout:overrides',{waitForCloud:false}),Store.pushAppKey(KEY,{waitForCloud:false})]);
     if(saved.some(value=>value===false||Array.isArray(value)&&value.some(result=>result===false)))throw Error('Identity links or player notes could not be saved.');
   }
   function replaceId(value, sources, survivor) {
@@ -426,6 +426,15 @@
     merged.jerseyNumbers={...(other.jerseyNumbers||{}),...(target.jerseyNumbers||{})};
     return merged;
   }
+  let deferredMergeRefresh=null;
+  function refreshMergedCatalogue(){
+    // A batch may start before scouting and finish its asynchronous save after
+    // typing begins. Keep its protected records, and postpone the costly index.
+    if(automaticBlocked()){if(deferredMergeRefresh===null)deferredMergeRefresh=setTimeout(()=>{deferredMergeRefresh=null;refreshMergedCatalogue();},1000);return;}
+    if(deferredMergeRefresh!==null){clearTimeout(deferredMergeRefresh);deferredMergeRefresh=null;}
+    OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};
+    window.dispatchEvent?.(new Event('euroscout:rosters-ready'));
+  }
   async function autoMergeBatch(plan) {
     if(!Store.canEdit())throw Error('Administrator access is required.');
     if(!plan.length)return 0;
@@ -462,12 +471,12 @@
       next.batches.push({id:batchId,at,admin:Store.user?.email||window.ESAccess?.user?.email||'Administrator',
         count:batchMerges.length,pairs:batchMerges.map(item=>pairKey('player',item.survivor,item.source)),lightweight:true,recordsBefore,recordsAfter});
       await persistBatch(next,recordsAfter);
-      OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};
+      refreshMergedCatalogue();
       return batchMerges.length;
     }catch(error){
       beforeOverrides==null?localStorage.removeItem('euroscout:overrides'):localStorage.setItem('euroscout:overrides',beforeOverrides);
       await persistBatch(oldState,recordsBefore).catch(()=>{});
-      OVR=ovrMerged();rebuildLinks();applyOverrides();detectionCache={};entityCache={};
+      refreshMergedCatalogue();
       throw error;
     }
   }
@@ -649,7 +658,7 @@
     document.getElementById('mcMerge').onclick=async e=>{e.currentTarget.disabled=true;try{await merge(candidate,view.survivor,view.options);}catch(error){toast(error.message);e.currentTarget.disabled=false;}};
   }
   function invalidateCatalogue(){detectionCache={};entityCache={};view.detectionReady={};automaticAttempted='';}
-  function automaticBlocked(){return !!(window.ESMatchupBusy?.()||window.ESSessions?.active?.()||document.querySelector(".ep2-overlay.open, #drawer [contenteditable=true]:focus, #drawer input:focus, #drawer textarea:focus, #drawer select:focus"));}
+  function automaticBlocked(){return !!(window.ESMatchupBusy?.()||window.ESSessions?.active?.()||document.querySelector?.(".ep2-overlay.open, #drawer [contenteditable=true]:focus, #drawer input:focus, #drawer textarea:focus, #drawer select:focus"));}
   function scheduleAutomatic(){if(automaticTimer!==null)clearTimeout(automaticTimer);automaticTimer=setTimeout(()=>{automaticTimer=null;if(automaticBlocked()){scheduleAutomaticDeferred();return;}runAutomatic().catch(error=>console.warn('Automatic identity consolidation delayed',error));},250);}
   function scheduleAutomaticDeferred(){if(automaticTimer!==null)return;automaticTimer=setTimeout(()=>{automaticTimer=null;scheduleAutomatic();},30000);}
   function linkedRecordPlan(){

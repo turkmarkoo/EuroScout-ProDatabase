@@ -1,14 +1,15 @@
-.es-status-dock{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:10002;display:flex;align-items:flex-end;justify-content:flex-end;gap:8px;max-width:calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));pointer-events:none}
-.es-status-dock>*{pointer-events:auto}
-.es-cloud-sync,.es-status-dock #esAccessBadge{box-sizing:border-box;padding:5px 10px;border:1px solid #87978f;border-radius:20px;background:#f4f8f6;color:#21483b;font:12px/16px system-ui;box-shadow:none}
-.es-status-dock #esAccessBadge{position:static;flex:none;white-space:nowrap}
-.es-cloud-sync{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:4px 8px;min-width:0}
-.es-cloud-sync [role=status]{flex:1 1 auto;overflow-wrap:anywhere}
-.es-cloud-sync[data-kind=pending],.es-cloud-sync[data-kind=offline],.es-cloud-sync[data-kind=retry],.es-cloud-sync[data-kind=conflict],.es-cloud-sync[data-kind=blocked]{background:#fff8e8;border-color:#e8c47b;color:#805512}
-.es-cloud-sync button{flex:none;font:inherit;line-height:inherit;color:inherit;background:transparent;border:0;border-left:1px solid #87978f66;border-radius:0;padding:0 0 0 8px;cursor:pointer;white-space:nowrap}
-.es-cloud-sync button:hover{color:#00674a;text-decoration:underline;text-underline-offset:2px}
-.es-cloud-sync button:focus-visible{outline:2px solid #167459;outline-offset:3px;border-radius:3px}
+.es-status-dock{position:static;display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:0 0 auto;margin-left:auto;padding:0;z-index:auto}
+.es-cloud-sync{position:relative;display:flex;align-items:center;padding:0;border:0;background:transparent;box-shadow:none;flex:none}
+.es-status-dock #esAccessBadge,.es-status-dock .es-cloud-sync [data-review]{box-sizing:border-box;position:static;display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:none;min-width:0;min-height:26px!important;height:26px;max-height:26px;margin:0;padding:4px 8px;border:1px solid #d9e3de;border-radius:20px;background:#f4f8f6;color:#52675c;font:11px/16px system-ui;white-space:nowrap;box-shadow:none}
+.es-status-dock #esAccessBadge{color:#21483b}
+.es-status-dock .es-cloud-sync [data-review]{cursor:pointer;background:transparent}
+.es-status-dock .es-cloud-sync [data-review]:hover{background:#eaf2ed;border-color:#a5baae;color:#21483b}
+.es-cloud-sync [data-review]:focus-visible{outline:2px solid #167459;outline-offset:2px}
+.es-sync-dot{display:inline-block;width:5px;height:5px;flex:none;border-radius:50%;background:#26845f}
+.es-cloud-sync:is([data-kind=pending],[data-kind=saving],[data-kind=offline],[data-kind=retry],[data-kind=conflict],[data-kind=blocked],[data-kind=storage-error]) .es-sync-dot{background:#bb8429}
+.es-sync-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .es-sync-dialog button{font:inherit;color:inherit;background:var(--panel,#fff);border:1px solid #cbdad2;border-radius:7px;padding:6px 9px;cursor:pointer;white-space:normal}
 .es-sync-dialog{width:min(520px,calc(100vw - 40px));max-height:calc(100dvh - 64px);overflow-y:auto;box-sizing:border-box;background:var(--panel,#fff);color:var(--txt,#15382f);border:1px solid #cbdad2;border-radius:12px;padding:22px;font:14px/1.5 system-ui}
 .es-sync-dialog::backdrop{background:#102d2866}.es-sync-dialog h3{margin-top:0}.es-sync-actions,.es-sync-recover{display:flex;gap:8px;flex-wrap:wrap}.es-sync-recover{margin-top:12px}
-@media(max-width:600px){.es-cloud-sync [role=status]{flex-basis:100%}.es-cloud-sync[data-kind=synced] [role=status]{flex-basis:auto}}
+@media(max-width:700px){.es-redesign .hwrap:has(.es-status-dock){flex-wrap:wrap}.es-status-dock{max-width:100%;flex-wrap:wrap}}
+html[data-theme=dark] .es-status-dock #esAccessBadge,html[data-theme=dark] .es-status-dock .es-cloud-sync [data-review]{background:#142d25;color:#b9d1c3;border-color:#355346}

@@ -39,9 +39,9 @@ const clone=v=>JSON.parse(JSON.stringify(v));
   // only after preserving both copies in the durable journal.
   server.records.p.rating=22;
   await page.evaluate(()=>{saveCloudConfirmed('p',{rating:21});});await page.waitForFunction(()=>EuroScoutCloudSync.state.kind==='conflict',{},{timeout:20000});assert.equal(server.records.p.rating,22);
-  await page.getByRole('button',{name:'Recovery',exact:true}).click();await page.getByRole('button',{name:'Use cloud’s conflicting values'}).click();await page.waitForFunction(()=>!document.querySelector('dialog'));
+  await page.getByRole('button',{name:/Recovery/}).click();await page.getByRole('button',{name:'Use cloud’s conflicting values'}).click();await page.waitForFunction(()=>!document.querySelector('dialog'));
   assert.equal(await page.evaluate(()=>Store.get('p').rating),22);const backup=await page.evaluate(()=>EuroScoutCloudSync.backup());assert(backup.journals.some(r=>r.recovery?.some(x=>x.reason==='Conflict review'&&x.local.records.p.rating===21)));
-  const download=page.waitForEvent('download');await page.getByRole('button',{name:'Recovery',exact:true}).click();await page.getByRole('button',{name:'Download recovery copy'}).click();const file=await download;assert(file.suggestedFilename().includes('private-recovery'));await page.getByRole('button',{name:'Close',exact:true}).click();
+  const download=page.waitForEvent('download');await page.getByRole('button',{name:/Recovery/}).click();await page.getByRole('button',{name:'Download recovery copy'}).click();const file=await download;assert(file.suggestedFilename().includes('private-recovery'));await page.getByRole('button',{name:'Close',exact:true}).click();
   await page.setViewportSize({width:390,height:844});const box=await page.locator('#esCloudSyncStatus').boundingBox();assert(box.x>=0&&box.x+box.width<=390);await page.screenshot({path:path.join(root,'../cloud-sync-mobile.png')});
   await page.setViewportSize({width:1366,height:900});await page.screenshot({path:path.join(root,'../cloud-sync-desktop.png')});
   // The IDB journal preserves pending data if ordinary localStorage is full.

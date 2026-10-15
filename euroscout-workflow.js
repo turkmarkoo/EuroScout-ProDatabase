@@ -7,14 +7,14 @@ function wfReport(p){return parseReport(recOf(p).report);}
 function wfData(p){return wfReport(p)._workflow||{};}
 function wfAuthor(){return Store.user?.email||'Local editor';}
 /* Autosaves form one revision session for 5 minutes; older revisions remain restorable. */
-saveRec=async function(p,patch){if(!Store.canEdit())return;const old=recOf(p),stored=parseReport(old.report),previous=old.report?stored:effectiveReport(p);let next={...wfContent(previous),...stored};
+saveRec=async function(p,patch,options){if(!Store.canEdit())return;const old=recOf(p),stored=parseReport(old.report),previous=old.report?stored:effectiveReport(p);let next={...wfContent(previous),...stored};
  if(Object.prototype.hasOwnProperty.call(patch,'report')){const incoming=parseReport(patch.report);next={...wfContent(previous),...stored,...incoming};if(WF_KEYS.slice(0,5).every(k=>Object.prototype.hasOwnProperty.call(incoming,k))&&!Object.prototype.hasOwnProperty.call(incoming,"overall"))next.overall="";const changed=JSON.stringify(wfContent(next))!==JSON.stringify(wfContent(previous));if(changed){const history=(stored._history||[]).slice();const now=wfNow(),latest=history[history.length-1];const sameSession=latest&&Date.now()-Date.parse(latest.savedAt)<300000&&latest.author===wfAuthor()&&!patch._forceRevision;
  if(!sameSession)history.push({id:crypto.randomUUID(),savedAt:now,contentAt:stored._notesUpdated||old.updated_at||'',author:wfAuthor(),report:wfContent(previous)});
  next._history=history.slice(-50);next._notesUpdated=now;
  }else next._notesUpdated=stored._notesUpdated||old.updated_at||'';
  patch={...patch,report:JSON.stringify(next)};
  }else if(old.report&&!stored._notesUpdated&&old.updated_at)patch={...patch,report:JSON.stringify({...stored,_notesUpdated:old.updated_at})};
- delete patch._forceRevision;const result=await Store.save(gid(p),patch);if(DRAWER_OPEN&&CURRENT===p.id)wfRefreshHistory(p);return result;
+ delete patch._forceRevision;const result=await Store.save(gid(p),patch,options);if(!options?.typing&&DRAWER_OPEN&&CURRENT===p.id)wfRefreshHistory(p);return result;
 };
 /* Search current notes, never hidden historical text or workflow metadata. */
 noteText=function(p){return (Object.values(wfContent(effectiveReport(p))).join(' ')+' '+playerTags(p).join(' ')).toLowerCase();};

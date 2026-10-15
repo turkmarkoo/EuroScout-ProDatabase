@@ -4,6 +4,7 @@ const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.
 const start=html.indexOf('const Store = (()=>{'),end=html.indexOf('\n})();',start)+'\n})();'.length;
 const store=html.slice(start,end)+'\nwindow.Store=Store;';
 const saveRec=html.slice(html.indexOf('async function saveRec('),html.indexOf('\nfunction mergeGroupRecords('));
+const workflowSource=fs.readFileSync(path.join(root,'euroscout-workflow.js'),'utf8'),workflow=workflowSource.slice(0,workflowSource.indexOf('/* Search current notes'));
 const copy=v=>JSON.parse(JSON.stringify(v));
 const report={nOff:'Original offense',nDef:'Preserved defense',_history:[{id:'September',report:{nOff:'Earlier observation '.repeat(80)}}],_workflow:{viewings:[{id:'September-game',event:'Keep viewing'}]}};
 const initial={schema:1,records:Object.fromEntries(Array.from({length:600},(_,i)=>['p'+i,{report:JSON.stringify(report),rating:3,hand:'Right',jerseyNumbers:{'2026/27|club':'00'}}])),appData:{'euroscout:sessions:v1':{sessions:[{id:'September',note:'Keep session'}]}},seeds:{}};
@@ -18,6 +19,7 @@ const initial={schema:1,records:Object.fromEntries(Array.from({length:600},(_,i)
    ${store}
    function gid(p){return p.id;}function recOf(p){return Store.get(p.id);}function parseReport(v){return JSON.parse(v||'{}');}
    ${saveRec}
+   window.DRAWER_OPEN=false;window.CURRENT='';${workflow}
    window.writeNote=async(id,text)=>{const p={id},r=parseReport(recOf(p).report);r.nOff=text;return saveRec(p,{report:JSON.stringify(r)},{typing:true});};
    Store.initSB().then(()=>{const set=Storage.prototype.setItem;window.fullWrites=0;window.draftWrites=0;window.maxDraftBytes=0;Storage.prototype.setItem=function(k,v){if(k==='euroscout:records')fullWrites++;if(k.includes(':typing:')){draftWrites++;maxDraftBytes=Math.max(maxDraftBytes,v.length);}return set.call(this,k,v);};window.ready=true;});
    </script>`});
@@ -27,13 +29,13 @@ const initial={schema:1,records:Object.fromEntries(Array.from({length:600},(_,i)
   await page.goto('https://typing.test/fixture.html');await page.waitForFunction(()=>window.ready);
   const timing=await page.evaluate(async()=>{const times=[];for(let i=1;i<=120;i++){const t=performance.now(),result=writeNote('p0','Fast observation '+i);times.push(performance.now()-t);await result;}return{max:Math.max(...times),p95:times.sort((a,b)=>a-b)[Math.floor(times.length*.95)],fullWrites,draftWrites,maxDraftBytes,bytes:JSON.stringify(ESAccess.state).length};});
   assert.equal(timing.fullWrites,0,'Typing must not serialize the full local records cache');assert.equal(timing.draftWrites,120);assert(timing.maxDraftBytes<timing.bytes/20);assert(timing.p95<25,'Input-handler work must stay within 25 ms on the fixture');assert.equal(cloudWrites,0);
-  // Simulate closing/reloading before the 350 ms quiet-period snapshot.
+  // Simulate closing/reloading before the 1200 ms quiet-period snapshot.
   await page.reload();await page.waitForFunction(()=>window.ready);assert.equal(await page.evaluate(()=>JSON.parse(Store.get('p0').report).nOff.replace(/^• /,'')),'Fast observation 120');
   await page.evaluate(async()=>{await writeNote('p0','Player one final');await writeNote('p1','Player two final');});
   await page.reload();await page.waitForFunction(()=>window.ready);assert.equal(await page.evaluate(()=>JSON.parse(Store.get('p0').report).nOff.replace(/^• /,'')),'Player one final');assert.equal(await page.evaluate(()=>JSON.parse(Store.get('p1').report).nOff.replace(/^• /,'')),'Player two final');
   await page.waitForFunction(()=>EuroScoutCloudSync.state.kind==='retry',{},{timeout:15000});assert.equal(cloudWrites,1);const backup=await page.evaluate(()=>EuroScoutCloudSync.backup());assert.equal(JSON.parse(backup.current.local.records.p0.report).nOff.replace(/^• /,''),'Player one final');
   mode='ok';await page.waitForFunction(()=>EuroScoutCloudSync.state.kind==='synced',{},{timeout:20000});assert.equal(JSON.parse(server.records.p0.report).nOff.replace(/^• /,''),'Player one final');assert.equal(JSON.parse(server.records.p1.report).nOff.replace(/^• /,''),'Player two final');
-  assert.equal(JSON.parse(server.records.p0.report).nDef.replace(/^• /,''),report.nDef);assert.deepEqual(JSON.parse(server.records.p0.report)._history,report._history);assert.deepEqual(JSON.parse(server.records.p0.report)._workflow.viewings,report._workflow.viewings);assert.deepEqual(server.records.p599,initial.records.p599);assert.deepEqual(server.appData['euroscout:sessions:v1'],initial.appData['euroscout:sessions:v1']);
+  assert.equal(JSON.parse(server.records.p0.report).nDef.replace(/^• /,''),report.nDef);assert.deepEqual(JSON.parse(server.records.p0.report)._history.slice(0,report._history.length),report._history);assert.deepEqual(JSON.parse(server.records.p0.report)._workflow.viewings,report._workflow.viewings);assert.deepEqual(server.records.p599,initial.records.p599);assert.deepEqual(server.appData['euroscout:sessions:v1'],initial.appData['euroscout:sessions:v1']);
   // An edit made while a previous local journal is committing must survive.
   await page.evaluate(async()=>{await writeNote('p0','Earlier local snapshot');const pending=EuroScoutCloudSync.flushDrafts();await writeNote('p0','Latest local snapshot');await pending;});
   await page.reload();await page.waitForFunction(()=>window.ready);assert.equal(await page.evaluate(()=>JSON.parse(Store.get('p0').report).nOff.replace(/^• /,'')),'Latest local snapshot');
