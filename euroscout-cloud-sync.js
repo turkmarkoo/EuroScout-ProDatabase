@@ -64,7 +64,11 @@ function create(options){
  let base=data(options.initial),local=copy(base),front=copy(base),flight,row,revision=0,queue=Promise.resolve(),timer,inflight=false,dirty=false,blocked=false,failures=0,nextAttempt=0,lastStart=-Infinity,waiters=[];
  const MIN_INTERVAL=10000,DEBOUNCE=1200;
  let savingLocal=0,state={kind:'synced',message:'Saved to cloud'};
- function status(kind,message){state={kind,message};options.onStatus?.(state);}
+ const drafts=new Map(),draftPrefix='euroscout:cloud-outbox:v1:'+options.account+':typing:'+options.tab+':';let draftTimer=null;
+ const draftKey=id=>draftPrefix+encodeURIComponent(id);
+ function writeDraft(entry){root.localStorage.setItem(draftKey(entry.playerId),JSON.stringify(entry));}
+ function storageError(error){blocked=true;status('storage-error','Local protection failed · keep this tab open and download a recovery copy');options.onError?.(error);}
+ function status(kind,message){if(state.kind===kind&&state.message===message)return;state={kind,message};options.onStatus?.(state);}
  function schedule(){if(timer||inflight||blocked||!dirty)return;timer=timers.setTimeout(()=>{timer=null;run();},Math.max(DEBOUNCE,nextAttempt-now(),MIN_INTERVAL-(now()-lastStart)));}
  async function persist(){row={...row,base,local,flight,dirty,revision,failures,nextAttempt,lastStart:Number.isFinite(lastStart)?lastStart:null,at:now()};await storage.put(row);}
  function serial(fn){const result=queue.then(fn);queue=result.catch(()=>{});return result;}
@@ -77,10 +81,19 @@ function create(options){
   if(legacy&&!equal(data(legacy),own?.local||base)&&(Object.keys(legacy.records||{}).length||Object.values(legacy.appData||{}).some(v=>v!=null))&&!(row.recovery||[]).some(r=>equal(r.value,data(legacy))))row.recovery=[...(row.recovery||[]),{reason:'Before cloud hydration',at:now(),value:data(legacy)}];
   if(own?.dirty){const result=reconcile(own.reviewBase||own.base,own.local,base,undefined,flight);local=result.value;blocked=result.conflicts.length>0;row.conflicts=result.conflicts;if(blocked)row.reviewBase=copy(own.reviewBase||own.base);dirty=!equal(local,base)||!!flight&&!equal(local,flight);}
   else if(legacy&&legacyPending){const empty={records:{},appData:{}},result=reconcile(empty,data(legacy),base);local=result.value;blocked=result.conflicts.length>0;row.conflicts=result.conflicts;if(blocked)row.reviewBase=empty;dirty=!equal(local,base);}
+  // Small typing journals survive a reload even before a full snapshot is built.
+  const typed=rows.filter(r=>r.tab?.startsWith('typing:'+options.tab+':')&&r.dirty);
+  for(const draft of typed){const result=reconcile(draft.base,draft.local,local,undefined,draft.flight);local=result.value;
+   if(result.conflicts.length){row.conflicts=[...(row.conflicts||[]),...result.conflicts];blocked=true;if(!row.reviewBase){row.reviewBase=copy(base);for(const id of Object.keys(draft.local.records)){
+    if(Object.hasOwn(draft.base.records,id))row.reviewBase.records[id]=copy(draft.base.records[id]);else delete row.reviewBase.records[id];}}}
+   dirty=!equal(local,base)||!!flight&&!equal(local,flight);
+  }
   // Other tabs are not consumed or acknowledged by this tab. Their copies stay
   // recoverable if a tab was closed while it still had unsynced work.
-  row.otherPending=rows.filter(r=>r.tab!==options.tab&&r.dirty).map(r=>({id:r.id,at:r.at}));
+  row.otherPending=rows.filter(r=>r.tab!==options.tab&&r.dirty&&!typed.includes(r)).map(r=>({id:r.id,at:r.at}));
   await persist();front=copy(local);options.applyLocal(copy(front));
+  for(const draft of typed)root.localStorage.removeItem(draftKey(draft.playerId));
+  if(typed.length)await options.flushLocal?.();
   if(!dirty&&!blocked)await options.ackLocal?.(local);
   if(blocked)status('conflict','Saved locally · another device changed the same information');
   else if(dirty){status('pending','Saved locally · waiting to sync');schedule();}
@@ -89,6 +102,7 @@ function create(options){
   return copy(local);
  }
  function save(snapshot,waitForCloud=true){
+  flushDrafts().catch(storageError);
   snapshot=data(snapshot);const observed=front;front=snapshot;savingLocal++;
   return new Promise((resolve,reject)=>serial(async()=>{
    // A captured UI snapshot may precede a cloud rebase. Apply only the edits
@@ -102,13 +116,43 @@ function create(options){
    if(blocked||root.navigator?.onLine===false){waiters.splice(0).forEach(r=>r(false));if(!blocked)status('offline','Saved locally · offline');}
   }).catch(error=>{savingLocal=Math.max(0,savingLocal-1);blocked=true;status('storage-error','Local protection failed · keep this tab open and download a recovery copy');reject(error);}));
  }
+ function stageRecord(id,record){
+  const value=copy(record),observed=copy(front.records[id]),old=drafts.get(id),entry=old?{...old}:{id:options.account+':typing:'+options.tab+':'+encodeURIComponent(id),account:options.account,tab:'typing:'+options.tab+':'+encodeURIComponent(id),playerId:id,base:{records:observed===undefined?{}:{[id]:observed},appData:{}},dirty:true,revision:0};
+  entry.local={records:{[id]:value},appData:{}};entry.at=now();entry.revision++;
+  // This tiny write is synchronous; no whole-dataset cloning or IDB snapshot
+  // runs in the input handler. The overflow adapter supplies durable IDB if full.
+  try{writeDraft(entry);}catch(error){storageError(error);return Promise.reject(error);}
+  drafts.set(id,entry);front.records[id]=copy(value);savingLocal++;dirty=true;
+  const applied=serial(async()=>{const result=reconcile({records:observed===undefined?{}:{[id]:observed},appData:{}},entry.local,{records:{[id]:local.records[id]},appData:{}},'local');local.records[id]=result.value.records[id];revision++;});
+  if(draftTimer)timers.clearTimeout(draftTimer);draftTimer=timers.setTimeout(()=>{draftTimer=null;flushDrafts().catch(storageError);},350);
+  if(!blocked)status('pending','Saved locally · waiting to sync');
+  return applied.then(()=>options.flushLocal?.()).then(()=>true).catch(error=>{storageError(error);throw error;}).finally(()=>{savingLocal--;});
+ }
+ function flushDrafts(){
+  if(draftTimer){timers.clearTimeout(draftTimer);draftTimer=null;}
+  if(!drafts.size)return Promise.resolve();
+  // Capture before joining the queue: a later input can arrive before this
+  // task starts, but must never be acknowledged by an older local snapshot.
+  const captured=[...drafts.values()];
+  try{for(const entry of captured){entry.flight=entry.flight||copy(entry.local);writeDraft(entry);}}catch(error){return Promise.reject(error);}
+  return serial(async()=>{
+   // Keep the version that may be committed, including intentional undo, until
+   // the complete durable journal has acknowledged that exact revision.
+   await options.flushLocal?.();await persist();
+   for(const entry of captured)if(drafts.get(entry.playerId)?.revision===entry.revision){root.localStorage.removeItem(draftKey(entry.playerId));drafts.delete(entry.playerId);}
+   await options.flushLocal?.();schedule();
+  });
+ }
+ async function typingPause(){while(draftTimer)await new Promise(resolve=>timers.setTimeout(resolve,100));}
  async function run(){
+  if(draftTimer){schedule();return;}
   if(inflight||blocked||!dirty)return;
   if(options.canSync&&!options.canSync()){blocked=true;status('blocked','Saved locally · an authorized editor must sign in to sync');waiters.splice(0).forEach(r=>r(false));return;}
   if(root.navigator?.onLine===false){status('offline','Saved locally · offline');waiters.splice(0).forEach(r=>r(false));return;}
   inflight=true;lastStart=now();const batch=waiters;waiters=[];let sent,force;
   try{
    const remote=data(await options.refreshCloud());
+   await typingPause();
    await serial(async()=>{
     const previous=local,result=reconcile(base,local,remote,undefined,flight);local=result.value;row.conflicts=result.conflicts;blocked=result.conflicts.length>0;if(!blocked)base=remote;dirty=!equal(local,base);force=!dirty&&!!flight&&!equal(local,flight);dirty=dirty||force;
     await persist();front=reconcile(previous,front,local,'local').value;options.applyLocal(copy(front));sent=copy(local);
@@ -116,6 +160,7 @@ function create(options){
    if(blocked){status('conflict','Saved locally · another device changed the same information');batch.forEach(r=>r(false));return;}
    status('saving','Saved locally · syncing…');
    if(dirty||force){await serial(async()=>{if(!force)flight=sent;dirty=true;await persist();});await options.saveCloud(sent,{force:!!force});}
+   await typingPause();
    await serial(async()=>{
     // Acknowledgement belongs only to the uploaded version. Newer local edits
     // remain pending and cannot be cleared by an older network response.
@@ -158,10 +203,15 @@ function create(options){
  async function acceptRemote(snapshot){await serial(async()=>{if(dirty)return;const previous=local;base=data(snapshot);local=copy(base);await persist();front=reconcile(previous,front,local,'local').value;options.applyLocal(copy(front));await options.ackLocal?.(local);});}
  function retry(){if(inflight||row.conflicts?.length)return;blocked=false;failures=0;nextAttempt=Math.max(nextAttempt,now());schedule();}
  function resume(){if(!blocked&&dirty)schedule();}
- return{init,save,resolve,recover,restoreLegacy,acceptRemote,backup,retry,resume,run,tab:options.tab,get state(){return state;},get dirty(){return dirty;},get blocked(){return blocked;},get savingLocal(){return savingLocal>0;},get local(){return copy(local);}};
+ return{init,save,stageRecord,flushDrafts,resolve,recover,restoreLegacy,acceptRemote,backup,retry,resume,run,tab:options.tab,get state(){return state;},get dirty(){return dirty;},get blocked(){return blocked;},get savingLocal(){return savingLocal>0;},get local(){return copy(local);}};
+}
+function statusDock(){
+ const doc=root.document;let dock=doc.getElementById('esStatusDock');
+ if(!dock){dock=doc.createElement('div');dock.id='esStatusDock';dock.className='es-status-dock';doc.body.appendChild(dock);const badge=doc.getElementById('esAccessBadge');if(badge)dock.appendChild(badge);}
+ return dock;
 }
 function mount(sync){
- const doc=root.document,bar=doc.createElement('div');bar.id='esCloudSyncStatus';bar.className='es-cloud-sync';bar.innerHTML='<span role="status" aria-live="polite"></span><button type="button" data-retry hidden>Retry sync</button><button type="button" data-review>Recovery</button>';doc.body.appendChild(bar);
+ const doc=root.document,bar=doc.createElement('div');bar.id='esCloudSyncStatus';bar.className='es-cloud-sync';bar.innerHTML='<span role="status" aria-live="polite"></span><button type="button" data-retry hidden>Retry sync</button><button type="button" data-review>Recovery</button>';statusDock().prepend(bar);
  const paint=()=>{bar.dataset.kind=sync.state.kind;bar.querySelector('span').textContent=sync.state.message;for(const id of ['liveStatus','saveState']){const label=doc.getElementById(id);if(label)label.textContent=sync.state.message;}bar.querySelector('[data-retry]').hidden=!['retry','offline','blocked'].includes(sync.state.kind);};
  root.addEventListener('euroscout:cloud-status',paint);paint();
  bar.querySelector('[data-retry]').onclick=()=>sync.retry();
@@ -179,5 +229,5 @@ function mount(sync){
  };
  return paint;
 }
-const api={create,reconcile,journal,mount,tabId};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.ESCloudSync=api;
+const api={create,reconcile,journal,mount,tabId,statusDock};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.ESCloudSync=api;
 })(typeof window==='undefined'?globalThis:window);

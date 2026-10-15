@@ -202,7 +202,7 @@ function wireNotebook(p,rep){
  document.querySelector('#mxPrev').onclick=()=>step(-1);document.querySelector('#mxNext').onclick=()=>step(1);
  document.querySelector('#mxWatch').onclick=()=>{if(!editable())return;toggleTag(p.id,WATCH_TAG).then(()=>renderScouting(true));};
  document.querySelectorAll('.mx-stock [data-stock]').forEach(b=>b.onclick=()=>{SX.setStock(p,b.dataset.stock);renderScouting(true);refreshMarks();});
- let dragged=null,noteSaveSequence=0;
+ let dragged=null,noteSaveSequence=0,noteFeedbackTimer=null,similarTimer=null;
  document.querySelectorAll('[data-cat]').forEach(el=>{el.onclick=()=>{category=el.dataset.cat;renderScouting(true)};if(el.dataset.cat==='all')return;el.ondragover=e=>{if(!dragged||dragged.field===el.dataset.cat)return;e.preventDefault();el.classList.add('drop');};el.ondragleave=()=>el.classList.remove('drop');el.ondrop=e=>{if(!dragged)return;e.preventDefault();const d=dragged;dragged=null;moveNote(d.field,d.text,el.dataset.cat);};});
  document.querySelector('#mxSimilar').onclick=()=>{showSimilar=!showSimilar;renderScouting(true);};
 
@@ -229,12 +229,12 @@ function wireNotebook(p,rep){
   const list=document.createElement('div');section.append(list);host.append(section);
   if(!editable()){list.innerHTML='<ul class="mx-readonly">'+bulletParse(rep[field]||'').map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>';continue;}
   let editor=makeBulletList(list,rep[field]||'','Write an observation…',()=>{/* An editor that has been redrawn away must never write its stale rows back. */if(!list.isConnected)return;if(SX?.active()&&chosen!==p.id){chosen=p.id;try{SX.select(p,p._liveClub);}catch(error){console.warn('Session selection not saved',error);}}const r=effectiveReport(p);r[field]=editor.serialize();
-   if(r._workflow?.noteTimes){r._workflow={...r._workflow};delete r._workflow.noteTimes;}counts(r);
-   const sequence=++noteSaveSequence;saveRec(p,{report:JSON.stringify(r)}).then(ok=>{if(!list.isConnected||sequence!==noteSaveSequence)return;counts();refreshMarks();const st=document.querySelector('#liveStatus');if(st)st.textContent=window.EuroScoutCloudSync?.state.message||(ok===false?'Saved locally · waiting to sync.':'✓ Saved to player profile');}).catch(()=>{if(!list.isConnected||sequence!==noteSaveSequence)return;const st=document.querySelector('#liveStatus');if(st)st.textContent='Could not save changes. Keep this note open and retry.'});});
+   if(r._workflow?.noteTimes){r._workflow={...r._workflow};delete r._workflow.noteTimes;}
+   const sequence=++noteSaveSequence;saveRec(p,{report:JSON.stringify(r)},{typing:true}).then(ok=>{if(!list.isConnected||sequence!==noteSaveSequence)return;clearTimeout(noteFeedbackTimer);noteFeedbackTimer=setTimeout(()=>{if(!list.isConnected||sequence!==noteSaveSequence)return;counts();refreshMarks();const st=document.querySelector('#liveStatus');if(st)st.textContent=window.EuroScoutCloudSync?.state.message||(ok===false?'Saved locally · waiting to sync.':'✓ Saved to player profile');},300);}).catch(()=>{if(!list.isConnected||sequence!==noteSaveSequence)return;const st=document.querySelector('#liveStatus');if(st)st.textContent='Could not save changes. Keep this note open and retry.'});});
   const addRow=list.querySelector('.bl-addrow');list.prepend(addRow);const addButton=addRow.querySelector('button');addButton.textContent='+  Add note';addButton.dataset.addNote=field;
   addButton.onclick=()=>{const ul=list.querySelector('.bl-ul');[...ul.children].slice(0,-1).forEach(li=>{if(!li.querySelector('.bl-txt').textContent.trim())li.remove();});const row=ul.lastElementChild;ul.prepend(row);row.querySelector('.bl-txt')?.focus();row.scrollIntoView({block:'nearest'});};
   decorate(list,field);
-  list.addEventListener('input',e=>{if(!e.target.matches('.bl-txt'))return;const index=[...list.querySelectorAll('.bl-txt')].indexOf(e.target);suggestions(e.target.textContent,{key:field,index})});
+  list.addEventListener('input',e=>{if(!e.target.matches('.bl-txt'))return;const target=e.target;clearTimeout(similarTimer);similarTimer=setTimeout(()=>{if(!target.isConnected)return;const index=[...list.querySelectorAll('.bl-txt')].indexOf(target);suggestions(target.textContent,{key:field,index});},250);});
   list.addEventListener('focusout',()=>setTimeout(()=>decorate(list,field),0));
   list.addEventListener('dragstart',e=>{const row=e.target.closest?.('.bl-item');dragged=row?{field,text:row.querySelector('.bl-txt').textContent}:null;});list.addEventListener('dragend',()=>setTimeout(()=>{dragged=null;document.querySelectorAll('.mx-cat.drop').forEach(x=>x.classList.remove('drop'));},0));
  }
