@@ -17,7 +17,8 @@ function apply(raw){
   p._bblRoster={season:data.season,teamId:r.teamId,teamName:r.teamName,number:r.number,source:r.source,profile:r.profile,checked:data.checked};
   p.currentRosterSeason=data.season;p.currentClub=r.teamName;p.currentRosterSource=r.source;p.currentRosterProfile=r.profile;
   if(r.img)p.img=r.img;
-  if(!p.born||r.match==='Official BBL profile birth date and career history reviewed')p.born=r.born;
+  if(!p.born)p.born=r.born;
+  if(!p.country){try{p.country=new Intl.DisplayNames(['en'],{type:'region'}).of(r.nationality.split('/')[0]);}catch{}}
   if(!p.height)p.height=r.height;if(!p.weight)p.weight=r.weight;
  }
  raw.domestic2627=raw.domestic2627||{season:data.season,leagues:{}};raw.domestic2627.leagues=raw.domestic2627.leagues||{};

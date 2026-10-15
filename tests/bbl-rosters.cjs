@@ -1,0 +1,9 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const c={window:{},structuredClone,Intl,canonKey:k=>k};vm.createContext(c);vm.runInContext(fs.readFileSync('bbl-rosters-2026.js','utf8'),c);vm.runInContext(fs.readFileSync('euroscout-bbl-rosters.js','utf8'),c);
+const d=c.window.EUROSCOUT_BBL_ROSTERS,bbl=c.window.EuroScoutBBL;assert.equal(d.teams.length,18);assert.equal(d.roster.length,334);assert(d.roster.every(r=>/^\d{1,2}$/.test(r.number)&&r.source&&r.birthDate&&r.img));
+const aliases=new Set();for(const r of d.roster)for(const id of r.ids){assert(!aliases.has(id));aliases.add(id);}
+const reaves=d.roster.find(r=>r.id==='2005169');assert(reaves.ids.includes('ncaam-248'));assert.equal(reaves.teamId,'422');assert.equal(reaves.number,'3');assert.equal(reaves.birthDate,'2002-09-10');
+const old={id:'ncaam-248',name:'Dejour Reaves',height:183,ppg:17.87,g:31,season:'2025/26',teamName:'Fordham Rams',jersey:'2',gameLog:[['2026-03-01',26]],hand:'Right'};
+const stats=JSON.stringify(old),raw={leagues:[{meta:{id:'bbl'},players:[]},{meta:{id:'ncaam'},players:[old]}]};bbl.apply(raw);assert.equal(old.g,31);assert.equal(old.ppg,17.87);assert.equal(old.season,'2025/26');assert.equal(old.teamName,'Fordham Rams');assert.equal(old.jersey,'2');assert.equal(old.hand,'Right');assert.equal(old.born,2002);assert.equal(old._bblRoster.number,'3');assert.equal(old.country,'United States');
+const before=raw.leagues[0].players.length;bbl.apply(raw);assert.equal(raw.leagues[0].players.length,before);assert.equal(bbl.current({id:'bbl-2001098'}).teamId,'483');assert.equal(bbl.current({id:'bbl-2005199'}).number,'10');
+console.log('PASS 18 official BBL teams, 334 jerseys, unique identities, Reaves NCAA link, reviewed transfer, idempotent import, historical stats and personal fields retained');

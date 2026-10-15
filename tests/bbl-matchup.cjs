@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const s=fs.readFileSync('euroscout-live-notes.js','utf8'),reaves={id:'ncaa-reaves',name:'Dejour Reaves',born:2002},other={id:'another',name:'Another Player',born:2001};
+let assignments={},manualNumber=null;const teamA={key:'bbl|422',name:'Braunschweig',teams:[]},teamB={key:'bbl|483',name:'Jena',teams:[]};
+const c={window:{EUROSCOUT_BBL_ROSTERS:{teams:[{id:'422',key:teamA.key,name:teamA.name}],roster:[{id:'2005169',ids:[reaves.id],teamId:'422',number:'3'}],players:[]},EuroScoutBBL:{key:p=>p.id===reaves.id?teamA.key:null,current:p=>p.id===reaves.id?{ids:[reaves.id],number:'3'}:null}},gid:p=>p.id,canonKey:k=>k,autoAppliedGet:()=>({}),next26Get:()=>assignments,next26bGet:()=>({}),assignPool:()=>[reaves,other],allPlayersEvery:()=>[reaves,other],allClubs:()=>[teamA,teamB],effective26keys:p=>assignments[p.id]?[assignments[p.id]]:[],fold:s=>String(s||'').toLowerCase(),storedShirt:()=>manualNumber};
+vm.createContext(c);
+for(const [start,end]of [['function officialRosterRow','function jerseyOrder'],['function officialDirectories','window.addEventListener'],['function rosterNameTokens','function liveRoster']])vm.runInContext(s.slice(s.indexOf(start),s.indexOf(end,s.indexOf(start))),c);
+let index=c.buildClubIndex();assert.equal(index.get(teamA.key)[0],reaves);assert.equal(c.shirt({...reaves,_liveClub:teamA.key}),'3');
+manualNumber='00';assert.equal(c.shirt({...reaves,_liveClub:teamA.key}),'00');manualNumber='0';assert.equal(c.shirt({...reaves,_liveClub:teamA.key}),'0');manualNumber='';assert.equal(c.shirt({...reaves,_liveClub:teamA.key}),'');manualNumber=null;
+assignments={[reaves.id]:teamB.key};index=c.buildClubIndex();assert(!index.get(teamA.key)?.includes(reaves));assert.equal(index.get(teamB.key)[0],reaves);assert.equal(c.officialRosterRow({...reaves,_liveClub:teamB.key}),null);
+console.log('PASS official BBL membership and jersey fallback; manual club and numbers (including 0, 00 and explicit blank) win; former-club numbers cannot leak into the new club');
