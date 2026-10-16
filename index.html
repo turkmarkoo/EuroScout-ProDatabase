@@ -1834,8 +1834,8 @@ body.drawer-lock{overflow:hidden}
 <script src="euroscout-clubs.js?v=20260914-virtus-merge"></script>
 <script src="euroscout-countries.js?v=20261009-tags-stats-v14"></script>
 <script src="config.js"></script><script src="euroscout-record-merge.js?v=20261008-history-recovery"></script>
-<link rel="stylesheet" href="euroscout-cloud-sync.css?v=20261015-smooth-notes-v3">
-<script src="euroscout-cloud-sync.js?v=20261015-smooth-notes-v3"></script>
+<link rel="stylesheet" href="euroscout-cloud-sync.css?v=20261016-device-sync-v2">
+<script src="euroscout-cloud-sync.js?v=20261016-device-sync-v2"></script>
 <script src="euroscout-access.js?v=20261015-smooth-notes-v3"></script>
 <!-- Manual overrides are loaded from the authorized snapshot. -->
 <script src="data/exhibitions.js"></script>
@@ -2489,13 +2489,21 @@ const Store = (()=>{
     privateDirty=true;const appData={};for(const k of APP_KEYS){try{appData[k]=JSON.parse(localStorage.getItem(k)||'null');}catch{}}
     return privateSync.save({records:structuredClone(cache),appData},waitForCloud);
   }
+  let remoteRefreshPending=false,remoteRefreshRunning=false;
+  function privateRefreshBusy(){return privateDirty||privateSync?.dirty||Object.keys(window.ESStorage?.pending()||{}).some(k=>k===LKEY||APP_KEYS.includes(k))||document.visibilityState!=='visible'||document.activeElement?.matches('input,textarea,select,[contenteditable=true]')||window.ESMatchupBusy?.()||document.querySelector('#modal.open,dialog[open]');}
   async function refreshPrivate(){
-    if(!window.ESAccess?.internal||!privateReady||STATE.view==='scouting'||privateDirty||privateSync?.dirty||Object.keys(window.ESStorage?.pending()||{}).some(k=>k===LKEY||APP_KEYS.includes(k))||document.visibilityState!=='visible'||document.activeElement?.matches('input,textarea,select,[contenteditable=true]')||document.querySelector('#modal.open'))return;
-    try{if(!await ESAccess.refresh())return;await privateSync.acceptRemote(ESAccess.state);OVR=ovrMerged();rebuildLinks();applyOverrides();if(CLUBS){buildClubs();NEXTCOMP=null;DOM27=null;}EuroScoutMarketRecords.refresh();render();if(CURRENT)renderProfile();
-    }catch(e){console.warn('Shared refresh unavailable:',e.message);}
+    if(!window.ESAccess?.internal||!privateReady||remoteRefreshRunning||privateRefreshBusy())return;
+    remoteRefreshRunning=true;
+    try{const changed=await ESAccess.refresh();if(!changed&&!remoteRefreshPending)return;remoteRefreshPending=true;
+      // Input can begin while the network is pending. Keep the refreshed cloud
+      // version queued until idle rather than replacing an active note editor.
+      if(privateRefreshBusy()||await privateSync.acceptRemote(ESAccess.state)===false)return;
+      if(privateRefreshBusy())return;
+      remoteRefreshPending=false;OVR=ovrMerged();rebuildLinks();applyOverrides();if(CLUBS){buildClubs();NEXTCOMP=null;DOM27=null;}EuroScoutMarketRecords.refresh();render();if(CURRENT)renderProfile();
+    }catch(e){console.warn('Shared refresh unavailable:',e.message);}finally{remoteRefreshRunning=false;}
   }
   window.addEventListener('es-access-role',()=>{applyRoleClass();renderHeaderAuth();if(STATE.league)render();});
-  window.addEventListener('storage',e=>{if(e.key!==LKEY||privateDirty||window.ESAccess&&localStorage.getItem('euroscout:cloud-owner:v1')!==ESAccess.user?.uid)return;cache=local.all();if(DRAWER_OPEN&&CURRENT)renderProfile();else if(STATE.league)render();});
+  window.addEventListener('storage',e=>{if(e.key!==LKEY||privateRefreshBusy()||window.ESAccess&&localStorage.getItem('euroscout:cloud-owner:v1')!==ESAccess.user?.uid)return;cache=local.all();if(DRAWER_OPEN&&CURRENT)renderProfile();else if(STATE.league)render();});
   window.addEventListener('online',()=>privateSync?.resume());
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')privateSync?.resume();});
   window.addEventListener('beforeunload',e=>{if(privateSync?.savingLocal){e.preventDefault();e.returnValue='';}});

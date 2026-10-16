@@ -1,0 +1,21 @@
+const assert=require('node:assert/strict'),fs=require('fs'),path=require('path');
+const {create,reconcile,journal}=require('../euroscout-cloud-sync.js');
+const clone=v=>structuredClone(v),report=(text,time,history=[])=>JSON.stringify({nOff:text,_notesUpdated:time,_history:history});
+const base={records:{p:{report:report('• Original','2026-10-14T10:00:00Z',[{at:'old',text:'Keep history'}]),rating:3},other:{hand:'Right'}},appData:{}};
+const ours=clone(base),theirs=clone(base);ours.records.p.report=report('• Original\n• Local addition','2026-10-15T10:00:00Z',[{at:'old',text:'Keep history'},{at:'local',text:'Local history'}]);theirs.records.p.report=report('• Original\n• Cloud addition','2026-10-16T10:00:00Z',[{at:'old',text:'Keep history'},{at:'cloud',text:'Cloud history'}]);theirs.records.other.hand='Left';
+const result=reconcile(base,ours,theirs);assert.deepEqual(result.conflicts,[]);const merged=JSON.parse(result.value.records.p.report);assert.equal(merged.nOff,'• Original\n• Cloud addition\n• Local addition');assert.equal(merged._notesUpdated,'2026-10-16T10:00:00Z');assert.equal(merged._history.length,3);assert.equal(result.value.records.other.hand,'Left');
+const edit=clone(ours);edit.records.p.report=report('• Edited original\n• Local addition','2026-10-15T10:00:00Z');assert(reconcile(base,edit,theirs).conflicts.includes('records.p.report.nOff'),'An edit/delete is never treated as an addition');assert.equal(reconcile(base,{...ours,records:{p:{rating:4}}},{...theirs,records:{p:{rating:5}}}).details.find(x=>x.path.at(-1)==='rating').remote,5);
+(async()=>{
+ const oldStorage=global.localStorage,oldOverflow=global.ESStorage;const values=new Map(),prefix='euroscout:cloud-outbox:v1:owner:';
+ const row={id:'owner:old-tab',account:'owner',tab:'old-tab',at:1,revision:1,base:clone(base),local:clone(ours),dirty:true};values.set(prefix+'old-tab',JSON.stringify(row));values.set(prefix+'removed','null');values.set(prefix+'bad','{unreadable');
+ global.localStorage={get length(){return values.size},key:i=>[...values.keys()][i],getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v)};global.ESStorage={usage:()=>[{key:prefix+'overflow-tombstone'}],flush:async()=>{}};
+ try{
+  const storage=journal('owner','new-tab');assert.equal((await storage.all()).length,1,'Tombstones cannot hide valid pending journals');assert.equal(storage.issues.length,1);assert.equal(storage.issues[0].raw,'{unreadable');
+  let remote=clone(theirs),writes=0,applied;const timers={setTimeout:()=>1,clearTimeout:()=>{}};const sync=create({account:'owner',tab:'new-tab',initial:remote,journal:storage,timers,refreshCloud:async()=>remote,saveCloud:async v=>{remote=v;writes++},applyLocal:v=>applied=v});await sync.init(ours,true);
+  assert.equal(sync.blocked,false,'Identical prior pending journal supplies the real baseline instead of empty-object conflicts');assert.equal(JSON.parse(sync.local.records.p.report).nOff,merged.nOff);assert.equal(sync.local.records.other.hand,'Left');assert.equal(writes,0);
+  const before=clone(applied),priorBytes=[...values];const preview=await sync.previewRecovery(0);assert(preview.records);assert.deepEqual(applied,before);assert.deepEqual([...values],priorBytes,'Preview cannot write or restore anything');
+  const backup=await sync.backup();assert.equal(backup.journals.length,2);assert.equal(backup.journalIssues[0].raw,'{unreadable');assert(backup.current.base&&backup.current.local);await sync.run();assert.equal(writes,1);assert.equal(sync.state.kind,'synced');assert.equal(JSON.parse(remote.records.p.report).nOff,merged.nOff);
+  const receiving=create({account:'owner',tab:'receiving-device',initial:base,journal:{all:async()=>[],put:async()=>{}},timers,applyLocal:v=>applied=v});await receiving.init();assert.equal(await receiving.acceptRemote(remote),true);assert.deepEqual(receiving.local,sync.local,'A second device converges on the confirmed cloud copy');
+  console.log('PASS deleted overflow markers, malformed-entry retention, accurate recovery export, proven cross-tab baseline, read-only preview, additive note/history merging and two-device convergence.');
+ }finally{global.localStorage=oldStorage;global.ESStorage=oldOverflow;}
+})().catch(e=>{console.error(e);process.exitCode=1});

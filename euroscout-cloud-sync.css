@@ -11,5 +11,6 @@
 .es-sync-dialog button{font:inherit;color:inherit;background:var(--panel,#fff);border:1px solid #cbdad2;border-radius:7px;padding:6px 9px;cursor:pointer;white-space:normal}
 .es-sync-dialog{width:min(520px,calc(100vw - 40px));max-height:calc(100dvh - 64px);overflow-y:auto;box-sizing:border-box;background:var(--panel,#fff);color:var(--txt,#15382f);border:1px solid #cbdad2;border-radius:12px;padding:22px;font:14px/1.5 system-ui}
 .es-sync-dialog::backdrop{background:#102d2866}.es-sync-dialog h3{margin-top:0}.es-sync-actions,.es-sync-recover{display:flex;gap:8px;flex-wrap:wrap}.es-sync-recover{margin-top:12px}
+.es-sync-preview,.es-sync-conflicts{margin-top:16px;padding-top:12px;border-top:1px solid #cbdad2}.es-sync-conflicts details{padding:8px 0;border-bottom:1px solid #e0e8e3}.es-sync-conflicts summary{cursor:pointer;font-weight:600}.es-sync-conflicts pre{font:12px/1.5 system-ui;white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;background:#f4f8f6;padding:10px;border-radius:6px;color:#15382f}
 @media(max-width:700px){.es-redesign .hwrap:has(.es-status-dock){flex-wrap:wrap}.es-status-dock{max-width:100%;flex-wrap:wrap}}
 html[data-theme=dark] .es-status-dock #esAccessBadge,html[data-theme=dark] .es-status-dock .es-cloud-sync [data-review]{background:#142d25;color:#b9d1c3;border-color:#355346}
