@@ -117,6 +117,7 @@ function create(options){
   // Other tabs are not consumed or acknowledged by this tab. Their copies stay
   // recoverable if a tab was closed while it still had unsynced work.
   row.otherPending=rows.filter(r=>r.tab!==options.tab&&r.dirty&&!typed.includes(r)).map(r=>({id:r.id,at:r.at}));
+  if(!blocked){delete row.reviewBase;row.conflicts=[];} // An already-synced old tab must not reuse its obsolete conflict baseline after its next edit/reload.
   await persist();front=copy(local);options.applyLocal(copy(front));
   for(const draft of typed)root.localStorage.removeItem(draftKey(draft.playerId));
   if(typed.length)await options.flushLocal?.();
