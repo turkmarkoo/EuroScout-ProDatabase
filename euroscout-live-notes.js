@@ -3,9 +3,14 @@
    never scrolls away, similar notes on demand. */
 (function(){
 'use strict';
-function sizeWorkspace(){const root=document.documentElement,viewport=window.visualViewport?.height||window.innerHeight,app=document.querySelector('main#app'),top=Math.max(0,app?.getBoundingClientRect().top||document.querySelector('body > header')?.getBoundingClientRect().bottom||76);root.style.setProperty('--matchup-viewport',viewport+'px');root.style.setProperty('--matchup-workspace',Math.max(240,viewport-top)+'px');}
+function sizeWorkspace(){const root=document.documentElement,app=document.querySelector('main#app'),live=app?.querySelector('.liveScouting');if(live){for(const el of [document.scrollingElement,document.body,app,live,...live.querySelectorAll('.mx-layout,.mx-col,.liveNotebook,.liveBody')]){if(el?.scrollTop)el.scrollTop=0;if(el?.scrollLeft)el.scrollLeft=0;}}const viewport=window.visualViewport?.height||window.innerHeight,top=Math.max(0,app?.getBoundingClientRect().top||document.querySelector('body > header')?.getBoundingClientRect().bottom||76);root.style.setProperty('--matchup-viewport',viewport+'px');root.style.setProperty('--matchup-workspace',Math.max(120,viewport-top)+'px');}
 function scrollMatchupArea(e){const area=e.target?.closest?.('.rosterList,#liveBullets,#liveRelated');if(!area||!area.closest('.liveScouting'))return;const max=area.scrollHeight-area.clientHeight;if(max<=0)return;const unit=e.deltaMode===1?32:e.deltaMode===2?area.clientHeight:1,next=Math.max(0,Math.min(max,area.scrollTop+e.deltaY*unit));if(next===area.scrollTop)return;area.scrollTop=next;e.preventDefault();e.stopPropagation();}
-sizeWorkspace();window.addEventListener('resize',sizeWorkspace);window.visualViewport?.addEventListener('resize',sizeWorkspace);const appHeader=document.querySelector('body > header');if(appHeader)new ResizeObserver(sizeWorkspace).observe(appHeader);
+let workspaceFrame=null;function scheduleWorkspace(){if(workspaceFrame!==null)return;workspaceFrame=requestAnimationFrame(()=>{workspaceFrame=null;sizeWorkspace();});}
+sizeWorkspace();window.addEventListener('resize',scheduleWorkspace);window.visualViewport?.addEventListener('resize',scheduleWorkspace);
+const workspaceObserver=new ResizeObserver(scheduleWorkspace),watchedChrome=new WeakSet();function watchWorkspaceChrome(){for(const el of [document.querySelector('body > header'),document.getElementById('dragonsDataStatus')])if(el&&!watchedChrome.has(el)){watchedChrome.add(el);workspaceObserver.observe(el);}scheduleWorkspace();}
+watchWorkspaceChrome();new MutationObserver(watchWorkspaceChrome).observe(document.body,{childList:true});
+document.addEventListener('focusin',e=>{if(e.target.closest?.('.liveScouting'))scheduleWorkspace();});
+document.addEventListener('scroll',e=>{if(!document.querySelector('.liveScouting'))return;const el=e.target;if(el===document||el===document.body||el===document.documentElement||el.matches?.('main#app,.liveScouting,.mx-layout,.mx-col,.liveNotebook,.liveBody'))scheduleWorkspace();},{capture:true,passive:true});
 
 const cats=[['nAth','Athleticism'],['nOff','Offense'],['nDef','Defense'],['nIntel','Intel'],['nProj','Projection']];
 const SX=window.ESSessions;
