@@ -69,6 +69,6 @@ assert.equal(landauGeneva[0].as, '105');
 
 const html = fs.readFileSync('index.html', 'utf8');
 assert.match(html, /data\/fixtures-2627\.js\?v=20261009-matchup-safe-v12/);
-assert.match(html, /euroscout-fixtures\.js\?v=20261009-matchup-safe-v12/);
-assert.match(html, /euroscout-sessions\.js\?v=20261009-matchup-safe-v12/);
+assert.match(html, /euroscout-fixtures\.js\?v=20261019-fixture-labels-v1/);
+assert.match(html, /euroscout-sessions\.js\?v=20261019-fixture-labels-v1/);
 console.log('DragonsData FIBA Europe Cup fixtures resolve to canonical club IDs.');

@@ -20,7 +20,7 @@ function officialDirectory(){
  const teams=[],players=[];
  const euro=window.EUROSCOUT_EUROCUP_ROSTERS;
  if(euro)for(const team of euro.teams||[]){
-  const entry={key:'eurocup:'+team.code,dbKey:'eurocup|'+team.code,code:team.code,officialCode:team.code,name:team.name,aliases:team.aliases||[]};teams.push(entry);
+  const entry={key:'eurocup:'+team.code,dbKey:team.key||'eurocup|'+team.code,code:team.code,officialCode:team.code,name:team.name,aliases:team.aliases||[]};teams.push(entry);
   for(const row of (euro.roster||[]).filter(player=>player.teamCode===team.code))players.push({team:entry,name:row.name,ids:row.ids||[],row});
  }
  const official=window.EUROSCOUT_OFFICIAL_ROSTERS;

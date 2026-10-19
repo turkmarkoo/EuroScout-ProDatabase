@@ -65,6 +65,12 @@ function officialFixtureKey(g,side){
  const matches=teams.filter(t=>t.competition===g.comp&&String(t.officialCode||t.code)===code).map(t=>canonKey(t.currentKey||t.key));
  const keys=[...new Set(matches.filter(k=>k&&clubByKey(k)))];return keys.length===1?keys[0]:'';
 }
+// Current registrations carry the canonical club key; competition codes can be reused.
+function registeredFixtureKey(comp,side){
+ if(comp!=='eurocup'||!side)return '';
+ const name=fold(side.name),matches=(window.EUROSCOUT_EUROCUP_ROSTERS?.teams||[]).filter(t=>name&&[t.name,...(t.aliases||[])].some(n=>fold(n)===name));
+ const keys=[...new Set(matches.map(t=>t.key&&canonKey(t.key)).filter(k=>k&&clubByKey(k)))];return keys.length===1?keys[0]:'';
+}
 function fromDragons(rows){
  const grouped=new Map();
  for(const g of rows||[]){const comp=g.comp||g.league_id||'',list=grouped.get(comp)||[];list.push(g);grouped.set(comp,list);}
@@ -73,7 +79,7 @@ function fromDragons(rows){
   for(const g of list)for(const side of [g.home,g.away])if(side?.code)teams.set(side.code,{code:side.code,name:side.name||side.code});
   const keyOf=resolver(comp,[...teams.values()]);
   return list.map(g=>{
-   const side=(s,which)=>{const official=officialFixtureKey(g,which),explicit=s?.key&&typeof clubByKey==='function'&&clubByKey(canonKey(s.key))?canonKey(s.key):'',raw=g.league_id&&s?.code?canonKey(g.league_id+'|'+s.code):'',direct=raw&&typeof clubByKey==='function'&&clubByKey(raw)?raw:'',key=official||explicit||direct||keyOf.get(s?.code)||'',c=key&&typeof clubByKey==='function'?clubByKey(key):null;return {...s,key,name:c?.name||s?.name||s?.code||''};};
+   const side=(s,which)=>{const official=officialFixtureKey(g,which),explicit=s?.key&&typeof clubByKey==='function'&&clubByKey(canonKey(s.key))?canonKey(s.key):'',raw=g.league_id&&s?.code?canonKey(g.league_id+'|'+s.code):'',direct=raw&&typeof clubByKey==='function'&&clubByKey(raw)?raw:'',key=official||registeredFixtureKey(comp,s)||explicit||direct||keyOf.get(s?.code)||'',c=key&&typeof clubByKey==='function'?clubByKey(key):null;return {...s,key,name:c?.name||s?.name||s?.code||''};};
    return {...g,comp,home:side(g.home,'home'),away:side(g.away,'away')};
   });
  });

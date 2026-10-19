@@ -25,6 +25,7 @@ const today = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d
 /* dd/mm/yyyy everywhere. Accepts YYYY-MM-DD or a full ISO stamp. */
 function fmtDate(v) { if (!v) return '—'; const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(v); }
 function fmtTime(v) { const d = new Date(v); return isNaN(d) ? '' : pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function roundLabel(value) { const text=String(value??'').trim();const n=text.match(/^(?:R(?:ound)?\s*)?(\d+)$/i);return n?'Round '+n[1]:text; }
 function fmtDur(sec) { sec = Math.max(0, Math.round(sec || 0)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return h ? h + ' h ' + pad(m) + ' min' : m + ' min'; }
 function clock(sec) { sec = Math.max(0, Math.floor(sec)); return pad(Math.floor(sec / 3600)) + ':' + pad(Math.floor(sec % 3600 / 60)) + ':' + pad(sec % 60); }
 function daysSince(v) { const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return Infinity; return Math.floor((Date.now() - new Date(+m[1], +m[2] - 1, +m[3]).getTime()) / 86400000); }
@@ -373,7 +374,7 @@ function openStart(preset, done) {
     const keepKnown = el.known.value;
     games = knownGames(el.a.value, el.b.value);
     $1('#sxKnownWrap', box).hidden = !games.length;
-    el.known.innerHTML = '<option value="">— not listed · enter by hand —</option>' + games.map((g, i) => '<option value="' + i + '">' + fmtDate(g.date) + (g.time ? ' ' + esc(g.time) : '') + ' · ' + esc(g.comp.name) + (g.round ? ' · ' + (/^\d+$/.test(String(g.round)) ? 'R' : '') + esc(g.round) : '') + ' · ' + (g.scoreA !== '' && g.scoreB !== '' ? g.scoreA + '–' + g.scoreB : 'not played yet') + '</option>').join('');
+    el.known.innerHTML = '<option value="">— not listed · enter by hand —</option>' + games.map((g, i) => '<option value="' + i + '">' + fmtDate(g.date) + (g.time ? ' ' + esc(g.time) : '') + ' · ' + esc(g.comp.name) + (g.round ? ' · ' + esc(roundLabel(g.round)) : '') + ' · ' + (g.scoreA !== '' && g.scoreB !== '' ? g.scoreA + '–' + g.scoreB : 'not played yet') + '</option>').join('');
     let pick = keepKnown !== '' && games[Number(keepKnown)] ? Number(keepKnown) : -1;
     if (preset.game) { const i = games.findIndex(g => g.date === preset.game.date && g.comp.id === preset.game.comp); if (i >= 0) pick = i; }
     if (pick < 0 && el.a.value && el.b.value && games.length) pick = 0;
@@ -381,7 +382,7 @@ function openStart(preset, done) {
   }
   el.a.onchange = el.b.onchange = paint;
   el.comp.onchange = () => { $1('#sxCompOtherWrap', box).hidden = el.comp.value !== '__other'; };
-  el.known.onchange = () => { const g = games[+el.known.value]; if (!el.known.value || !g) return; el.gameDate.value = g.date; el.scoreA.value = g.scoreA; el.scoreB.value = g.scoreB; if ([...el.comp.options].some(o => o.value === g.comp.id)) el.comp.value = g.comp.id; if (g.round) el.stage.value = (g.group ? 'Group ' + g.group + ' · ' : '') + (/^\d+$/.test(String(g.round)) ? 'Round ' : '') + g.round; if (g.venue) el.venue.value = g.venue; $1('#sxCompOtherWrap', box).hidden = true; };
+  el.known.onchange = () => { const g = games[+el.known.value]; if (!el.known.value || !g) return; el.gameDate.value = g.date; el.scoreA.value = g.scoreA; el.scoreB.value = g.scoreB; if ([...el.comp.options].some(o => o.value === g.comp.id)) el.comp.value = g.comp.id; if (g.round) el.stage.value = (g.group ? 'Group ' + g.group + ' · ' : '') + roundLabel(g.round); if (g.venue) el.venue.value = g.venue; $1('#sxCompOtherWrap', box).hidden = true; };
   paint();
   /* Feeds can arrive before deferred FIBA aliases. Re-resolve this pair when
      the dialog opens so a legal company name cannot hide a known game. */
@@ -489,7 +490,7 @@ function openTeamLog(key) {
     '<p class="sx-hint">Competitions watched: ' + (t.competitions.length ? esc(t.competitions.join(' · ')) : '—') + '</p>' +
     '<div class="sx-cols"><section><h4 class="sx-sub">Recent games</h4>' + (t.games.length ? '<ol class="sx-timeline">' + t.games.slice(0, 8).map(s => gameLine(s, key)).join('') + '</ol>' : '<p class="sx-hint">No games watched yet.</p>') + '</section>' +
     '<section><h4 class="sx-sub">Recent scouting sessions</h4>' + (t.sessions.length ? '<ol class="sx-timeline">' + t.sessions.slice(0, 8).map(s => '<li><span class="sx-tl-date">' + fmtDate((s.startedAt || s.gameDate || '').slice(0, 10)) + '</span><div><b>' + s.players.length + ' player' + (s.players.length === 1 ? '' : 's') + '</b><small>' + esc([s.a.name + ' vs ' + s.b.name, nameOf(s.by)].filter(Boolean).join(' · ')) + '</small></div></li>').join('') + '</ol>' : '<p class="sx-hint">No sessions yet.</p>') + '</section></div>' +
-    (next.length ? '<h4 class="sx-sub">Next games</h4><ol class="sx-timeline">' + next.map(g => '<li><span class="sx-tl-date">' + fmtDate(g.date) + '</span><div><b>' + esc(g.home.name) + ' vs ' + esc(g.away.name) + '</b><small>' + esc([g.time, g.compName, 'Round ' + g.round, g.venue].filter(Boolean).join(' · ')) + '</small></div></li>').join('') + '</ol>' : '') +
+    (next.length ? '<h4 class="sx-sub">Next games</h4><ol class="sx-timeline">' + next.map(g => '<li><span class="sx-tl-date">' + fmtDate(g.date) + '</span><div><b>' + esc(g.home.name) + ' vs ' + esc(g.away.name) + '</b><small>' + esc([g.time, g.compName, roundLabel(g.round), g.venue].filter(Boolean).join(' · ')) + '</small></div></li>').join('') + '</ol>' : '') +
     '<h4 class="sx-sub">Players viewed</h4>' + people(t.viewed, 'Nobody from this team has been viewed in a session yet.') +
     '<h4 class="sx-sub">On the watchlist</h4>' + people(t.shortlisted.map(p => ({ id: gid(p), pid: p.id, name: p.name })), 'No 2026/27 roster player is on the watchlist.') +
     '<h4 class="sx-sub">Reports written</h4>' + people(t.reports.map(p => ({ id: gid(p), pid: p.id, name: p.name })), 'No notes on the current roster yet.'), true);
@@ -541,7 +542,7 @@ function renderLog() {
     const byDay = new Map(); list.forEach(g => { if (!byDay.has(g.date)) byDay.set(g.date, []); byDay.get(g.date).push(g); });
     body = '<div class="sx-filters"><label>Show <select id="sxUpMode"><option value="recent"' + (upMode === 'recent' ? ' selected' : '') + '>Played games</option><option value="upcoming"' + (upMode === 'upcoming' ? ' selected' : '') + '>Upcoming games</option></select></label><label>Competition <select id="sxUpComp"><option value="">All (' + cs.length + ')</option>' + cs.map(c => '<option value="' + escAttr(c.id) + '"' + (c.id === upComp ? ' selected' : '') + '>' + esc(c.name) + ' · ' + c.games + ' games</option>').join('') + '</select></label><label>Window <select id="sxUpDays">' + [7, 14, 30, 60].map(n => '<option value="' + n + '"' + (n === upDays ? ' selected' : '') + '>' + (upMode === 'recent' ? 'last ' : 'next ') + n + ' days</option>').join('') + '</select></label><button type="button" class="btn ghost sm" id="sxUpRefresh">Refresh schedule</button><span class="sx-hint" style="margin:0">' + (FX && FX.loadedAt() ? 'Schedule checked ' + fmtDate(new Date(FX.loadedAt()).toISOString()) + ' ' + fmtTime(FX.loadedAt()) : FX && FX.state() === 'loading' ? 'Loading the schedule…' : '') + '</span></div>' +
       (FX && FX.problems().length ? '<details class="sx-problems"><summary>' + FX.problems().length + ' thing' + (FX.problems().length === 1 ? '' : 's') + ' to check</summary><ul>' + FX.problems().map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></details>' : '') +
-      (list.length ? [...byDay.entries()].map(([d, gs]) => '<h4 class="sx-sub">' + dayLabel(d) + '</h4><div class="sx-tablewrap"><table class="sx-table sx-fixt"><tbody>' + gs.map(g => '<tr><td class="sx-ftime">' + esc(g.time || '—') + '</td><td class="sx-fcomp">' + esc(g.compName) + (g.group ? ' · ' + esc(g.group) : '') + ' <span class="sx-hint">R' + esc(g.round) + '</span></td><td><b>' + esc(g.home.name) + '</b> vs <b>' + esc(g.away.name) + '</b>' + (g.played ? ' <span class="sx-hint">' + esc(g.hs + '–' + g.as) + '</span>' : '') + '</td><td class="sx-hint">' + esc(g.venue) + '</td><td class="sx-fact">' + fixtureAction(g,scoutedGame(g)) + '</td></tr>').join('') + '</tbody></table></div>').join('')
+      (list.length ? [...byDay.entries()].map(([d, gs]) => '<h4 class="sx-sub">' + dayLabel(d) + '</h4><div class="sx-tablewrap"><table class="sx-table sx-fixt"><tbody>' + gs.map(g => '<tr><td class="sx-ftime">' + esc(g.time || '—') + '</td><td class="sx-fcomp">' + esc(g.compName) + (g.group ? ' · ' + esc(g.group) : '') + (g.round ? ' <span class="sx-hint">· ' + esc(roundLabel(g.round)) + '</span>' : '') + '</td><td><b>' + esc(g.home.name) + '</b> vs <b>' + esc(g.away.name) + '</b>' + (g.played ? ' <span class="sx-hint">' + esc(g.hs + '–' + g.as) + '</span>' : '') + '</td><td class="sx-hint">' + esc(g.venue) + '</td><td class="sx-fact">' + fixtureAction(g,scoutedGame(g)) + '</td></tr>').join('') + '</tbody></table></div>').join('')
         : '<div class="empty">' + (FX && FX.state() === 'loading' ? 'Loading the schedule…' : 'No games in this window.') + '</div>') +
       '<p class="sx-hint">EuroLeague and EuroCup come live from the official schedule, with final scores as games finish. Other leagues appear here once their results are in <code>data/fixtures-2627.js</code>.</p>';
   } else {
@@ -635,10 +636,10 @@ function openEdit(id) {
   function paintGames() {
     games = el.a.value && el.b.value ? knownGames(el.a.value, el.b.value).filter(g => g.scoreA !== '' && g.scoreB !== '') : [];
     $1('#sxEditKnownWrap', box).hidden = !games.length;
-    el.known.innerHTML = '<option value="">— choose —</option>' + games.map((g, i) => '<option value="' + i + '">' + fmtDate(g.date) + ' · ' + esc(g.comp.name) + (g.round ? ' · R' + esc(g.round) : '') + ' · ' + g.scoreA + '–' + g.scoreB + '</option>').join('');
+    el.known.innerHTML = '<option value="">— choose —</option>' + games.map((g, i) => '<option value="' + i + '">' + fmtDate(g.date) + ' · ' + esc(g.comp.name) + (g.round ? ' · ' + esc(roundLabel(g.round)) : '') + ' · ' + g.scoreA + '–' + g.scoreB + '</option>').join('');
   }
   el.a.onchange = el.b.onchange = paintGames; paintGames();
-  el.known.onchange = () => { const g = games[+el.known.value]; if (!el.known.value || !g) return; el.gameDate.value = g.date; el.scoreA.value = g.scoreA; el.scoreB.value = g.scoreB; el.comp.value = g.comp.name; if (g.round) el.stage.value = (g.group ? 'Group ' + g.group + ' · ' : '') + 'Round ' + g.round; if (g.venue) el.venue.value = g.venue; };
+  el.known.onchange = () => { const g = games[+el.known.value]; if (!el.known.value || !g) return; el.gameDate.value = g.date; el.scoreA.value = g.scoreA; el.scoreB.value = g.scoreB; el.comp.value = g.comp.name; if (g.round) el.stage.value = (g.group ? 'Group ' + g.group + ' · ' : '') + roundLabel(g.round); if (g.venue) el.venue.value = g.venue; };
   $1('#sxEditCancel', box).onclick = () => openSession(id);
   f.onsubmit = async e => {
     e.preventDefault();
