@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const html=fs.readFileSync('index.html','utf8');
 const picker=fs.readFileSync('team-selection-workspace-20261007d.js','utf8');
 
-assert.match(html,/if\(\[\.\.\.lgSet\[a\]\]\.some\(l=>lgSet\[b\]\.has\(l\)\)\)return false/);
+assert.match(html,/if\(\[\.\.\.lgSet\[a\]\]\.some\(l=>lgSet\[b\]\.has\(l\)\)&&!reviewedAlias\)return false/);
 assert.match(html,/buducnost/);
 assert.match(html,/sc derby\|studentski centar/);
 assert.match(picker,/\['fec','FIBA Europe Cup',\/\^fibaeuropecup\$\//);

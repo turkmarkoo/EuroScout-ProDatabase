@@ -6776,11 +6776,31 @@
       "teamName": "SKYLINERS",
       "source": "https://www.easycredit-bbl.de/teams/426/2026",
       "ids": [
-        "bbl-2003116"
+        "bbl-2003116",
+        "eurocup-006254"
       ],
       "match": "Preserved official provider ID and reviewed aliases",
       "existing": true,
-      "photoStatus": "verified"
+      "photoStatus": "verified",
+      "identityEvidence": {
+        "checked": "2026-10-19",
+        "ids": [
+          "bbl-2003116",
+          "eurocup-006254"
+        ],
+        "nameVariants": [
+          "Moses Pölking",
+          "Moses Poelking"
+        ],
+        "birthDate": "1997-11-30",
+        "height": 206,
+        "number": "6",
+        "sources": [
+          "https://www.easycredit-bbl.de/spieler/2003116",
+          "https://api-live.euroleague.net/v2/competitions/U/seasons/U2026/clubs/FRA/people"
+        ],
+        "basis": "Official current roster records agree on full name including explicit Pölking jersey spelling, exact birth date, height, jersey and Frankfurt membership."
+      }
     },
     {
       "id": "2002137",

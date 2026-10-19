@@ -27,7 +27,7 @@ assert.equal(new Set(tortona.flatMap(row=>row.ids)).size,tortona.flatMap(row=>ro
 const helperSource=live.slice(live.indexOf('function officialDirectories()'),live.indexOf('function liveRoster(key)'));
 const rosterContext={
  window:{EUROSCOUT_EUROCUP_ROSTERS:eurocup},
- canonKey:key=>key,gid:p=>p._gid||p.id,next26Get:()=>({}),next26bGet:()=>({}),
+ canonKey:key=>key,gid:p=>p._gid||p.id,next26Get:()=>({}),next26bGet:()=>({}),autoAppliedGet:()=>({}),
  assignPool:()=>eurocup.players,allPlayersEvery:()=>eurocup.players,player:()=>null,
  allClubs:()=>[{key:'eurocup|DER',name:'Baglietto Derthona Tortona',teams:[{key:'eurocup|DER',name:'Baglietto Derthona Tortona'},{key:'lba|BDBT',name:'Derthona Basket'}]},{key:'bcl|MSB',name:'Le Mans Sarthe Basket',teams:[{key:'bcl|MSB',name:'Le Mans Sarthe Basket'},{key:'lnb|LEM',name:'Le Mans Sarthe Basket'}]}],
  effective26keys:()=>['stale|OLD'],effective26:()=> 'stale|OLD',isStatus:()=>false,fold:s=>String(s||'').toLowerCase(),officialRosterRow:()=>null,Map,Set
@@ -67,7 +67,7 @@ const actualClubs=[
 ];
 const actualContext={
  window:{EUROSCOUT_EUROCUP_ROSTERS:eurocup,EUROSCOUT_OFFICIAL_ROSTERS:official},
- canonKey:key=>key,gid:p=>p._gid||p.id,next26Get:()=>({}),next26bGet:()=>({}),assignPool:()=>[],allPlayersEvery:()=>actualPlayers,
+ canonKey:key=>key,gid:p=>p._gid||p.id,next26Get:()=>({}),next26bGet:()=>({}),autoAppliedGet:()=>({}),assignPool:()=>[],allPlayersEvery:()=>actualPlayers,
  player:id=>actualById.get(id)||null,allClubs:()=>actualClubs,effective26keys:()=>[],
  fold:s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),
  officialRosterRow:p=>rosterById.get(p?.id)||(p?._grp||[]).map(x=>rosterById.get(x.id)).find(Boolean)||null,Map,Set
