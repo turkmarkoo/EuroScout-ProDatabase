@@ -12,6 +12,15 @@ function key(p){const row=current(p),team=row&&data.teams.find(t=>t.code===row.t
 function link(uni){for(const row of data.roster)for(let i=1;i<row.ids.length;i++)uni(row.ids[0],row.ids[i]);}
 function apply(raw){
   if(!raw?.leagues)return;
+  // New entrants can exist in the current entry list before the historical core
+  // contains their club rows. Register their stable destinations for every view.
+  const entrants=data.teams.filter(team=>team.key?.startsWith('n2627|'));
+  if(entrants.length){
+    let entryLeague=raw.leagues.find(item=>item.meta.id==='n2627');
+    if(!entryLeague){entryLeague={meta:{id:'n2627',name:'2026/27 new entrants',teamsOnly:true,excludeFromStats:true},teams:[],players:[]};raw.leagues.push(entryLeague);}
+    entryLeague.teams=entryLeague.teams||[];
+    for(const team of entrants){const code=team.key.slice('n2627|'.length);if(!entryLeague.teams.some(row=>String(row.code)===code))entryLeague.teams.push({code,name:team.name,teamName:team.name,country:team.country,logo:team.logo});}
+  }
   let league=raw.leagues.find(item=>item.meta.id==='eurocup');
   if(!league){league={meta:{id:'eurocup',name:'EuroCup',season:'2026/27',tier:'International',source:data.source},teams:[],players:[]};raw.leagues.push(league);}
   const playerIds=new Set(league.players.map(p=>p.id));

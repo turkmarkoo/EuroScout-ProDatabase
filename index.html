@@ -2030,7 +2030,7 @@ const CLUB_ALIAS={"barca":"fc barcelona","partizan mozzart bet":"partizan belgra
 function clubCanon(n){return CLUB_ALIAS[n]||n;}
 // Reviewed source-code aliases for the same senior club. Historical source rows
 // retain both IDs; only the club view resolves them as one identity.
-const CLUB_CODE_ALIAS_GROUPS=[['eurocup|FRK','eurocup|FRA']];
+const CLUB_CODE_ALIAS_GROUPS=[['eurocup|FRK','eurocup|FRA'],['eurocup|MXR','eurocup|MRO'],['eurocup|RBB','eurocup|BCR']];
 const FRANKFURT_SENIOR_KEYS=new Set(['bbl|FRS','eurocup|FRK','eurocup|FRA']);
 function separateFrankfurtSquads(a,b){return a.key==='directory|germany-skyliners-juniors'&&FRANKFURT_SENIOR_KEYS.has(b.key)||b.key==='directory|germany-skyliners-juniors'&&FRANKFURT_SENIOR_KEYS.has(a.key);}
 const VERIFIED_CLUB_PAIRS=new Set(["euroleague|OLY~gbl|OLY","acb|VBC~euroleague|PAM","acb|RMB~euroleague|MAD","bsl|FEN~euroleague|ULK","euroleague|ZAL~lkl|ZAL","euroleague|HTA~il|HTA","euroleague|PAN~gbl|PAO","euroleague|MCO~lnb|MON","acb|BAR~euroleague|BAR","aba|CZV~euroleague|RED","aba|DUB~euroleague|DUB","euroleague|TEL~il|MTA","bbl|FCB~euroleague|MUN","euroleague|MIL~lba|MIO","aba|PAR~euroleague|PAR","euroleague|PRS~lnb|PAB","euroleague|VIR~lba|BOV","acb|BKN~euroleague|BAS","bsl|EFS~euroleague|IST","euroleague|ASV~lnb|VIL","bsl|BJK~eurocup|BES","eurocup|BOU~lnb|BOU","aba|BUD~eurocup|BUD","bsl|TTK~eurocup|TTK","eurocup|TRN~lba|TN","bbl|CHE~eurocup|NIN","bbl|ULM~eurocup|ULM","eurocup|LKB~lkl|LIE","eurocup|NIO~gbl|PAN","eurocup|JER~il|JER","bsl|BAH~eurocup|BAH","aba|COL~eurocup|LJU","eurocup|LJU~slo|CED","eurocup|VNC~lba|VE","acb|MAN~eurocup|MAN","aba|CLU~eurocup|CLU","eurocup|CLU~rou|CLJ","eurocup|ARI~gbl|ARI","eurocup|KLA~lkl|NEP","eurocup|WRO~plk|WŚW","bbl|HAM~eurocup|HAM","aba|SPR~kls|SPARTAKOFFICESHOES","aba|COL~slo|CED","aba|CLU~rou|CLJ","aba|MEG~kls|MEGASUPERBET","aba|FMP~kls|FMP","aba|KRK~slo|KRK","aba|ILI~slo|PER","aba|VIE~autbsl|BCV","aba|BOR~kls|BORACMOZZART","bcl|AEK~gbl|AEK","cyp|PA~fec|PA"]);
@@ -3011,7 +3011,7 @@ function loadMatchupRosterScripts(){
   const packs=[
     loadCoreScriptChain(["bbl-rosters-2026.js?v=20261019-skyliners-identity","euroscout-bbl-rosters.js?v=20261015-bbl-save-v1"]),
     loadCoreScriptChain(["data/israel-rosters-2026.js?v=20261012-israel-v1","euroscout-israel-rosters.js?v=20261012-israel-v1"]),
-    loadCoreScriptChain(["eurocup-rosters-2026.js?v=20261008-current-season-key-v5","euroscout-eurocup-rosters.js?v=20261008-current-season-key-v5"]),
+    loadCoreScriptChain(["eurocup-rosters-2026.js?v=20261008-current-season-key-v5","euroscout-eurocup-rosters.js?v=20261019-entrant-clubs-v1"]),
     loadCoreScriptChain(["official-rosters-2026.js?v=20261008-current-season-key-v5","current-contract-updates-2026.js?v=20261007-vtb-bursa","euroleague-rosters-2026.js?v=20261002-official","data/fiba-club-competitions-2026.js?v=20261014-bcl-refresh-v1","euroscout-fiba-club-competitions.js?v=20261014-bcl-history-v1","euroscout-official-rosters.js?v=20261014-competition-dates-v1"])
   ];
   MATCHUP_ROSTER_PROMISE=Promise.allSettled(packs).then(results=>{if(results.every(result=>result.status==="rejected"))throw results[0].reason;return ready();}).catch(error=>{MATCHUP_ROSTER_PROMISE=null;throw error;});
@@ -3032,7 +3032,7 @@ function loadCoreEnrichmentScripts(){
     loadCoreScriptChain(["membership-data.js?v=20260920-fix","euroscout-regional-rosters.js?v=20260920-restore-1","euroscout-registry.js?v=20260920-restore-1","euroscout-memberships.js?v=20260921-entry-dialog"]),
     loadCoreScriptChain(["data/realgm-representation.js?v=20260907-13","euroscout-representation.js?v=20260907-13"]),
     loadCoreScriptChain(["data/aba-rosters-2026.js?v=20260910-1","euroscout-aba-rosters.js?v=20260921-mateo-roster-fix"]),
-    loadCoreScriptChain(["eurocup-rosters-2026.js?v=20260930-cowan-merge","euroscout-eurocup-rosters.js?v=20260930-identities"]),
+    loadCoreScriptChain(["eurocup-rosters-2026.js?v=20260930-cowan-merge","euroscout-eurocup-rosters.js?v=20261019-entrant-clubs-v1"]),
     loadCoreScriptChain(["official-rosters-2026.js?v=20260914-bclq-release","current-contract-updates-2026.js?v=20261007-vtb-bursa","euroleague-rosters-2026.js?v=20261002-official","data/fiba-club-competitions-2026.js?v=20261014-bcl-refresh-v1","euroscout-fiba-club-competitions.js?v=20261014-bcl-history-v1","euroscout-official-rosters.js?v=20261014-competition-dates-v1"]),
     loadCoreScriptChain(["data/kzs-pro-2026.js?v=20261005-gorica-logo","euroscout-kzs-pro.js?v=20261004-live-stats"]),
     loadCoreScriptChain(["data/bclq-2026.js?v=20260921-final","euroscout-bclq-2026.js?v=20260930-profile-stats"])
