@@ -1,0 +1,17 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const c={window:{},structuredClone,console,Event:class{}};vm.createContext(c);
+for(const f of ['eurocup-rosters-2026.js','euroscout-dragons.js'])vm.runInContext(fs.readFileSync(f,'utf8'),c);
+const raw={leagues:[],notes:{keep:'Private test note'}},before=JSON.stringify(raw);
+const league=(id,season,name='Maxima Roma')=>({meta:{id,season,privateOwnerFeed:true},teams:[{code:'fixture-team',name}],players:[]});
+const feed={fixtures:[],leagues:[league('dragons-current-fixture','2026/27'),league('dragons-old-fixture','2025/26'),league('dragons-unknown-fixture','2026/27','Unknown Fixture Club')]};
+c.window.EuroScoutDragons.connectData(raw,feed);
+assert.equal(c.window.EuroScoutDragons.clubKey('dragons-current-fixture|fixture-team'),'n2627|MR');
+assert.equal(c.window.EuroScoutDragons.clubKey('dragons-old-fixture|fixture-team'),null,'Past-season membership cannot become a current club alias');
+assert.equal(c.window.EuroScoutDragons.clubKey('dragons-unknown-fixture|fixture-team'),null);
+assert.equal(JSON.stringify(raw),before);
+const club={key:'n2627|MR',name:'Maxima Roma'},provider={key:'dragons-current-fixture|fixture-team',name:'Maxima Roma'};
+c.CLUBS=[provider,club];c.CLUB_BY_TEAMKEY=new Map([[provider.key,provider],[club.key,club],['eurocup|MRO',club]]);c.allDbTeams=()=>assert.fail('Ready club registry must not rebuild');c.isStatus=()=>false;
+const html=fs.readFileSync('index.html','utf8');vm.runInContext(html.slice(html.indexOf('function clubForTeamKey('),html.indexOf('function dbTeamByKey(')),c);
+assert.equal(c.canonKey(provider.key),club.key);assert.equal(c.clubByKey(provider.key),club);assert.equal(c.clubForTeamKey(provider.key),club);
+assert.equal(c.canonKey('unmatched|team'),'unmatched|team');assert.equal(c.clubByKey('unmatched|team'),null);
+console.log('PASS verified current provider team IDs resolve to official clubs; past and unknown teams remain separate; source notes unchanged.');

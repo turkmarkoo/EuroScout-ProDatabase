@@ -1,0 +1,30 @@
+const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/PC/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const root=path.resolve(__dirname,'..'),baseline=process.argv.includes('--baseline');
+(async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{
+ const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.hostname!=='euro.test')return route.abort();
+  if(u.pathname==='/euroscout-access.js')return route.fulfill({contentType:'text/javascript',body:`window.ESAccess={internal:true,owner:true,user:{uid:'fixture-user',email:'fixture@example.invalid'},state:{schema:1,records:{},appData:{},seeds:{}},seedReady:Promise.resolve({core:{season2627:{comps:{}},rumors:{entrantFixture:true}},seeds:{}}),saveState:async function(s){this.state=s;return true;},refresh:async()=>false,get:async()=>null,field:()=>null};ESAccess.ready=Promise.resolve(ESAccess);`});
+  const f=path.resolve(root,u.pathname.slice(1)||'index.html');if(baseline&&['/','/index.html','/euroscout-dragons.js'].includes(u.pathname)){const name=u.pathname==='/euroscout-dragons.js'?'euroscout-dragons.js':'index.html',body=require('child_process').execFileSync('git',['-c','safe.directory='+root,'show','HEAD:'+name],{cwd:root,encoding:'utf8',maxBuffer:3000000});return route.fulfill({contentType:name.endsWith('.html')?'text/html':'text/javascript',body});}return fs.existsSync(f)&&fs.statSync(f).isFile()?route.fulfill({path:f}):route.fulfill({status:404,body:''});
+ });
+ await page.goto('https://euro.test/');await page.waitForFunction(()=>window.EuroScoutCatalogueReady&&STATE.data?.rumors?.entrantFixture&&!document.querySelector('#coreLoadStatus'),{},{timeout:90000});
+ await page.evaluate(async()=>{
+ await loadMatchupRosterScripts();
+ const feed={schema:1,quality_policy:'accepted_live_boxscores_only',leagues:[{meta:{id:'dragons-ec-fixture',name:'EuroCup fixture',season:'2026/27',privateOwnerFeed:true},teams:[{code:'fixture-roma',name:'Maxima Roma'}],players:[]}],fixtures:[]};
+ STATE.data=EuroScoutDragons.connectData(STATE.data,feed);DBTEAM_LIST=null;DBTEAM_BYKEY=null;CLUBS=null;CLUB_BY_TEAMKEY=null;allDbTeams();
+ localStorage.setItem('euroscout:next26:v1',JSON.stringify({'aba-5452':'eurocup|MRO'}));
+ const active={id:'saved-game-fixture',gameDate:'2026-10-14',a:{key:'acb|LLT',name:'La Laguna Tenerife'},b:{key:'dragons-ec-fixture|fixture-roma',name:'Maxima Roma'},competition:{id:'eurocup',name:'EuroCup'},players:[],scoreA:'96',scoreB:'71',mode:'Video'};
+ localStorage.setItem('euroscout:session:active:v1',JSON.stringify(active));window.__assignmentBefore=localStorage.getItem('euroscout:next26:v1');window.__savedGameBefore=localStorage.getItem('euroscout:session:active:v1');STATE.view='scouting';render();
+ });
+ const roster=page.locator('.mx-col[data-slot=b] .rosterRow');
+ const matt=roster.filter({hasText:'M. Ryan'});if(baseline){assert.equal(await matt.count(),0);console.log('REPRODUCED: saved provider-key matchup excludes Matt with a valid official manual assignment.');return;}assert.equal(await matt.count(),1,'saved provider-key game must include the manually assigned Matt Ryan');
+ assert.match(await matt.textContent(),/^32/);
+ assert.equal(await page.evaluate(()=>canonKey('dragons-ec-fixture|fixture-roma')),await page.evaluate(()=>canonKey('eurocup|MRO')));
+ assert.equal(await page.evaluate(()=>localStorage.getItem('euroscout:next26:v1')),await page.evaluate(()=>__assignmentBefore));
+ const active=await page.evaluate(()=>ESSessions.active());assert.equal(active.b.key,'dragons-ec-fixture|fixture-roma');assert.equal(active.scoreA,'96');assert.equal(active.scoreB,'71');
+ const mattId=await matt.getAttribute('data-id');const before=await page.evaluate(async id=>{const p=player(id);await saveRec(p,{report:JSON.stringify({nOff:'Keep this test observation'}),rating:4});return JSON.stringify(recOf(p));},mattId);
+ await matt.click();assert.match(await page.locator('.mx-player h2').textContent(),/Matt Ryan/);assert.equal(await page.locator('#liveNumber').textContent(),'Jersey #32');
+ assert.equal(await page.evaluate(id=>JSON.stringify(recOf(player(id))),mattId),before);
+ await page.screenshot({path:path.resolve(root,'../matt-ryan-desktop.png'),animations:'disabled'});await page.setViewportSize({width:390,height:844});assert.equal(await page.locator('.mx-col[data-slot=b] .rosterRow').filter({hasText:'M. Ryan'}).count(),1);
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,legacySavedGameKey:true,mattPresentOnce:true,jersey32:true,manualAssignmentPreserved:true,savedGameTeamKeysAndScoresPreserved:true,notesAndRatingsPreserved:true,desktopAndPhone:true,externalRequestsBlocked:true}));
+ }finally{await browser.close();}})().catch(e=>{console.error(e.stack);process.exitCode=1;});

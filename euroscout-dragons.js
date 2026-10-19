@@ -1,6 +1,6 @@
 /* DragonsHub statistics. Never cache or copy this feed into scouting snapshots. */
 (function(){'use strict';
-let feed=null,problem='',links=[],registrations=new Map();
+let feed=null,problem='',links=[],registrations=new Map(),clubAliases=new Map();
 const clean=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const reader=()=>window.ESAccess?.internal&&!!ESAccess.user;
 const allPlayers=raw=>(raw.leagues||[]).flatMap(league=>league.players||[]);
@@ -123,7 +123,7 @@ function connectData(raw,data){
  // of nested stat values only delays startup and wastes memory.
  const result={...raw,leagues:(raw.leagues||[]).map(league=>({...league,players:[...(league.players||[])],teams:[...(league.teams||[])]}))};
  if(raw.notes&&typeof raw.notes==='object')result.notes=structuredClone(raw.notes);
- const directory=officialDirectory(),resolved=[];links=[];registrations=new Map();
+ const directory=officialDirectory(),resolved=[];links=[];registrations=new Map();clubAliases=new Map();
  prepareDirectory(directory,result);
  directory.feedTeams=feedTeamDirectory(data,directory);
  for(const fixture of data.fixtures||[])for(const key of ['home','away','homeTeam','awayTeam','teamA','teamB','a','b']){
@@ -134,6 +134,12 @@ function connectData(raw,data){
  result.leagues=result.leagues.filter(league=>!ids.has(league.meta.id));
  for(const sourceLeague of data.leagues){
   const league=structuredClone(sourceLeague);league.meta={...league.meta,season:league.meta.season||'2026/27',statsSeason:'2026/27',privateOwnerFeed:true};
+  // Saved games retain provider team IDs. Resolve them to the same verified
+  // destination used by manual assignments and official roster registrations.
+  if(/2026\D+(?:20)?27/.test(league.meta.season))for(const team of league.teams||[]){
+   const match=directTeamMatch({team:team.code,teamName:team.name,league:league.meta.id},directory);
+   if(match?.dbKey&&team.code!=null)clubAliases.set(league.meta.id+'|'+team.code,match.dbKey);
+  }
   for(const player of league.players||[]){
    player.league=league.meta.id;player.statsSeason='2026/27';player._dragonsData=true;player._verifiedExternal=true;player._sourceSeason=league.meta.season;
    player._sourceTeamKey=teamMatch(player,directory)?.dbKey||null;
@@ -182,5 +188,5 @@ function finish(raw){
  for(const league of raw.leagues||[])if(league.meta.privateOwnerFeed)for(const player of league.players||[])for(const [key,value] of Object.entries(player.dragonsTotals||{}))player['t_'+({p3m:'f3m',p3a:'f3a'}[key]||key)]=value;
  renderBadge();
 }
-window.EuroScoutDragons={apply,refresh,generated:()=>feed?.generated||'',link,key,recordLinks:()=>links.filter(([source])=>source.startsWith('dragons-')),finish,connectData,resolve,fetchLocal,fixtures(){return reader()&&feed?feed.fixtures:[];},active(){return !!(reader()&&feed);}};
+window.EuroScoutDragons={apply,refresh,generated:()=>feed?.generated||'',link,key,clubKey:k=>clubAliases.get(k)||null,recordLinks:()=>links.filter(([source])=>source.startsWith('dragons-')),finish,connectData,resolve,fetchLocal,fixtures(){return reader()&&feed?feed.fixtures:[];},active(){return !!(reader()&&feed);}};
 })();
