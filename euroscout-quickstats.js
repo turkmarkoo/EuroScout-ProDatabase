@@ -35,6 +35,13 @@ function bar(v){if(v==null)return '<span class="qs-nobar">—</span>';const tone
 const row=(label,value,pk,p,note)=>'<tr><th scope="row">'+label+(note?'<small>'+note+'</small>':'')+'</th><td>'+value+'</td><td>'+(pk?bar(pctOf(p,pk)):'')+'</td></tr>';
 const table=(rows)=>'<table class="qs-table"><thead><tr><th>Stat</th><th>Value</th><th>League percentile</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
 const ratio=(a,b)=>a==null||!b?'—':n(a/b,2);
+function opponentName(p,value){
+ const code=String(value??''),teams=leagueOf(p)?.teams||[];
+ const matches=teams.filter(team=>[team.code,team.id,team.key].some(id=>id!=null&&String(id)===code));
+ const names=[...new Set(matches.map(team=>team.name||team.teamName).filter(Boolean))];
+ if(names.length===1)return names[0];
+ return /^dragons-team-/.test(code)?'Opponent unavailable':code;
+}
 
 const PAGES={
  overview(p){const L=leagueOf(p),cards=[['ppg','Points',n(p.ppg)],['rpg','Rebounds',n(p.rpg)],['apg','Assists',n(p.apg)],['pir','PIR',n(p.pir!=null?p.pir:p.eff)],['ts','True shooting',pc(p.ts)],['f3p','3-point %',pc(p.f3p)],['mpg','Minutes',n(p.mpg)],['usg','Usage',pc(p.usg)]];
@@ -54,7 +61,7 @@ const PAGES={
   const avg=(list,k)=>{const v=list.map(g=>get(g,k)).filter(x=>x!=null);return v.length?n(v.reduce((s,x)=>s+Number(x),0)/v.length):'—';};
   const last=games.slice(0,5);
   return '<div class="qs-meta"><span>Last '+last.length+': <b>'+avg(last,'pts')+'</b> pts · <b>'+avg(last,'reb')+'</b> reb · <b>'+avg(last,'ast')+'</b> ast · <b>'+avg(last,'min')+'</b> min</span></div><div class="qs-scroll"><table class="qs-table qs-log"><thead><tr><th>Date</th><th>Opp</th><th>Result</th><th>Min</th><th>Pts</th><th>FG</th><th>3P</th><th>FT</th><th>Reb</th><th>Ast</th><th>Stl</th><th>Blk</th><th>TO</th><th>PIR</th><th>+/−</th></tr></thead><tbody>'+
-   games.map(g=>'<tr><td>'+fmtDate(get(g,'date'))+'</td><td>'+(get(g,'ha')==='A'?'@ ':'')+esc(get(g,'opp')||'')+'</td><td class="'+(get(g,'win')?'qs-w':'qs-l')+'">'+(get(g,'win')?'W':'L')+' '+(get(g,'teamPts')??'')+'–'+(get(g,'oppPts')??'')+'</td><td>'+n(get(g,'min'),0)+'</td><td><b>'+(get(g,'pts')??'—')+'</b></td><td>'+ma(g,'fgm','fga')+'</td><td>'+ma(g,'fg3m','fg3a')+'</td><td>'+ma(g,'ftm','fta')+'</td><td>'+(get(g,'reb')??'—')+'</td><td>'+(get(g,'ast')??'—')+'</td><td>'+(get(g,'stl')??'—')+'</td><td>'+(get(g,'blk')??'—')+'</td><td>'+(get(g,'tov')??'—')+'</td><td>'+(get(g,'pir')??get(g,'eff')??'—')+'</td><td>'+(get(g,'pm')??'—')+'</td></tr>').join('')+'</tbody></table></div>';}
+   games.map(g=>'<tr><td>'+fmtDate(get(g,'date'))+'</td><td>'+(get(g,'ha')==='A'?'@ ':'')+esc(opponentName(p,get(g,'opp')))+'</td><td class="'+(get(g,'win')?'qs-w':'qs-l')+'">'+(get(g,'win')?'W':'L')+' '+(get(g,'teamPts')??'')+'–'+(get(g,'oppPts')??'')+'</td><td>'+n(get(g,'min'),0)+'</td><td><b>'+(get(g,'pts')??'—')+'</b></td><td>'+ma(g,'fgm','fga')+'</td><td>'+ma(g,'fg3m','fg3a')+'</td><td>'+ma(g,'ftm','fta')+'</td><td>'+(get(g,'reb')??'—')+'</td><td>'+(get(g,'ast')??'—')+'</td><td>'+(get(g,'stl')??'—')+'</td><td>'+(get(g,'blk')??'—')+'</td><td>'+(get(g,'tov')??'—')+'</td><td>'+(get(g,'pir')??get(g,'eff')??'—')+'</td><td>'+(get(g,'pm')??'—')+'</td></tr>').join('')+'</tbody></table></div>';}
 };
 
 function linesOf(p){const rows=typeof personLines==='function'?personLines(p):allPlayersEvery().filter(x=>gid(x)===gid(p));return rows.filter(x=>x.league!=='sl').sort((a,b)=>(b.min||0)-(a.min||0));}

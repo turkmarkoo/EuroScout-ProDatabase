@@ -1,0 +1,17 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('euroscout-quickstats.js','utf8');
+const cols=['date','opp','ha','win','teamPts','oppPts','min','pts','fgm','fga','fg3m','fg3a','ftm','fta','reb','ast','stl','blk','tov','pir','pm'];
+const leagues={current:{meta:{gameLogCols:cols},teams:[{code:'dragons-team-314',name:'Opponent Alpha'},{code:'dragons-team-240',name:'Opponent Beta'},{code:'dragons-team-244',name:'Opponent <Gamma>'},{code:0,name:'Zero Club'}]},other:{meta:{gameLogCols:cols},teams:[{code:'dragons-team-314',name:'Different League Club'}]}};
+const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const context={window:{},document:{addEventListener(){}},leagueOf:p=>leagues[p.league],esc:escape};vm.createContext(context);
+vm.runInContext(source.replace('window.ESQuickStats={','window.testLog=PAGES.log;window.testOpponent=opponentName;window.ESQuickStats={'),context);
+const p={league:'current',gameLog:[['2026-10-04','dragons-team-314','A',1,93,88,13,5],['2026-09-26','dragons-team-240','H',1,93,81,18,6],['2026-09-24','dragons-team-244','A',0,83,94,18,8]]},before=JSON.stringify(p);
+const rendered=context.window.testLog(p);
+assert(rendered.includes('@ Opponent Alpha'));assert(rendered.includes('Opponent Beta'));assert(rendered.includes('@ Opponent &lt;Gamma&gt;'));
+assert(!rendered.includes('dragons-team-'));assert(rendered.includes('93–88'));assert(rendered.includes('83–94'));assert(rendered.includes('<b>5</b>'));
+assert.equal(JSON.stringify(p),before,'rendering must not change statistics or source IDs');
+assert.equal(context.window.testOpponent({league:'other'},'dragons-team-314'),'Different League Club','IDs are scoped to the selected league');
+assert.equal(context.window.testOpponent(p,'dragons-team-missing'),'Opponent unavailable','missing names never become guessed clubs or raw internal IDs');
+assert.equal(context.window.testOpponent(p,'Already Named Club'),'Already Named Club');assert.equal(context.window.testOpponent(p,0),'Zero Club');
+leagues.current.teams.push({code:'dragons-team-314',name:'Conflicting Club'});assert.equal(context.window.testOpponent(p,'dragons-team-314'),'Opponent unavailable');
+console.log('PASS league-scoped opponent names, home/away markers, escaped labels, unknown/ambiguous ID handling and unchanged game statistics.');
