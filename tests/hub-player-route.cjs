@@ -1,0 +1,12 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const handlers={},messages=[],opened=[],people=new Map([['ncaam-3106',{id:'ncaam-3106'}]]);
+const parent={postMessage:(data,origin)=>messages.push({data,origin})};
+const c={parent,CURRENT:null,DRAWER_OPEN:false,location:{pathname:'/',search:'?embed=1',hash:''},history:{replaceState(a,b,url){c.location.hash=new URL(url,'https://euroscout.mtscouting.com').hash}},player:id=>people.get(id),window:{ESAccess:{internal:true},EuroScoutPlayerRoutesReady:false,addEventListener:(type,fn)=>handlers[type]=fn},openFromHash(h){opened.push(h);const id=decodeURIComponent(h.slice(3));if(people.has(id)){c.CURRENT=id;c.DRAWER_OPEN=true;handlers['euroscout:profile-opened']()}}};
+vm.createContext(c);vm.runInContext(fs.readFileSync(__dirname+'/../euroscout-hub-player.js','utf8'),c);
+const message=(id,requestId='one',origin='https://dragonshub.mtscouting.com',source=parent)=>handlers.message({origin,source,data:{type:'hub:player-open',id,requestId}});
+message('ncaam-3106','untrusted','https://example.com');message('ncaam-3106','wrong-window',undefined,{});message('../bad');assert.equal(opened.length,0);assert.equal(messages.length,0);
+message('ncaam-3106');assert.equal(opened.length,0,'wait until the real application can handle profiles');c.window.EuroScoutPlayerRoutesReady=true;handlers['euroscout:routes-ready']();
+assert.equal(opened.length,1);assert.equal(messages[0].data.type,'euroscout:player-opened');assert.equal(messages[0].data.id,'ncaam-3106');assert.equal(messages[0].data.requestId,'one');assert.equal(messages[0].origin,'https://dragonshub.mtscouting.com');
+message('aba-waiting','two');people.set('aba-waiting',{id:'aba-waiting'});handlers['euroscout:catalogue-ready']();assert.equal(messages[1].data.requestId,'two');assert.equal(c.CURRENT,'aba-waiting');
+message('aba-missing','three');c.location.hash='#p=ncaam-3106';handlers['euroscout:catalogue-ready']();assert.equal(messages[2].data.type,'euroscout:player-cancelled');assert.equal(c.CURRENT,'aba-waiting');
+console.log('PASS: trusted origin/window, validation, delayed readiness, exact acknowledgement, catalogue wait and user navigation cancellation.');

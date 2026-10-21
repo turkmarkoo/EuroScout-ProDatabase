@@ -27,4 +27,12 @@ const league=(id,player)=>({meta:{id},players:player?[{id:player}]:[]});
  assert.deepEqual(scopes,['ncaa']);assert.deepEqual(opened[1],{id:'ncaam-3106',fromHist:true});
  r.location.hash='#p=aba-missing';r.openFromHash(r.location.hash);r.location.hash='#p=aba-other';players.set('aba-missing',{id:'aba-missing'});handlers['euroscout:catalogue-ready']();assert.equal(opened.length,2);
  console.log('Deferred European/college links open when available; stale routes stay closed: passed');
+ const prefix=html.slice(html.indexOf('function renderProfile(){'),html.indexOf('  const L=STATE.league,rec=recOf(p);',html.indexOf('function renderProfile(){')));
+ const stable={id:'canonical',league:'ncaam'},available=new Map();
+ const guard={CURRENT:'old-id',CURRENT_PROFILE_IDS:['old-id','canonical'],DRAWER_OPEN:true,STATE:{league:{}},player:id=>available.get(id),leagueOf:p=>({meta:{id:p.league}}),closeDrawer:()=>{throw Error('Refresh closed the profile')}};
+ vm.createContext(guard);vm.runInContext(prefix+'return p;}',guard);
+ guard.renderProfile();assert.equal(guard.DRAWER_OPEN,true);assert.equal(guard.CURRENT,'old-id');
+ available.set('canonical',stable);assert.equal(guard.renderProfile(),stable);assert.equal(guard.CURRENT,'canonical');
+ console.log('Temporary catalogue gaps keep the open profile; stable merged IDs recover: passed');
+
 })().catch(e=>{console.error(e);process.exitCode=1});
