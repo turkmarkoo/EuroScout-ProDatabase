@@ -3104,7 +3104,12 @@ async function loadRemainingCore(){
     // Metadata-only private seeds enrich the catalogue; they cannot replace it.
     if(seedCore&&seedCore!==full)full={...full,...seedCore,leagues:full.leagues};
     await enrichmentReady;
-    const leagueId=STATE.league?.meta?.id;full=await prepareCoreData(full,false,true);STATE.data=full;STATE.league=full.leagues.find(l=>l.meta.id===leagueId)||full.leagues[0];
+    const leagueId=STATE.league?.meta?.id;full=await prepareCoreData(full,false,true);
+    // Optional college/pro packs may finish before the slow full-core request.
+    // Retain their competitions while replacing core competitions with fresh data.
+    const haveLeagues=new Set(full.leagues.map(L=>L.meta.id));
+    for(const L of STATE.data?.leagues||[])if(!haveLeagues.has(L.meta.id)){full.leagues.push(L);haveLeagues.add(L.meta.id);}
+    STATE.data=full;STATE.league=full.leagues.find(l=>l.meta.id===leagueId)||full.leagues[0];
     // The first-paint catalogue contains only EuroLeague. Rebuild every team
     // index after swapping in the full catalogue or active FIBA sessions keep
     // the stale one-league club map and cannot resolve their rosters.
@@ -3217,12 +3222,11 @@ async function boot(){
   // 2026/27 transfers (from euroball-tracker) — loaded for manual review/approval only, never auto-committed
   loadTransfers().then(()=>{if(TRANSFERS_LOADED)render();});
   // Deep links can open one player or prefill the existing 2–4 player comparison.
-  if(/^#(?:p|compare)=(nba|gleague|ncaa)/i.test(__DEEPHASH))loadExtraLeagues().then(()=>openFromHash(__DEEPHASH)).catch(e=>toast(e.message));
-  else openFromHash(__DEEPHASH);
+  openFromHash(location.hash||__DEEPHASH);
   window.addEventListener("popstate",()=>{
     if(/^#compare=/.test(location.hash||"")){openFromHash(location.hash);return;}
     const m=/^#p=(.+)$/.exec(location.hash||"");
-    if(m){const id=decodeURIComponent(m[1]);if(PROF_HIST.length&&PROF_HIST[PROF_HIST.length-1]===id)PROF_HIST.pop();openProfile(id,true);}
+    if(m){const id=decodeURIComponent(m[1]);if(PROF_HIST.length&&PROF_HIST[PROF_HIST.length-1]===id)PROF_HIST.pop();openFromHash(location.hash,true);}
     else if(DRAWER_OPEN){PROF_HIST=[];closeDrawer(true);}
   });
   if(Store.enabled){
@@ -3376,7 +3380,12 @@ function parsePlayerHash(h){
   if(!m)return null;
   try{return decodeURIComponent(m[1]);}catch(e){return m[1];}
 }
-function openFromHash(h){
+let PENDING_PLAYER_HASH='';
+window.addEventListener('euroscout:catalogue-ready',()=>{
+  const h=PENDING_PLAYER_HASH;
+  if(h&&location.hash===h&&player(parsePlayerHash(h)))openFromHash(h);
+});
+function openFromHash(h,fromHist=false){
   const compare=/^#compare=(.+)$/.exec(h||"");
   if(compare){
     const ids=compare[1].split("~").map(x=>{try{return decodeURIComponent(x);}catch(e){return x;}}).filter(Boolean).slice(0,4);
@@ -3386,6 +3395,7 @@ function openFromHash(h){
   }
   const id=parsePlayerHash(h);
   if(!id){
+    PENDING_PLAYER_HASH='';
     if(DRAWER_OPEN&&!/^#p=/.test(location.hash))closeDrawer();
     const route=new URLSearchParams(String(h||'').replace(/^#/,''));
     const view=route.get('view'),create=route.get('create');
@@ -3401,8 +3411,14 @@ function openFromHash(h){
     }
     return;
   }
-  if(CURRENT===id&&DRAWER_OPEN)return;      // already showing this player
-  if(player(id))openProfile(id);
+  if(CURRENT===id&&DRAWER_OPEN){PENDING_PLAYER_HASH='';return;}
+  if(player(id)){PENDING_PLAYER_HASH='';openProfile(id,fromHist);return;}
+  // The first screen may contain only EuroLeague. Retry this exact route when
+  // its competition arrives, unless the user has navigated away or closed it.
+  PENDING_PLAYER_HASH=h;
+  if(/^(?:nba|gleague|ncaa)/i.test(id))loadExtraLeagues(/^ncaa/i.test(id)?'ncaa':'pro').then(()=>{
+    if(PENDING_PLAYER_HASH===h&&location.hash===h&&player(id))openFromHash(h,fromHist);
+  }).catch(e=>toast(e.message));
 }
 
 function goHome(){
@@ -4188,6 +4204,7 @@ function openDrawerUI(){
 function syncDrNav(){const dr=$("#drawer");if(!dr)return;const nav=dr.querySelector(".profnav");
   if(nav){const h=Math.round(nav.getBoundingClientRect().height)||52;dr.style.setProperty("--drnav",Math.max(44,h)+"px");}}
 function closeDrawer(silent){
+  PENDING_PLAYER_HASH='';
   const dr=$("#drawer"),sc=$("#scrim");if(dr){dr.classList.remove("on","fullpage");dr.setAttribute("aria-hidden","true");}
   if(sc)sc.classList.remove("on");
   document.body.classList.remove("drawer-lock");
@@ -6129,7 +6146,7 @@ let EXHIB=null, EXHIB_BYNN={};
 function roleFromHt(ht){ if(ht==null)return "Guard"; if(ht>=207)return "Center"; if(ht>=198)return "Forward"; return "Guard"; }
 const EXTRA_JOBS=new Map();
 async function loadExtraLeagues(scope='all'){
-  const labels=scope==='pro'?['pro']:['pro','ncaa'];
+  const labels=scope==='pro'?['pro']:scope==='ncaa'?['ncaa']:['pro','ncaa'];
   await Promise.all(labels.map(label=>{
     if(!EXTRA_JOBS.has(label))EXTRA_JOBS.set(label,loadExtraPack(label).catch(e=>{EXTRA_JOBS.delete(label);throw e;}));
     return EXTRA_JOBS.get(label);
