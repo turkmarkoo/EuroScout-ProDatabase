@@ -14,7 +14,7 @@ for(const set of sets){
 }
 const live=fs.readFileSync('euroscout-live-notes.js','utf8');
 assert.match(live,/function rosterName\(p,players\)/);
-assert.match(live,/esc\(rosterName\(p,r\.players\)\)/);
+assert.match(live,/esc\(p\.name\)/);
 assert.match(live,/function buildClubIndex\(\)/,'Matchup must build a stable roster index');
 assert.match(live,/window\.EUROSCOUT_EUROCUP_ROSTERS/,'Matchup must include official EuroCup registrations');
 assert.match(live,/window\.EUROSCOUT_OFFICIAL_ROSTERS/,'Matchup must include other official competition registrations');

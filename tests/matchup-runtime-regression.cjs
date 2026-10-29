@@ -15,7 +15,7 @@ assert.match(css,/\.mx-col\{[^}]*max-height:100%[^}]*contain:layout/);
 assert.match(css,/\.rosterList\{[^}]*height:100%[^}]*overflow-y:scroll/);
 const source=html.slice(html.indexOf('let CORE_FULL_PROMISE='),html.indexOf('function loadCoreEnrichmentScripts()'));
 let appended=[];const events=[];
-const context={STATE:{data:null},window:{dispatchEvent:e=>events.push(e.type)},document:{createElement:()=>({}),head:{appendChild:node=>{appended.push(node.src);queueMicrotask(()=>node.onload());}}},Event:class Event{constructor(type){this.type=type;}},Map,Promise,console};
+const context={STATE:{data:null},window:{dispatchEvent:e=>events.push(e.type)},document:{querySelector:()=>null,createElement:()=>({}),head:{appendChild:node=>{appended.push(node.src);queueMicrotask(()=>node.onload());}}},Event:class Event{constructor(type){this.type=type;}},Map,Promise,console};
 vm.createContext(context);vm.runInContext(source,context);
 (async()=>{
  const a=context.loadMatchupRosterScripts(),b=context.loadMatchupRosterScripts();assert.equal(a,b,'concurrent matchup requests must share one promise');await a;
