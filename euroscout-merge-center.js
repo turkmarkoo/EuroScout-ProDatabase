@@ -535,6 +535,8 @@
     const oldState=state();
     try {
       const pending=[];
+      const privateSync=window.EuroScoutCloudSync;
+      let mergedPlayer;
       if (type==='player') {
         const target=Store.get(survivor), other=Store.get(source);
         const sourcePlayer=player(source), sourceIds=new Set((sourcePlayer?sourcePlayer._grp||[sourcePlayer]:[]).map(p=>p.id));
@@ -553,23 +555,32 @@
           let data; try { data=JSON.parse(raw); } catch { continue; }
           localStorage.setItem(key,JSON.stringify(replaceId(data,sourceIds,survivor)));
         }
-        pending.push(Store.save(survivor,merged));
-        const after={};for (const key of keys) { after[key]=localStorage.getItem(key); pending.push(Store.pushAppKey(key)); }
+        mergedPlayer=merged;
+        if (!privateSync) pending.push(Store.save(survivor,merged));
+        const after={};for (const key of keys) { after[key]=localStorage.getItem(key); if (!privateSync) pending.push(Store.pushAppKey(key)); }
         const storageBefore={...before};delete storageBefore.record;entry.changes=storageChanges(storageBefore,after);entry.recordAfter=structuredClone(merged);
       }
       const next=state(); next.merges.push(entry); next.reviewed[candidate.id]='merged';
-      pending.push(saveState(next));
-      if ((await Promise.all(pending)).some(result=>result===false)) throw Error('Cloud save did not complete.');
+      saveState(next,false);
+      // The private journal captures the player record, links and references together.
+      pending.push(privateSync&&mergedPlayer
+        ?Store.save(survivor,mergedPlayer,{waitForCloud:false})
+        :Store.pushAppKey(KEY,{waitForCloud:!privateSync}));
+      const results=await Promise.allSettled(pending);
+      const failed=results.find(result=>result.status==='rejected'||result.value===false);
+      if (failed) throw failed.reason||Error(privateSync?'The merge could not be saved on this device.':'Cloud save did not complete.');
       if (type==='player') { OVR=ovrMerged(); rebuildLinks(); applyOverrides(); }
       if (type==='club') { buildClubs(); NEXTCOMP=null; DOM27=null; }
       if (type==='agent') applyOverrides();
-      detectionCache={}; entityCache={}; view.pair=null; view.manualCandidate=null; renderMergeCenter(); toast('Merge saved. Undo is available for 30 days.');
+      detectionCache={}; entityCache={}; view.pair=null; view.manualCandidate=null; renderMergeCenter(); toast(privateSync?'Merge saved on this device. '+privateSync.state.message:'Merge saved. Undo is available for 30 days.');
       return true;
     } catch (error) {
       for (const [key,raw] of Object.entries(before)) if (key!=='record') raw==null?localStorage.removeItem(key):localStorage.setItem(key,raw);
       const rollback=[];
-      if (type==='player') { rollback.push(Store.save(survivor,before.record));for(const key of keys)rollback.push(Store.pushAppKey(key));OVR=ovrMerged(); rebuildLinks(); applyOverrides(); }
-      rollback.push(saveState(oldState));
+      if (privateSync) saveState(oldState,false);
+      if (type==='player') { rollback.push(Store.save(survivor,before.record,{waitForCloud:!privateSync}));if (!privateSync) for(const key of keys)rollback.push(Store.pushAppKey(key));OVR=ovrMerged(); rebuildLinks(); applyOverrides(); }
+      if (!privateSync) rollback.push(saveState(oldState));
+      else if (type!=='player') rollback.push(Store.pushAppKey(KEY,{waitForCloud:false}));
       await Promise.allSettled(rollback);
       throw error;
     }

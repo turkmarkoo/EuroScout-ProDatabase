@@ -105,6 +105,17 @@ function verifiedProfile(source,directory){
 function resolve(source,directory,raw){
  if(!directory.nameIndex)prepareDirectory(directory,raw);
  const verified=verifiedProfile(source,directory);if(verified)return verified;
+ // Both feeds use verified roster names, but the same player can appear under
+ // two spellings in the catalogue. Resolve the official aliases before scoring.
+ if(/^dragons-(ec|aba)-/.test(source.league||'')&&/^buducnost(?: |$)/.test(clean(source.teamName))){
+  const rosterName=value=>clean(String(value||'').replace(/[\u0110\u0111]/g,'d'));
+  const known=window.EuroScoutABA?.verifiedBuducnost?.find(row=>
+   row.born===Number(source.born||source.birthYear)&&row.names.some(name=>rosterName(name)===rosterName(source.name)));
+  if(known){
+   const id=known.ids.find(candidate=>directory.byId.has(candidate));
+   if(id)return {id,ids:known.ids,player:directory.byId.get(id),team:teamMatch(source,directory)};
+  }
+ }
  const byId=directory.byId,born=Number(source.born||source.birthYear||0),compatible=row=>!born||!row?.born||Number(row.born)===born;
  if(source.linkedEuroScoutId&&byId.has(source.linkedEuroScoutId)){const player=byId.get(source.linkedEuroScoutId);if(compatible(player)&&abbreviationMatches(source.name,player.name))return{id:player.id,player,team:teamMatch(source,directory)};return null;}
  const team=teamMatch(source,directory),found=new Map();for(const key of nameKeys(source.name))for(const item of directory.nameIndex.get(key)||[])if(abbreviationMatches(source.name,item.name)&&(!born||!item.born||born===item.born))found.set(item.key,item);
