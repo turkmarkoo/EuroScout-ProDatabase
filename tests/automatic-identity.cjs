@@ -126,5 +126,9 @@ assert.equal(report._notesUpdated,'2026-10-07T10:00:00Z');assert.deepEqual(repor
   records.set('idle-source',{report:JSON.stringify({nOff:'Source note stays safe'})});records.set('idle-target',{report:JSON.stringify({nDef:'Target note stays safe'})});
   await api.autoMergeBatch([{candidate:{id:'player:idle-source|idle-target'},survivor:'idle-target',source:'idle-source'}]);assert.equal(rebuilds,0);assert.equal(timers.length,1);assert(records.get('idle-target').report.includes('Source note stays safe'));assert(records.get('idle-target').report.includes('Target note stays safe'));
   busy=false;timers.shift()();assert.equal(rebuilds,1,'deferred catalogue refresh runs once when scouting is idle');
-  console.log('PASS automatic identity matching, cache refresh, hard conflicts, note dates, revisions, additive merge, undo and save-failure rollback.');
+  context.STATE.view='scouting';busy=false;const beforeMatchup=rebuilds;
+  assert.equal(await api.runAutomatic(),0,'Background identity batches wait until the scout leaves the matchup, even between clicks');
+  assert.equal(rebuilds,beforeMatchup);
+  context.STATE.view='other';
+  console.log('PASS automatic identity matching, cache refresh, hard conflicts, note dates, revisions, additive merge, undo, save-failure rollback and idle matchup protection.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

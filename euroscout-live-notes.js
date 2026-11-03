@@ -37,12 +37,12 @@ function scheduleRosterRefresh(){
  if(rosterRefreshTimer!==null)return;
  rosterRefreshTimer=setTimeout(()=>{rosterRefreshTimer=null;
   const editing=document.activeElement?.closest?.('.liveScouting')&&document.activeElement.matches('input,select,textarea,[contenteditable=true]');
-  if(editing||openingSession||matchupPointerDown||performance.now()<matchupInteractionUntil||document.querySelector('#teamSelectionWorkspace,#modal.open,#sxMask,#qsMask')){scheduleRosterRefresh();return;}
+  if(editing||openingSession||matchupPointerDown||performance.now()<matchupInteractionUntil||document.querySelector('#teamSelectionWorkspace,#modal.open,#sxMask,#qsMask,.dq-popover,.es-option-popover,.es-option-overlay')){scheduleRosterRefresh();return;}
   resetRosters();if(STATE.view==='scouting')fullRedraw();
  },200);
 }
 /* Optional catalogue imports must not compete with active scouting input. */
-window.ESMatchupBusy=()=>STATE.view==='scouting'&&!!(openingSession||matchupPointerDown||performance.now()<matchupInteractionUntil||document.activeElement?.closest?.('.liveScouting')&&document.activeElement.matches('input,select,textarea,[contenteditable=true]')||document.querySelector('#teamSelectionWorkspace,#sxMask,#qsMask'));
+window.ESMatchupBusy=()=>STATE.view==='scouting'&&!!(openingSession||matchupPointerDown||performance.now()<matchupInteractionUntil||document.activeElement?.closest?.('.liveScouting')&&document.activeElement.matches('input,select,textarea,[contenteditable=true]')||document.querySelector('#teamSelectionWorkspace,#sxMask,#qsMask,.dq-popover,.es-option-popover,.es-option-overlay'));
 function matchupDirectoriesReady(){return !!(window.EUROSCOUT_EUROCUP_ROSTERS&&window.EUROSCOUT_OFFICIAL_ROSTERS&&window.EUROSCOUT_BBL_ROSTERS);}
 function ensureMatchupDirectories(){
  if(matchupDirectoriesReady()||rosterDirectoriesPending||typeof window.loadMatchupRosterScripts!=="function")return;
@@ -196,20 +196,23 @@ function startSession(){
 function finishSession(){SX.openFinish(()=>fullRedraw());}
 function editGame(){const a=SX?.active();if(!a)return;const box=SX.modal('<h3>Game details</h3><form id="mxGame" class="sx-form"><div class="sx-two"><label>Competition<input name="comp" type="text" value="'+escAttr(a.competition?.name||'')+'"></label><label>Stage / round<input name="stage" type="text" value="'+escAttr(a.stage||'')+'"></label></div><div class="sx-two"><label>Game date<input name="gameDate" type="date" value="'+escAttr(a.gameDate||'')+'"></label><label>How are you watching?<select name="mode"><option'+(a.mode==='Video'?' selected':'')+'>Video</option><option'+(a.mode==='Live'?' selected':'')+'>Live</option></select></label></div><label>Venue<input name="venue" type="text" value="'+escAttr(a.venue||'')+'"></label><div class="sx-actions"><button class="btn primary">Save</button></div></form>');const f=box.querySelector('#mxGame');f.onsubmit=e=>{e.preventDefault();const name=f.elements.comp.value.trim();SX.update({competition:name===(a.competition?.name||'')?a.competition:{id:'',name},stage:f.elements.stage.value.trim(),gameDate:f.elements.gameDate.value||a.gameDate,mode:f.elements.mode.value,venue:f.elements.venue.value.trim()});SX.closeModal();renderScouting(true);};}
 
-function wireNotebook(p,rep){
- const s=STATE.scouting,date=todayStr();
+function wirePlayer(p){
  const avatar=document.querySelector('.liveAvatar img');if(avatar){const fallback=()=>{avatar.replaceWith(document.createTextNode(initials(p.name)))};avatar.onerror=fallback;if(avatar.complete&&!avatar.naturalWidth)fallback();}
  document.querySelector('#liveNumber').onclick=()=>{if(!editable())return;showModal('<h3>'+esc(p.name)+' · jersey number</h3><p>2026/27 · '+esc(liveRoster(p._liveClub)?.t.name||'')+'</p><form id="jerseyForm"><label>Number (00, 0–99)<input name="jersey" type="text" inputmode="numeric" maxlength="2" pattern="[0-9]{1,2}" value="'+escAttr(shirt(p))+'" style="display:block;padding:12px;margin:12px 0"></label><p class="hint">Leave empty for unknown. #00 and #0 stay distinct.</p><button class="btn primary">Save number</button><p role="status"></p></form>');const form=document.querySelector('#jerseyForm');form.elements.jersey.focus();form.onsubmit=async e=>{e.preventDefault();const raw=form.elements.jersey.value.trim();if(raw&&!/^[0-9]{1,2}$/.test(raw))return;const value=raw==='00'?'00':raw?String(Number(raw)):'';const numbers={...jerseyNumbers(p),[numberKey(p)]:value};form.querySelector('button').disabled=true;try{const ok=await saveRec(p,{jerseyNumbers:numbers});busyStatus=ok===false?'Number stored locally; cloud sync failed.':'Jersey number saved.';hideModal();rosters.clear();fullRedraw();}catch(e){form.querySelector('[role=status]').textContent='Could not save. Try again.';form.querySelector('button').disabled=false;}};};
  document.querySelector('#liveProfile').onclick=()=>openProfile(p.id);
  const boardBtn=document.querySelector('#mxBoard');if(boardBtn)boardBtn.onclick=()=>addToScoutBoard(p.id);
- const level=document.querySelector('#mxLevel');if(level)level.onchange=async()=>{await window.wfFlushReport?.();ovrSaveLocal({bio:{[gid(p)||p.id]:{projLevel:level.value}}});busyStatus=level.value===''?'Level back to automatic.':'Estimated level saved.';rosters.clear();clubIndex=null;fullRedraw();};
- for(const [id,field,label] of [['mxHand','hand','Dominant hand'],['mxPosition','role','Position'],['mxBorn','born','Birth year'],['mxHeight','height','Height'],['mxCountry','country','Nationality']]){const control=document.getElementById(id);if(!control)continue;control.onchange=async()=>{control.disabled=true;try{await window.wfFlushReport?.();const value=control.value,patch={[field]:['born','height','weight'].includes(field)&&value!==''?Number(value):value};if(field==='born'){const dob=String(p.birthDate||p.dob||'');patch.birthDate=value&&/^\d{4}-\d{2}-\d{2}$/.test(dob)?value+dob.slice(4):'';}if(field==='role')patch.pos={Guard:'G',Forward:'F',Big:'C'}[value]||'';ovrSaveLocal({bio:{[gid(p)||p.id]:patch}},{players:personLines(p)});await window.ESStorage?.flush();busyStatus=label+' saved to player profile.';rosters.clear();renderScouting(true);if(field==='role'){const byId=new Map(rosterPlayers().map(x=>[x.id,x]));document.querySelectorAll('.rosterRow').forEach(row=>{const updated=byId.get(row.dataset.id);if(updated)row.querySelector('.mx-rpos').textContent=posShort(updated);});['a','b'].forEach(applyFilter);}}catch(error){control.disabled=false;busyStatus='Could not save '+label.toLowerCase()+'. Your existing data is retained.';document.getElementById('liveStatus').textContent=busyStatus;}};}
+ const saveField=async(control,patch,label)=>{control.disabled=true;try{await window.wfFlushReport?.();ovrSaveLocal({bio:{[gid(p)||p.id]:patch}},{players:personLines(p)});await window.ESStorage?.flush();window.ESMatchupProfile.refresh({playerId:p.id,rosterChanged:false,message:label});}catch(error){if(control.isConnected)control.disabled=false;const status=document.getElementById('liveStatus');if(selected===p.id&&status)status.textContent='Could not finish saving player details. Please retry and check sync status.';}};
+ const level=document.querySelector('#mxLevel');if(level)level.onchange=()=>{const value=level.value;return saveField(level,{projLevel:value},value===''?'Level back to automatic.':'Estimated level saved.');};
+ for(const [id,field,label] of [['mxHand','hand','Dominant hand'],['mxPosition','role','Position'],['mxBorn','born','Birth year'],['mxHeight','height','Height'],['mxCountry','country','Nationality']]){const control=document.getElementById(id);if(!control)continue;control.onchange=()=>{const value=control.value,patch={[field]:['born','height','weight'].includes(field)&&value!==''?Number(value):value};if(field==='born'){const dob=String(p.birthDate||p.dob||'');patch.birthDate=value&&/^\d{4}-\d{2}-\d{2}$/.test(dob)?value+dob.slice(4):'';}if(field==='role')patch.pos={Guard:'G',Forward:'F',Big:'C'}[value]||'';return saveField(control,patch,label+' saved to player profile.');};}
  const logsBtn=document.querySelector('#mxLogs');if(logsBtn)logsBtn.onclick=()=>SX?SX.openPlayerLog(p):openProfile(p.id);
  const statsBtn=document.querySelector('#mxStats');if(statsBtn)statsBtn.onclick=()=>ESQuickStats.open(p);
  window.ESQuickStats?.follow(p);
  document.querySelector('#mxPrev').onclick=()=>step(-1);document.querySelector('#mxNext').onclick=()=>step(1);
  document.querySelector('#mxWatch').onclick=()=>{if(!editable())return;toggleTag(p.id,WATCH_TAG).then(()=>renderScouting(true));};
  document.querySelectorAll('.mx-stock [data-stock]').forEach(b=>b.onclick=()=>{SX.setStock(p,b.dataset.stock);renderScouting(true);refreshMarks();});
+}
+function wireNotebook(p,rep){
+ const s=STATE.scouting,date=todayStr();wirePlayer(p);
  let dragged=null,noteSaveSequence=0,noteFeedbackTimer=null,similarTimer=null;
  document.querySelectorAll('[data-cat]').forEach(el=>{el.onclick=()=>{category=el.dataset.cat;renderScouting(true)};if(el.dataset.cat==='all')return;el.ondragover=e=>{if(!dragged||dragged.field===el.dataset.cat)return;e.preventDefault();el.classList.add('drop');};el.ondragleave=()=>el.classList.remove('drop');el.ondrop=e=>{if(!dragged)return;e.preventDefault();const d=dragged;dragged=null;moveNote(d.field,d.text,el.dataset.cat);};});
  document.querySelector('#mxSimilar').onclick=()=>{showSimilar=!showSimilar;renderScouting(true);};
@@ -280,9 +283,19 @@ if(K){
  add('swap','Swap teams','X',swapTeams);
  add('session','Start / finish session','Shift+S',()=>(document.querySelector('#mxFinish')||document.querySelector('#mxStart'))?.click());
 }
-window.ESMatchupProfile={refresh:function({playerId,rosterChanged=true}={}){
- if(rosterChanged){rosters.clear();clubIndex=null;}
- else{const changed=player(playerId),id=gid(changed);for(const roster of rosters.values())for(const cached of roster.players)if(gid(cached)===id){const fresh=player(cached.id);if(fresh)Object.assign(cached,fresh);}}
- fullRedraw();
+/* Personal fields do not change team membership. Keep the notebook, scroll
+   positions and roster index in place, and update only the affected header/rows. */
+window.ESMatchupProfile={refresh:function({playerId,rosterChanged=true,message}={}){
+ if(rosterChanged){resetRosters();if(STATE.view==='scouting')fullRedraw();return;}
+ const changed=player(playerId);if(!changed)return;const id=gid(changed),affected=new Map();
+ for(const roster of rosters.values())for(const cached of roster.players)if(gid(cached)===id){const fresh=player(cached.id);if(fresh)Object.assign(cached,fresh);affected.set(cached.id,cached);}
+ if(STATE.view!=='scouting')return;
+ document.querySelectorAll('.rosterRow').forEach(row=>{const p=affected.get(row.dataset.id);if(!p)return;row.title=[p.name,rosterBirth(p),p.height?p.height+' cm':'',p.country].filter(Boolean).join(' · ');row.querySelector('.rrName').textContent=p.name;row.querySelector('.mx-born').textContent=rosterBirth(p)||'—';row.querySelector('.mx-rpos').textContent=posShort(p);});
+ ['a','b'].forEach(applyFilter);
+ const p=affected.get(selected),header=document.querySelector('.mx-player');if(!p||!header)return;
+ if(message)busyStatus=message;
+ const template=document.createElement('template');template.innerHTML=headerHTML(p);header.replaceWith(template.content.firstElementChild);wirePlayer(p);window.ESPlayerScouting?.mountMatchup(p);
+ const status=document.getElementById('liveStatus');if(message&&status)status.textContent=message;
+ requestAnimationFrame(sizeWorkspace);
 }};
 })();

@@ -658,7 +658,7 @@
     document.getElementById('mcMerge').onclick=async e=>{e.currentTarget.disabled=true;try{await merge(candidate,view.survivor,view.options);}catch(error){toast(error.message);e.currentTarget.disabled=false;}};
   }
   function invalidateCatalogue(){detectionCache={};entityCache={};view.detectionReady={};automaticAttempted='';}
-  function automaticBlocked(){return !!(window.ESMatchupBusy?.()||window.ESSessions?.active?.()||document.querySelector?.(".ep2-overlay.open, #drawer [contenteditable=true]:focus, #drawer input:focus, #drawer textarea:focus, #drawer select:focus"));}
+  function automaticBlocked(){return !!(STATE.view==='scouting'||window.ESMatchupBusy?.()||window.ESSessions?.active?.()||document.querySelector?.(".ep2-overlay.open, #drawer [contenteditable=true]:focus, #drawer input:focus, #drawer textarea:focus, #drawer select:focus"));}
   function scheduleAutomatic(){if(automaticTimer!==null)clearTimeout(automaticTimer);automaticTimer=setTimeout(()=>{automaticTimer=null;if(automaticBlocked()){scheduleAutomaticDeferred();return;}runAutomatic().catch(error=>console.warn('Automatic identity consolidation delayed',error));},250);}
   function scheduleAutomaticDeferred(){if(automaticTimer!==null)return;automaticTimer=setTimeout(()=>{automaticTimer=null;scheduleAutomatic();},30000);}
   function linkedRecordPlan(){
