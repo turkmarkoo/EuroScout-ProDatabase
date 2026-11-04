@@ -2747,8 +2747,12 @@ function mergeGroupRecords(){
  const seen=new Set();
  allPlayersFlat().forEach(p=>{
   const g=gid(p);if(!g||seen.has(g))return;seen.add(g);
-  const ids=recordIds(p),manual=!!window.EuroScoutMergeCenter?.canonicalPlayer(ids);
-  const recs=(manual?[Store.get(g)]:ids.map(id=>Store.get(id))).filter(Boolean),base={...Store.get(g)};
+  const ids=recordIds(p),manual=!!window.EuroScoutMergeCenter?.canonicalPlayer(ids),base={...Store.get(g)};
+  const repairKey=window.EuroScoutIdentityBio?.personKey(p),repairVersion='distinct-fosters-20261104-v1';
+  // A bad historical cross-link left two canonical records for the Bonn
+  // player. Recover them once, only inside his verified identity partition.
+  const recoverNotes=!!repairKey&&base._identityNotesRepair!==repairVersion;
+  const recs=(manual&&!recoverNotes?[Store.get(g)]:ids.map(id=>Store.get(id))).filter(Boolean);
   let dirty=false;
   for(const r of recs){
    if(r.rating>(base.rating||0)){base.rating=r.rating;dirty=true;}
@@ -2758,7 +2762,14 @@ function mergeGroupRecords(){
   }
   const reports=recs.filter(r=>r.report&&String(r.report).trim()).map(r=>parseReport(r.report));
   if(reports.length){
-   const merged=window.ESRecordMerge?ESRecordMerge.mergeReports(reports):reports[0],next=JSON.stringify(merged);
+   const merged=window.ESRecordMerge?ESRecordMerge.mergeReports(reports):reports[0];
+   if(recoverNotes&&reports.length>1){
+    const history=new Map();for(const report of reports)for(const item of report._history||[])history.set(item.id||JSON.stringify(item),item);
+    for(const id of ids){const saved=Store.get(id);if(!saved?.report||['','{}'].includes(String(saved.report).trim()))continue;const previous=parseReport(saved.report),snapshot={...previous};delete snapshot._history;
+     const entryId=repairVersion+':'+id;history.set(entryId,{id:entryId,savedAt:new Date().toISOString(),contentAt:previous._notesUpdated||saved.updated_at||'',author:saved.updated_by||'',reason:'Before verified identity separation',report:snapshot});}
+    merged._history=[...history.values()];base._identityNotesRepair=repairVersion;dirty=true;
+   }
+   const next=JSON.stringify(merged);
    if(next!==String(base.report||'')){base.report=next;dirty=true;}
   }
   if(dirty)Store.save(g,base);
