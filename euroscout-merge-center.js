@@ -35,7 +35,7 @@
       if(!canonicalLinked.has(id))continue;
       let current=id;const seen=new Set();
       while(canonicalParent.has(current)&&!seen.has(current)){seen.add(current);current=canonicalParent.get(current);}
-      if(!seen.has(current))return current;
+      if(!seen.has(current)&&!ids.some(source=>window.EuroScoutIdentityBio?.separated(source,current)))return current;
     }
     return null;
   };

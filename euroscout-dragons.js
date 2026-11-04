@@ -105,6 +105,14 @@ function verifiedProfile(source,directory){
 function resolve(source,directory,raw){
  if(!directory.nameIndex)prepareDirectory(directory,raw);
  const verified=verifiedProfile(source,directory);if(verified)return verified;
+ // The BBL feed reused PAOK's provider person code and 1995 bio for Bonn's
+ // Foster. Resolve this exact club/name against Bonn's official 2002 profile.
+ if(/^dragons-bbl-/.test(source.league||'')&&clean(source.name)==='marcus foster'&&clean(source.teamName)==='telekom baskets bonn'){
+  const row=window.EUROSCOUT_BBL_ROSTERS?.roster?.find(r=>r.id==='2004437'&&r.birthDate==='2002-01-06'&&r.teamId==='415');
+  if(row){const ids=row.ids.filter(id=>!['eurocup-010386','jbl-31'].includes(id)),id=ids.find(id=>directory.byId.has(id))||ids[0];return{id,ids,player:directory.byId.get(id),row:{...row,country:'United States',role:'Guard',birthDate:row.birthDate},team:teamMatch(source,directory),officialId:'bbl:2004437',source:row.profile};}
+  return null; // Wait for the BBL directory instead of adopting PAOK's same-name bio.
+ }
+
  // Both feeds use verified roster names, but the same player can appear under
  // two spellings in the catalogue. Resolve the official aliases before scoring.
  if(/^dragons-(ec|aba)-/.test(source.league||'')&&/^buducnost(?: |$)/.test(clean(source.teamName))){

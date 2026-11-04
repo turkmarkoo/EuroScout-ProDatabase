@@ -1508,14 +1508,14 @@
         "bbl-2004437",
         "bbl-2001733",
         "enbl-97",
-        "jbl-31",
-        "eurocup-010386",
         "fiba-stat-bcl-400006",
         "fiba-bcl-400006"
       ],
-      "match": "Preserved official provider ID and reviewed aliases",
+      "match": "Distinct Marcus Foster identity verified by official birth date",
       "existing": true,
-      "photoStatus": "official-roster-image"
+      "photoStatus": "official-roster-image",
+      "identityChecked": "2026-11-04",
+      "identitySource": "https://www.telekom-baskets-bonn.de/presse/newsarchiv/mehr-als-ein-ersatz-marcus-foster-bleibt-in-bonn"
     },
     {
       "id": "2004062",

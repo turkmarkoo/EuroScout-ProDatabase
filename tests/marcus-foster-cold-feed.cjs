@@ -1,0 +1,8 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const window={ESAccess:{internal:true,user:{}}};const c={window,structuredClone,console,setTimeout,clearTimeout};vm.createContext(c);for(const file of ['euroscout-identity-bio.js','eurocup-rosters-2026.js','euroscout-dragons.js'])vm.runInContext(fs.readFileSync(file,'utf8'),c);
+const raw={leagues:[{meta:{id:'eurocup'},teams:[{code:'PAO',name:'PAOK Thessaloniki'}],players:[{id:'eurocup-010386',name:'Marcus Foster',born:1995,league:'eurocup',team:'PAO',teamName:'PAOK Thessaloniki'}]}]};
+const make=()=>({schema:1,quality_policy:'accepted_live_boxscores_only',fixtures:[],leagues:[{meta:{id:'dragons-bbl-329',season:'2026/27',privateOwnerFeed:true},players:[{id:'dragons-bbl-329-player-1116',name:'Marcus Foster',born:1995,height:191,teamName:'Telekom Baskets Bonn',g:7,ppg:8.86}]}]});
+let row=window.EuroScoutDragons.connectData(raw,make()).leagues.at(-1).players[0];assert.equal(row.linkedEuroScoutId,undefined,'No fallback to PAOK while the BBL directory is deferred');
+vm.runInContext(fs.readFileSync('bbl-rosters-2026.js','utf8'),c);const bonn=window.EUROSCOUT_BBL_ROSTERS.roster.find(r=>r.id==='2004437');assert(!bonn.ids.includes('eurocup-010386'));assert(!window.EUROSCOUT_EUROCUP_ROSTERS.roster.find(r=>r.id==='010386').ids.includes('bbl-2001733'));
+row=window.EuroScoutDragons.connectData(raw,make()).leagues.at(-1).players[0];assert.equal(row.linkedEuroScoutId,'bbl-2004437');assert.equal(row.born,2002);assert.equal(row.height,196);assert.equal(row.ppg,8.86);assert.equal(row.g,7);
+console.log('PASS cold deferred-roster safety, official birth/height correction and unchanged BBL statistics.');

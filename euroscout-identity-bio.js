@@ -1,6 +1,23 @@
 /* Verified person metadata. NBA person IDs are shared across NBA, G League and
    Summer League; club membership and statistics are not inferred here. */
 (function(root){'use strict';
+// These same-name players were incorrectly cross-linked by older roster aliases.
+// Provider row IDs, rather than the shared spelling, keep both people distinct.
+const distinctPeople=[
+ {key:'marcus-foster-2002',ids:['bbl-2004437','bbl-2001733','enbl-97','fiba-bcl-400006','fiba-stat-bcl-400006','dragons-bbl-329-player-1116'],birthDate:'2002-01-06',height:196,source:'https://www.telekom-baskets-bonn.de/presse/newsarchiv/mehr-als-ein-ersatz-marcus-foster-bleibt-in-bonn'},
+ {key:'marcus-foster-1995',ids:['eurocup-010386','jbl-31','dragons-ec-97-player-1116','dragons-gre-335-player-4504'],birthDate:'1995-06-03',height:191,source:'https://www.paokbc.gr/en/news/team/3564-marcus-foster-joins-paok-on-a-two-year-deal'}
+];
+const distinctIds=new Map(distinctPeople.flatMap(p=>p.ids.map(id=>[id,p])));
+function personKey(value){return distinctIds.get(typeof value==='string'?value:value?.id)?.key||value?._identityPersonKey||'';}
+function separated(a,b){const A=personKey(a),B=personKey(b);return !!(A&&B&&A!==B);}
+function correctDistinct(raw){for(const L of raw?.leagues||[])for(const p of L.players||[]){const known=distinctIds.get(p.id);if(!known)continue;p.born=Number(known.birthDate.slice(0,4));p.birthDate=known.birthDate;p.dob=known.birthDate;p._identityPersonKey=known.key;p._identityBioSource=known.source;p._strictIdentity=true;
+ const official=known.key==='marcus-foster-2002'?root.EUROSCOUT_BBL_ROSTERS?.roster?.find(r=>r.id==='2004437'):null;if(official?.img)p.img=official.img;
+ // Repair only the imported size inherited from the other Foster, retaining
+ // separately entered height measurements and every source statistic/note.
+ if(known.key==='marcus-foster-2002'&&Number(p.height)===191)p.height=known.height;
+ if(p._orig){p._orig.born=p.born;p._orig.birthDate=p.birthDate;if(known.key==='marcus-foster-2002'&&Number(p._orig.height)===191)p._orig.height=known.height;}
+ if(p.linkedEuroScoutId&&separated(p,p.linkedEuroScoutId))delete p.linkedEuroScoutId;
+}return raw;}
 const people=[
  {nbaId:'1642045',name:'Devon Higgs',birthDate:'2000-02-10',source:'https://gleague.nba.com/player/1642045/devon-higgs'},
  {nbaId:'1630777',name:'Jeremiah Tilmon',birthDate:'1998-11-25',source:'https://gleague.nba.com/player/1630777/jeremiah-tilmon'},
@@ -9,7 +26,7 @@ const people=[
  {nbaId:'1631210',name:'Jacob Toppin',birthDate:'2000-05-08',source:'https://www.nba.com/player/1631210/bio'}
 ];
 const byId=new Map(people.map(p=>[p.nbaId,p])),fold=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-function apply(raw){for(const L of raw?.leagues||[])for(const p of L.players||[]){const id=String(p._nbaId||(['nba','gleague'].includes(p.league)?p.code:'')||''),known=byId.get(id);if(!known||fold(p.name)!==fold(known.name))continue;const year=Number(known.birthDate.slice(0,4)),old=String(p.born||'').match(/^(?:19|20)\d{2}$/);if(old&&Number(old[0])!==year||p.birthDate&&p.birthDate!==known.birthDate)continue;if(!old)p.born=year;if(!p.birthDate)p.birthDate=known.birthDate;p._identityBioSource=known.source;p._identityBioChecked='2026-10-08';}return raw;}
+function apply(raw){correctDistinct(raw);for(const L of raw?.leagues||[])for(const p of L.players||[]){const id=String(p._nbaId||(['nba','gleague'].includes(p.league)?p.code:'')||''),known=byId.get(id);if(!known||fold(p.name)!==fold(known.name))continue;const year=Number(known.birthDate.slice(0,4)),old=String(p.born||'').match(/^(?:19|20)\d{2}$/);if(old&&Number(old[0])!==year||p.birthDate&&p.birthDate!==known.birthDate)continue;if(!old)p.born=year;if(!p.birthDate)p.birthDate=known.birthDate;p._identityBioSource=known.source;p._identityBioChecked='2026-10-08';}return raw;}
 // Read-only identity evidence for matching. Do not backfill imported rows here:
 // identity changes must pass through the reversible merge batch and its notes backup.
 const verified=[
@@ -44,5 +61,5 @@ function resolve(p){
  const existing=rgId(p);if(existing&&known.realgmId&&existing!==known.realgmId)return null;
  return known;
 }
-root.EuroScoutIdentityBio={apply,people,resolve,verified};
+root.EuroScoutIdentityBio={apply,people,resolve,verified,personKey,separated,correctDistinct};
 })(window);
