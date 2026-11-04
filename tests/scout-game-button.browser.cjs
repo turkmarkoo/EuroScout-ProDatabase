@@ -1,0 +1,26 @@
+const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/PC/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const root=path.resolve(__dirname,'..');
+(async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{
+ const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.hostname!=='euro.test')return route.abort();
+  if(u.pathname==='/euroscout-access.js')return route.fulfill({contentType:'text/javascript',body:`window.ESAccess={internal:true,owner:true,user:{uid:'fixture-user',email:'fixture@example.invalid'},state:{schema:1,records:{},appData:{},seeds:{}},seedReady:Promise.resolve({core:{season2627:{comps:{}},rumors:{skylinersFixture:true}},seeds:{}}),saveState:async function(s){this.state=s;return true;},refresh:async()=>false,get:async()=>null,field:()=>null};ESAccess.ready=Promise.resolve(ESAccess);`});
+  const f=path.resolve(root,u.pathname.slice(1)||'index.html');return fs.existsSync(f)&&fs.statSync(f).isFile()?route.fulfill({path:f}):route.fulfill({status:404,body:''});
+ });
+ await page.goto('https://euro.test/');await page.waitForFunction(()=>window.EuroScoutCatalogueReady&&STATE.data?.rumors?.skylinersFixture&&!document.querySelector('#coreLoadStatus'),{},{timeout:90000});
+ await page.evaluate(async()=>{
+  await loadMatchupRosterScripts();const clubs=allClubs(),bonn=clubs.find(c=>c.name==='Telekom Baskets Bonn'),alba=clubs.find(c=>c.name==='ALBA BERLIN');if(!bonn||!alba)throw Error('Missing BBL teams');
+  const game={id:'bonn-alba-regression',date:'2026-11-01',time:'18:00',comp:'bbl',compName:'German BBL',round:7,venue:'Telekom Dome',home:{key:bonn.key,name:bonn.name},away:{key:alba.key,name:alba.name},hs:95,as:88,played:true};
+  window.__scheduleRefreshes=0;ESFixtures.all=()=>[game];ESFixtures.recent=()=>[game];ESFixtures.upcoming=()=>[game];ESFixtures.competitions=()=>[{id:'bbl',name:'German BBL',games:1,played:1}];ESFixtures.between=()=>[game];ESFixtures.refresh=async()=>{window.__scheduleRefreshes++;return[game];};
+  const history=JSON.stringify({v:1,sessions:[{id:'keep-finished-game',gameDate:'2026-09-01',a:{key:bonn.key,name:bonn.name},b:{key:alba.key,name:alba.name},competition:{id:'bbl',name:'German BBL'},players:[],note:'Keep finished scouting work'}]});localStorage.setItem('euroscout:sessions:v1',history);window.__historyBefore=history;
+  const p=allPlayersEvery().find(p=>p.name==='Darius McGhee')||allPlayersEvery()[0];await Store.save(p.id,{report:JSON.stringify({nOff:'Preserve this scouting note',_history:[{id:'old-note',report:{nOff:'Earlier note'}}]}),rating:4,jerseyNumbers:{'2026/27|club':'00'}});window.__playerBefore={id:p.id,record:JSON.stringify(Store.get(p.id))};STATE.view='scoutlog';render();
+ });
+ await page.locator('[data-tab=upcoming]').click();
+ const response=await page.locator('[data-scout]').evaluate(b=>{b.click();return{label:b.textContent,disabled:b.disabled,busy:b.getAttribute('aria-busy')};});assert.deepEqual(response,{label:'Opening…',disabled:true,busy:'true'});
+ await page.locator('#sxStart').waitFor({timeout:2000});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+ assert.equal(await page.evaluate(()=>__scheduleRefreshes),0,'Opening an already-loaded game must not rebuild the full schedule');
+ const form=await page.locator('#sxStart').evaluate(f=>({a:f.elements.a.selectedOptions[0].textContent,b:f.elements.b.selectedOptions[0].textContent,date:f.elements.gameDate.value,comp:f.elements.comp.value,stage:f.elements.stage.value,scoreA:f.elements.scoreA.value,scoreB:f.elements.scoreB.value}));assert.equal(form.a,'Telekom Baskets Bonn');assert.equal(form.b,'ALBA BERLIN');assert.equal(form.date,'2026-11-01');assert.equal(form.comp,'bbl');assert.equal(form.stage,'Round 7');assert.equal(form.scoreA,'95');assert.equal(form.scoreB,'88');
+ assert.equal(await page.locator('#sxStart').count(),1);await page.getByRole('button',{name:'Cancel',exact:true}).click();assert.equal(await page.evaluate(()=>ESSessions.active()),null);
+ await page.locator('[data-scout]').click();await page.locator('#sxStart').waitFor();await page.locator('#sxStart [type=submit]').click();await page.locator('.liveScouting').waitFor();
+ const final=await page.evaluate(()=>({a:ESSessions.active().a.name,b:ESSessions.active().b.name,date:ESSessions.active().gameDate,history:localStorage.getItem('euroscout:sessions:v1')===__historyBefore,record:JSON.stringify(Store.get(__playerBefore.id))===__playerBefore.record,rosters:[...document.querySelectorAll('.mx-col .rosterList')].map(e=>e.querySelectorAll('.rosterRow').length),refreshes:__scheduleRefreshes}));assert.equal(final.a,'Telekom Baskets Bonn');assert.equal(final.b,'ALBA BERLIN');assert.equal(final.date,'2026-11-01');assert(final.history&&final.record);assert(final.rosters.length===2&&final.rosters.every(n=>n>0));assert.deepEqual(errors,[]);await page.screenshot({path:path.resolve(root,'../scout-game-button-fixed.png')});console.log(JSON.stringify({passed:true,...final,externalRequestsBlocked:true}));
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

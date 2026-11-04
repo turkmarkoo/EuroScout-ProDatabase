@@ -386,7 +386,9 @@ function openStart(preset, done) {
   paint();
   /* Feeds can arrive before deferred FIBA aliases. Re-resolve this pair when
      the dialog opens so a legal company name cannot hide a known game. */
-  Promise.resolve(window.loadMatchupRosterScripts?.()).then(()=>{if(document.getElementById('sxStart')===f)paint();return window.ESFixtures?.refresh(false);}).then(()=>{if(document.getElementById('sxStart')===f)paint();}).catch(()=>{});
+  // The loaded fixture already has the game details. Rebuilding the complete
+  // DragonsData schedule here blocks the dialog's first paint for no new data.
+  Promise.resolve(window.loadMatchupRosterScripts?.()).then(()=>{if(document.getElementById('sxStart')!==f)return;if(window.ESFixtures?.all?.().length){paint();return;}return window.ESFixtures?.refresh(false).then(()=>{if(document.getElementById('sxStart')===f)paint();});}).catch(()=>{});
   $1('#sxCancel', box).onclick = closeModal;
   const status = $1('#sxStartStatus', box), button = f.querySelector('[type=submit]');
   const showStartError = message => { status.textContent = message; status.hidden = false; };
@@ -561,7 +563,18 @@ function renderLog() {
   const uc = $1('#sxUpComp'); if (uc) uc.onchange = () => { upComp = uc.value; renderLog(); };
   const ud = $1('#sxUpDays'); if (ud) ud.onchange = () => { upDays = +ud.value; renderLog(); };
   const ur = $1('#sxUpRefresh'); if (ur) ur.onclick = () => { ur.disabled = true; ur.textContent = 'Checking…'; ESFixtures.refresh(true).then(renderLog); };
-  document.querySelectorAll('[data-scout]').forEach(b => b.onclick = () => { const [h, aw, date, comp] = b.dataset.scout.split('~'); openStart({ a: h, b: aw, gameDate: date, game: { date, comp } }, s => { if (s) { STATE.scouting.a = s.a.key; STATE.scouting.b = s.b.key; go(); } }); });
+  document.querySelectorAll('[data-scout]').forEach(b => b.onclick = () => {
+    if(b.disabled)return;
+    const [h, aw, date, comp] = b.dataset.scout.split('~'),label=b.textContent;
+    b.disabled=true;b.textContent='Opening…';b.setAttribute('aria-busy','true');
+    // Paint feedback before building the team/game options. Repeated clicks
+    // cannot open duplicate dialogs while the catalogue is being prepared.
+    requestAnimationFrame(()=>setTimeout(()=>{
+      try{openStart({ a: h, b: aw, gameDate: date, game: { date, comp } }, s => { if (s) { STATE.scouting.a = s.a.key; STATE.scouting.b = s.b.key; go(); } });}
+      catch(error){console.warn('Could not open game scouting',error);toast('Could not open this game. Please try again.');}
+      finally{b.disabled=false;b.textContent=label;b.removeAttribute('aria-busy');}
+    },0));
+  });
   const un = $1('#sxUnscouted'); if (un) un.onchange = () => { showUnscouted = un.checked; renderLog(); };
   const rowKey = (el, fn) => { el.onclick = fn; el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } }; };
   document.querySelectorAll('[data-team]').forEach(r => rowKey(r, () => openTeamLog(r.dataset.team)));
