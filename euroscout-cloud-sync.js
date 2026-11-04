@@ -43,6 +43,17 @@ function merge(base,local,remote,choice,where=[],conflicts=[],flight,details=[])
  conflicts.push(where.join('.'));details.push({path:[...where],base:copy(base),local:copy(local),remote:copy(remote)});return copy(choice==='remote'?remote:local);
 }
 function reconcile(base,local,remote,choice,flight){const conflicts=[],details=[];return{value:merge(base,local,remote,choice,[],conflicts,flight,details),conflicts,details};}
+// Build a Blob from bounded JSON chunks. A long recovery history can exceed
+// V8's single-string limit even though each protected journal remains readable.
+function* jsonChunks(value){
+ function* walk(v){
+  if(typeof v==='string'){yield '"';for(let i=0;i<v.length;i+=4096)yield JSON.stringify(v.slice(i,i+4096)).slice(1,-1);yield '"';return;}
+  if(Array.isArray(v)){yield '[';for(let i=0;i<v.length;i++){if(i)yield ',';yield* walk(v[i]===undefined?null:v[i]);}yield ']';return;}
+  if(object(v)){yield '{';let first=true;for(const k of Object.keys(v)){if(v[k]===undefined)continue;if(!first)yield ',';first=false;yield* walk(k);yield ':';yield* walk(v[k]);}yield '}';return;}
+  yield JSON.stringify(v)??'null';
+ }
+ let part='';for(const token of walk(value)){part+=token;if(part.length>=65536){yield part;part='';}}if(part)yield part;
+}
 async function tabId(account){
  let candidate;try{candidate=root.sessionStorage.getItem('euroscout:cloud-tab:v1');}catch{}
  candidate=candidate||root.crypto.randomUUID();
@@ -220,6 +231,7 @@ function create(options){
    const result=reconcile(found.base,found.local,local,undefined,found.flight);local=result.value;row.conflicts=result.conflicts;blocked=result.conflicts.length>0;if(blocked)row.reviewBase=copy(found.base);flight=found.flight;dirty=!equal(local,base)||!!flight&&!equal(local,flight);revision++;await persist();front=copy(local);options.applyLocal(copy(front));
   });status(blocked?'conflict':'pending',blocked?'Saved locally · review recovered changes':'Saved locally · waiting to sync');schedule();
  }
+ async function currentBackup(){await queue;return{format:'euroscout-private-recovery-v1',scope:'Current notes and settings; older recovery copies remain on this device',account:options.account,exportedAt:new Date().toISOString(),state:copy(state),current:{base:copy(base),local:copy(local),flight:copy(flight),reviewBase:copy(row?.reviewBase),conflicts:copy(row?.conflicts||[])},deviceOnly:options.backupExtras?.()||{}};}
  async function backup(){await queue;let journals=[],journalReadError=null;try{journals=await storage.all();}catch(error){journalReadError=error.message;}return{format:'euroscout-private-recovery-v1',account:options.account,exportedAt:new Date().toISOString(),state:copy(state),current:{base:copy(base),local:copy(local),flight:copy(flight),reviewBase:copy(row?.reviewBase),conflicts:copy(row?.conflicts||[]),recovery:copy(row?.recovery||[])},deviceOnly:options.backupExtras?.()||{},journals,journalReadError,journalIssues:storage.issues||[]};}
  async function previewRecovery(index){await queue;const value=row.recovery?.[index]?.value;if(!value?.records)throw Error('Recovery copy unavailable.');return{at:row.recovery[index].at,records:Object.keys(value.records).length,changedPlayers:[...new Set([...Object.keys(value.records),...Object.keys(local.records)])].filter(id=>!equal(value.records[id],local.records[id])),changedAppKeys:[...new Set([...Object.keys(value.appData||{}),...Object.keys(local.appData)])].filter(k=>!equal(value.appData?.[k],local.appData[k]))};}
  async function reviewConflicts(){const remote=data(await options.refreshCloud());await queue;return{checkedAt:now(),details:reconcile(row.reviewBase||base,local,remote,undefined,flight).details};}
@@ -232,7 +244,7 @@ function create(options){
  async function acceptRemote(snapshot){return serial(async()=>{if(dirty)return false;const previous=local;base=data(snapshot);local=copy(base);await persist();front=reconcile(previous,front,local,'local').value;options.applyLocal(copy(front));await options.ackLocal?.(local);return true;});}
  function retry(){if(inflight||row.conflicts?.length)return;blocked=false;failures=0;nextAttempt=Math.max(nextAttempt,now());schedule();}
  function resume(){if(!blocked&&dirty)schedule();}
- return{init,save,stageRecord,flushDrafts,resolve,recover,previewRecovery,reviewConflicts,restoreLegacy,acceptRemote,backup,retry,resume,run,tab:options.tab,get state(){return state;},get dirty(){return dirty;},get blocked(){return blocked;},get savingLocal(){return savingLocal>0;},get local(){return copy(local);}};
+ return{init,save,stageRecord,flushDrafts,resolve,recover,previewRecovery,reviewConflicts,restoreLegacy,acceptRemote,backup,currentBackup,retry,resume,run,tab:options.tab,get state(){return state;},get dirty(){return dirty;},get blocked(){return blocked;},get savingLocal(){return savingLocal>0;},get local(){return copy(local);}};
 }
 function statusDock(){
  const doc=root.document;let dock=doc.getElementById('esStatusDock');
@@ -243,12 +255,12 @@ function mount(sync){
  const doc=root.document,bar=doc.createElement('div');bar.id='esCloudSyncStatus';bar.className='es-cloud-sync';bar.innerHTML='<button type="button" data-review><i class="es-sync-dot" aria-hidden="true"></i><span data-label></span></button><span class="es-sync-sr" role="status" aria-live="polite"></span>';statusDock().prepend(bar);
  const paint=()=>{const {kind,message}=sync.state;bar.dataset.kind=kind;const button=bar.querySelector('[data-review]'),text=({synced:'Saved',recovery:'Saved',pending:'Saved locally',saving:'Syncing',offline:'Offline',retry:'Sync pending',conflict:'Needs review',blocked:'Sync paused','storage-error':'Save needs attention'})[kind]||'Saving';bar.querySelector('[data-label]').textContent=text;button.title=message+'\nClick for saving and recovery.';button.setAttribute('aria-label',text+' · Recovery');bar.querySelector('[role=status]').textContent=message;for(const id of ['liveStatus','saveState']){const label=doc.getElementById(id);if(label&&label.textContent!==message)label.textContent=message;}};
  root.addEventListener('euroscout:cloud-status',paint);paint();
- async function download(){const backup=await sync.backup(),url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'})),a=doc.createElement('a');a.href=url;a.download='EuroScout-private-recovery-'+new Date().toISOString().slice(0,10)+'.json';a.click();root.setTimeout(()=>URL.revokeObjectURL(url),60000);}
+ async function download(currentOnly=false){const backup=await(currentOnly?sync.currentBackup():sync.backup()),url=URL.createObjectURL(new Blob([...jsonChunks(backup)],{type:'application/json'})),a=doc.createElement('a');a.href=url;a.download='EuroScout-private-'+(currentOnly?'current-notes-':'recovery-')+new Date().toISOString().slice(0,10)+'.json';a.click();root.setTimeout(()=>URL.revokeObjectURL(url),60000);}
  bar.querySelector('[data-review]').onclick=async()=>{
   const backup=await sync.backup(),dialog=doc.createElement('dialog');dialog.className='es-sync-dialog';
-  dialog.innerHTML='<h3>Saving & recovery</h3><p class="es-sync-message"></p><p>Your pending edits and recovery copies are stored on this device. The download contains private scouting information.</p><div class="es-sync-actions"><button type="button" data-download>Download recovery copy</button><button type="button" data-retry hidden>Retry sync</button><button type="button" data-local hidden>Keep this device’s conflicting values</button><button type="button" data-cloud hidden>Use cloud’s conflicting values</button><button type="button" data-close>Close</button></div><div class="es-sync-recover"></div><p role="status"></p>';
+  dialog.innerHTML='<h3>Saving & recovery</h3><p class="es-sync-message"></p><p>Your pending edits and recovery copies are stored on this device. The download contains private scouting information.</p><div class="es-sync-actions"><button type="button" data-current-download>Download current notes &amp; settings</button><button type="button" data-download>Download all recovery copies</button><button type="button" data-retry hidden>Retry sync</button><button type="button" data-local hidden>Keep this device’s conflicting values</button><button type="button" data-cloud hidden>Use cloud’s conflicting values</button><button type="button" data-close>Close</button></div><div class="es-sync-recover"></div><p role="status"></p>';
   dialog.querySelector('.es-sync-message').textContent=sync.state.message;
-  dialog.querySelector('[data-download]').onclick=download;
+  for(const [selector,currentOnly]of [['[data-current-download]',true],['[data-download]',false]])dialog.querySelector(selector).onclick=async()=>{try{await download(currentOnly);}catch(e){dialog.querySelector('[role=status]').textContent='Download failed: '+e.message;}};
   const act=fn=>async()=>{try{await fn();dialog.close();dialog.remove();paint();}catch(e){dialog.querySelector('[role=status]').textContent=e.message;}};
   const retry=dialog.querySelector('[data-retry]');retry.hidden=!['retry','offline','blocked'].includes(sync.state.kind);retry.onclick=act(()=>sync.retry());
   for(const [name,choice]of [['local','local'],['cloud','remote']]){const button=dialog.querySelector('[data-'+name+']');button.hidden=sync.state.kind!=='conflict';button.onclick=act(()=>sync.resolve(choice));}
@@ -269,5 +281,5 @@ function mount(sync){
  };
  return paint;
 }
-const api={create,reconcile,journal,mount,tabId,statusDock};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.ESCloudSync=api;
+const api={create,reconcile,journal,mount,tabId,statusDock,jsonChunks};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.ESCloudSync=api;
 })(typeof window==='undefined'?globalThis:window);
