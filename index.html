@@ -2648,6 +2648,7 @@ function applyOverrides(onlyPlayers){
     p.country=EuroScoutCountries.canonical(p.country);
     p._ext=extFor(p)||null;
   }));
+  if(!onlyPlayers&&Store.canEdit()&&window.ESRecordMerge)mergeGroupRecords(true);
 }
 function normName(x){return searchFold(x).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\u0111\u0142]/g,"d").replace(/\u0142/g,"l").replace(/[\u015f\u0219]/g,"s").replace(/[\u0131]/g,"i").replace(/[\u0127]/g,"h").replace(/[\u00f0]/g,"d").replace(/[\u00f8]/g,"o").replace(/[\u00e6]/g,"ae").replace(/[^a-z ]/g,"").trim();}
 function allPlayersEvery(){const a=[];STATE.data.leagues.forEach(L=>{if(L.meta.teamsOnly)return;L.players.forEach(p=>a.push(p));});return a;}
@@ -2743,9 +2744,9 @@ async function saveRec(p,patch,options){
  else if(old.report&&!report._notesUpdated&&old.updated_at){patch={...patch,report:JSON.stringify({...report,_notesUpdated:old.updated_at})};}
  return Store.save(gid(p),patch,options);
 }
-function mergeGroupRecords(){
+function mergeGroupRecords(verifiedOnly=false){
  const seen=new Set();
- allPlayersFlat().forEach(p=>{
+ allPlayersFlat().filter(p=>!verifiedOnly||window.EuroScoutIdentityBio?.personKey(p)).forEach(p=>{
   const g=gid(p);if(!g||seen.has(g))return;seen.add(g);
   const ids=recordIds(p),manual=!!window.EuroScoutMergeCenter?.canonicalPlayer(ids),base={...Store.get(g)};
   const repairKey=window.EuroScoutIdentityBio?.personKey(p),repairVersion='distinct-fosters-20261104-v1';
@@ -2763,7 +2764,7 @@ function mergeGroupRecords(){
   const reports=recs.filter(r=>r.report&&String(r.report).trim()).map(r=>parseReport(r.report));
   if(reports.length){
    const merged=window.ESRecordMerge?ESRecordMerge.mergeReports(reports):reports[0];
-   if(recoverNotes&&reports.length>1){
+   if(recoverNotes&&reports.filter(r=>['nAth','nOff','nDef','nIntel','nProj','overall'].some(k=>String(r[k]||'').trim())).length>1){
     const history=new Map();for(const report of reports)for(const item of report._history||[])history.set(item.id||JSON.stringify(item),item);
     for(const id of ids){const saved=Store.get(id);if(!saved?.report||['','{}'].includes(String(saved.report).trim()))continue;const previous=parseReport(saved.report),snapshot={...previous};delete snapshot._history;
      const entryId=repairVersion+':'+id;history.set(entryId,{id:entryId,savedAt:new Date().toISOString(),contentAt:previous._notesUpdated||saved.updated_at||'',author:saved.updated_by||'',reason:'Before verified identity separation',report:snapshot});}
