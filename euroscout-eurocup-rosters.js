@@ -2,6 +2,10 @@
 (function(){
 'use strict';
 const data=window.EUROSCOUT_EUROCUP_ROSTERS;if(!data)return;
+// Both official profiles identify Elias Roedl/Rödl as born 25 May 2002,
+// 198 cm, NINERS Chemnitz, jersey 11. Preserve their source-specific stats.
+const roedl=data.roster.find(row=>row.id==='008216'&&row.dob==='2002-05-25'&&row.teamCode==='NIN');
+if(roedl)roedl.ids=[...new Set([...roedl.ids,'bbl-2003893'])];
 const byId=new Map();
 for(const row of data.roster)for(const id of row.ids){
   if(byId.has(id)&&byId.get(id).id!==row.id)throw Error('Conflicting EuroCup identity '+id);
