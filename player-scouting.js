@@ -3,10 +3,12 @@
 'use strict';
 const definitions=[
 ['Floor General','Guards','Organizes the offense, controls tempo and creates advantages for teammates.',['Decision-making','Passing','Tempo control'],['Chris Paul','Facundo Campazzo'],['Combo Guard','Shot Creator']],
+['PnR Playmaker','Guards','Creates advantages as a pick-and-roll ball handler by reading coverages, finding the roller and passing to open shooters.',['Pick-and-roll reads','Roller and weak-side passing','Scoring-passing balance'],['Miloš Teodosić','Nick Calathes'],['Floor General','Combo Guard','Shot Creator']],
 ['Shot Creator','Guards','Creates his own shot in isolation, pick-and-roll and late-clock situations.',['Self-creation','Three-level scoring','Pressure handling'],['Carsen Edwards','Tyler Dorsey'],['Combo Guard','Shooter']],
 ['Shooter','Guards','Provides spacing and scoring through reliable perimeter shooting.',['Catch-and-shoot','Movement shooting','Floor spacing'],['Duncan Robinson','Kyle Guy'],['Shot Creator','3&D Wing']],
 ['Slasher','Guards','Attacks gaps and gets to the rim through drives and transition runs.',['Rim pressure','First step','Finishing'],['Dwyane Wade','Anthony Edwards'],['Combo Guard','Slashing Forward']],
 ['Point-of-Attack Defender','Guards','Disrupts ball handlers and defends the first action on the perimeter.',['Ball pressure','Screen navigation','Containment'],['Alex Caruso','Jrue Holiday'],['Wing Stopper','Combo Guard']],
+['3&D Guard','Guards','Supports the backcourt through perimeter shooting and reliable defense with limited responsibility for creating offense.',['Catch-and-shoot spacing','Backcourt defense','Low-touch offense'],['Danny Green','Kentavious Caldwell-Pope'],['Point-of-Attack Defender','Shooter','3&D Wing']],
 ['Combo Guard','Guards','Contributes as both a ball handler and an off-ball guard.',['Versatility','Secondary creation','Off-ball scoring'],['Derrick White','Vasilije Micić'],['Floor General','Shot Creator']],
 ['3&D Wing','Forwards','Combines perimeter defense with shooting that maintains offensive spacing.',['Perimeter defense','Spot-up shooting','Low-touch offense'],['Mikal Bridges','Trevor Ariza'],['Wing Stopper','Shooter']],
 ['Shot Creator Wing','Forwards','Creates scoring advantages from the wing with the ball in his hands.',['Isolation','Pull-up shooting','Mismatch creation'],['Mario Hezonja','Cedi Osman'],['Shot Creator','Slashing Forward']],
@@ -20,7 +22,9 @@ const definitions=[
 ['PnR Big','Bigs','Creates value through screens, rolls and finishes in pick-and-roll offense.',['Screening','Roll timing','Rim finishing'],['Mathias Lessort','Clint Capela'],['Mobile Big','Interior Scorer']],
 ['Stretch Big','Bigs','Adds shooting range from the center position to open the floor.',['Pick-and-pop','Perimeter shooting','Spacing'],['Brook Lopez','Kristaps Porziņģis'],['Stretch Forward','Impact Big']],
 ['Interior Scorer','Bigs','Creates and finishes scoring opportunities close to the basket.',['Post scoring','Touch','Interior footwork'],['Alperen Şengün','Willy Hernangómez'],['PnR Big','Impact Big']],
+['Passing Big','Bigs','Facilitates offense through handoffs, elbow and post passing, and short-roll decisions.',['Handoffs','Interior playmaking','Short-roll decisions'],['Nikola Jokić','Domantas Sabonis'],['Impact Big','Interior Scorer','PnR Big']],
 ['Mobile Big','Bigs','Covers space and contributes through movement on both ends of the floor.',['Defensive mobility','Transition running','Switching'],['Bam Adebayo','Nic Claxton'],['Rim Protector','PnR Big']],
+['Switching Big','Bigs','Defends smaller players after switches and contains drives away from the basket.',['Switch coverage','Perimeter containment','Defensive footwork'],['Bam Adebayo','Nic Claxton'],['Mobile Big','Rim Protector','Defensive Forward']],
 ['Impact Big','Bigs','Influences multiple phases through interior presence, rebounding and physical play.',['Rebounding','Physicality','Two-way presence'],['Nikola Milutinov','Domantas Sabonis'],['Interior Scorer','Rim Protector']]
 ];
 const roles=Object.freeze(definitions.map(([name,group,definition,characteristics,examples,related])=>Object.freeze({name,group,definition,characteristics:Object.freeze(characteristics),examples:Object.freeze(examples),related:Object.freeze(related)})));
