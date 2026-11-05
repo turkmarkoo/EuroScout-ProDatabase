@@ -500,7 +500,18 @@ function openTeamLog(key) {
 }
 
 /* ── Scouting log view: sessions · teams · competitions ── */
-let tab = 'sessions', showUnscouted = false, upComp = '', upDays = 14, upMode = 'recent';
+let tab = 'sessions', showUnscouted = false, upComp = '', upDays = 14, upMode = 'recent', gameSearch = '', gameTeam = '', gameSearchTimer = null;
+// Search all competition aliases of each canonical club; no player data is changed.
+function fixtureTeams(fixtures){
+ const teams=new Map();for(const g of fixtures)for(const side of [g.home,g.away]){const key=side.key?canonKey(side.key):'name:'+competitionNameKey(side.name);if(!teams.has(key))teams.set(key,{key,name:side.name,aliases:[]});teams.get(key).aliases.push(side.name,side.code);}
+ return [...teams.values()].sort((a,b)=>a.name.localeCompare(b.name));
+}
+function searchGames(fixtures,teams){
+ const fold=v=>String(v||'').replace(/[đĐ]/g,'dj').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+ const query=fold(gameSearch).split(' ').filter(Boolean),byKey=new Map(teams.map(t=>[t.key,t]));
+ return fixtures.filter(g=>{const sides=[g.home,g.away],keys=sides.map(s=>s.key?canonKey(s.key):'name:'+competitionNameKey(s.name));if(gameTeam&&!keys.includes(gameTeam))return false;
+  const text=fold(sides.flatMap((s,i)=>[s.name,s.code,...(byKey.get(keys[i])?.aliases||[])]).join(' '));return query.every(token=>text.includes(token));});
+}
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 function dayLabel(v) { const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? DAYS[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] + ' ' + fmtDate(v) : v; }
 window.addEventListener('euroscout-fixtures', () => { if (STATE.view === 'scoutlog' && tab === 'upcoming' && !document.getElementById('sxMask')) renderLog(); });
@@ -520,6 +531,8 @@ function fixtureScoutIndex(sessions,fixtures){
 function fixtureAction(g,scouted){return scouted?'<button type="button" class="sx-scouted-chip" data-session="'+escAttr(scouted.id)+'" title="Open saved scouting session">✓ Scouted</button>':canEdit()&&g.home.key&&g.away.key?'<button type="button" class="btn ghost sm" data-scout="'+escAttr([g.home.key,g.away.key,g.date,g.comp].join('~'))+'">Scout this game</button>':'';}
 
 function renderLog() {
+  clearTimeout(gameSearchTimer);
+  const searchFocus=document.activeElement?.id==='sxGameSearch',searchCursor=searchFocus?document.activeElement.selectionStart:null;
   const sessions = everything();
   const teamKeys = new Set(); sessions.forEach(s => { if (s.a.key) teamKeys.add(s.a.key); if (s.b.key) teamKeys.add(s.b.key); });
   const coverageRows=coverage(),compCount=coverageRows.filter(c=>c.sessions).length;
@@ -539,14 +552,14 @@ function renderLog() {
       teams.map(t => '<tr class="sx-click" data-team="' + escAttr(t.key) + '" tabindex="0"><td><b>' + esc(t.name) + '</b></td><td>' + famBar(t.score, t.band) + '</td><td>' + t.games.length + '</td><td>' + fmtDate(t.first) + '</td><td>' + fmtDate(t.last) + '</td><td>' + t.viewed.length + (t.rosterSize ? ' / ' + t.rosterSize : '') + '</td><td>' + t.shortlisted.length + '</td><td>' + t.reports.length + '</td><td>' + esc(t.competitions.join(' · ') || '—') + '</td></tr>').join('') + '</tbody></table></div>'
       : '<div class="empty">Team logs appear once a session is finished.</div>';
   } else if (tab === 'upcoming') {
-    const FX = window.ESFixtures, list = FX ? FX[upMode](upDays, upComp) : [], cs = FX ? FX.competitions() : [];
+    const FX = window.ESFixtures, teams = fixtureTeams(FX?.all?.()||[]), list = searchGames(FX ? FX[upMode](upDays, upComp) : [], teams), cs = FX ? FX.competitions() : [];
     const scoutedGame=fixtureScoutIndex(sessions,FX?.all?.()||list);
     const byDay = new Map(); list.forEach(g => { if (!byDay.has(g.date)) byDay.set(g.date, []); byDay.get(g.date).push(g); });
-    body = '<div class="sx-filters"><label>Show <select id="sxUpMode"><option value="recent"' + (upMode === 'recent' ? ' selected' : '') + '>Played games</option><option value="upcoming"' + (upMode === 'upcoming' ? ' selected' : '') + '>Upcoming games</option></select></label><label>Competition <select id="sxUpComp"><option value="">All (' + cs.length + ')</option>' + cs.map(c => '<option value="' + escAttr(c.id) + '"' + (c.id === upComp ? ' selected' : '') + '>' + esc(c.name) + ' · ' + c.games + ' games</option>').join('') + '</select></label><label>Window <select id="sxUpDays">' + [7, 14, 30, 60].map(n => '<option value="' + n + '"' + (n === upDays ? ' selected' : '') + '>' + (upMode === 'recent' ? 'last ' : 'next ') + n + ' days</option>').join('') + '</select></label><button type="button" class="btn ghost sm" id="sxUpRefresh">Refresh schedule</button><span class="sx-hint" style="margin:0">' + (FX && FX.loadedAt() ? 'Schedule checked ' + fmtDate(new Date(FX.loadedAt()).toISOString()) + ' ' + fmtTime(FX.loadedAt()) : FX && FX.state() === 'loading' ? 'Loading the schedule…' : '') + '</span></div>' +
+    body = '<div class="sx-filters sx-game-search"><label for="sxGameSearch">Find team <input type="search" id="sxGameSearch" placeholder="Type a team name…" value="' + escAttr(gameSearch) + '"></label><label for="sxGameTeam">Team <select id="sxGameTeam"><option value="">All teams</option>' + teams.map(t=>'<option value="'+escAttr(t.key)+'"'+(t.key===gameTeam?' selected':'')+'>'+esc(t.name)+'</option>').join('') + '</select></label><button type="button" class="btn ghost sm" id="sxGameClear">Clear filters</button><span class="sx-hint" role="status">' + list.length + ' games found</span></div><div class="sx-filters"><label>Show <select id="sxUpMode"><option value="recent"' + (upMode === 'recent' ? ' selected' : '') + '>Past games</option><option value="upcoming"' + (upMode === 'upcoming' ? ' selected' : '') + '>Upcoming games</option></select></label><label>Competition <select id="sxUpComp"><option value="">All (' + cs.length + ')</option>' + cs.map(c => '<option value="' + escAttr(c.id) + '"' + (c.id === upComp ? ' selected' : '') + '>' + esc(c.name) + ' · ' + c.games + ' games</option>').join('') + '</select></label><label>Window <select id="sxUpDays">' + [0, 7, 14, 30, 60].map(n => '<option value="' + n + '"' + (n === upDays ? ' selected' : '') + '>' + (n ? (upMode === 'recent' ? 'last ' : 'next ') + n + ' days' : 'Full season · 2026/27') + '</option>').join('') + '</select></label><button type="button" class="btn ghost sm" id="sxUpRefresh">Refresh schedule</button><span class="sx-hint" style="margin:0">' + (FX && FX.loadedAt() ? 'Schedule checked ' + fmtDate(new Date(FX.loadedAt()).toISOString()) + ' ' + fmtTime(FX.loadedAt()) : FX && FX.state() === 'loading' ? 'Loading the schedule…' : '') + '</span></div>' +
       (FX && FX.problems().length ? '<details class="sx-problems"><summary>' + FX.problems().length + ' thing' + (FX.problems().length === 1 ? '' : 's') + ' to check</summary><ul>' + FX.problems().map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></details>' : '') +
       (list.length ? [...byDay.entries()].map(([d, gs]) => '<h4 class="sx-sub">' + dayLabel(d) + '</h4><div class="sx-tablewrap"><table class="sx-table sx-fixt"><tbody>' + gs.map(g => '<tr><td class="sx-ftime">' + esc(g.time || '—') + '</td><td class="sx-fcomp">' + esc(g.compName) + (g.group ? ' · ' + esc(g.group) : '') + (g.round ? ' <span class="sx-hint">· ' + esc(roundLabel(g.round)) + '</span>' : '') + '</td><td><b>' + esc(g.home.name) + '</b> vs <b>' + esc(g.away.name) + '</b>' + (g.played ? ' <span class="sx-hint">' + esc(g.hs + '–' + g.as) + '</span>' : '') + '</td><td class="sx-hint">' + esc(g.venue) + '</td><td class="sx-fact">' + fixtureAction(g,scoutedGame(g)) + '</td></tr>').join('') + '</tbody></table></div>').join('')
-        : '<div class="empty">' + (FX && FX.state() === 'loading' ? 'Loading the schedule…' : 'No games in this window.') + '</div>') +
-      '<p class="sx-hint">EuroLeague and EuroCup come live from the official schedule, with final scores as games finish. Other leagues appear here once their results are in <code>data/fixtures-2627.js</code>.</p>';
+        : '<div class="empty">' + (FX && FX.state() === 'loading' ? 'Loading the schedule…' : 'No games match these filters. Try Full season or clear the team and competition.') + '</div>') +
+      '<p class="sx-hint">Search covers games available in the database for 2026/27. Team searches start with the full season; you can narrow the window afterwards. BBL Cup fixtures are kept separate from league games.</p>' + (window.EUROSCOUT_BBL_CUP_2026 ? '<p class="sx-hint">BBL Cup schedule checked ' + fmtDate(window.EUROSCOUT_BBL_CUP_2026.checkedAt) + ' · <a href="https://netto-bbl-pokal.de/spielplan" target="_blank" rel="noopener noreferrer">Official schedule ↗</a></p>' : '');
   } else {
     const list = comps.filter(c => showUnscouted || c.games);
     body = '<label class="sx-check"><input type="checkbox" id="sxUnscouted" ' + (showUnscouted ? 'checked' : '') + '> Show competitions with nothing watched yet (' + comps.filter(c => !c.games).length + ')</label>' +
@@ -559,6 +572,10 @@ function renderLog() {
   const go = () => { STATE.view = 'scouting'; render(); };
   const nw = $1('#sxNew'); if (nw) nw.onclick = () => openStart({ a: STATE.scouting.a, b: STATE.scouting.b }, s => { if (s) { STATE.scouting.a = s.a.key; STATE.scouting.b = s.b.key; go(); } });
   const rs = $1('#sxResume'); if (rs) rs.onclick = () => { STATE.scouting.a = a.a.key; STATE.scouting.b = a.b.key; go(); };
+  const search=$1('#sxGameSearch');if(search)search.oninput=()=>{const first=!gameSearch.trim()&&search.value.trim();gameSearch=search.value;if(first)upDays=0;
+    clearTimeout(gameSearchTimer);gameSearchTimer=setTimeout(()=>{if(STATE.view==='scoutlog'&&tab==='upcoming')renderLog();},180);};
+  const team=$1('#sxGameTeam');if(team)team.onchange=()=>{gameTeam=team.value;if(gameTeam)upDays=0;renderLog();};
+  const clear=$1('#sxGameClear');if(clear)clear.onclick=()=>{gameSearch='';gameTeam='';upComp='';upDays=14;upMode='recent';renderLog();};
   const um = $1('#sxUpMode'); if (um) um.onchange = () => { upMode = um.value; renderLog(); };
   const uc = $1('#sxUpComp'); if (uc) uc.onchange = () => { upComp = uc.value; renderLog(); };
   const ud = $1('#sxUpDays'); if (ud) ud.onchange = () => { upDays = +ud.value; renderLog(); };
@@ -579,6 +596,7 @@ function renderLog() {
   const rowKey = (el, fn) => { el.onclick = fn; el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } }; };
   document.querySelectorAll('[data-team]').forEach(r => rowKey(r, () => openTeamLog(r.dataset.team)));
   document.querySelectorAll('[data-session]').forEach(r => rowKey(r, () => openSession(r.dataset.session)));
+  if(searchFocus){const next=$1('#sxGameSearch');if(next){next.focus({preventScroll:true});next.setSelectionRange(searchCursor,searchCursor);}}
 }
 /* Sessions that predate this feature are only a grouping of old viewings. The
    first time one is edited or merged it becomes a real, stored session, and the

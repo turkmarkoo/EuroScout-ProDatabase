@@ -1,0 +1,40 @@
+const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/PC/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const root=path.resolve(__dirname,'..');
+(async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{
+ const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.hostname!=='euro.test')return route.abort();
+  if(u.pathname==='/euroscout-access.js')return route.fulfill({contentType:'text/javascript',body:`window.ESAccess={internal:true,owner:true,user:{uid:'fixture-user',email:'fixture@example.invalid'},state:{schema:1,records:{},appData:{},seeds:{}},seedReady:Promise.resolve({core:{season2627:{comps:{}},rumors:{skylinersFixture:true}},seeds:{}}),saveState:async function(s){this.state=s;return true;},refresh:async()=>false,get:async()=>null,field:()=>null};ESAccess.ready=Promise.resolve(ESAccess);`});
+  const f=path.resolve(root,u.pathname.slice(1)||'index.html');return fs.existsSync(f)&&fs.statSync(f).isFile()?route.fulfill({path:f}):route.fulfill({status:404,body:''});
+ });
+ await page.clock.install({time:new Date('2026-11-05T12:00:00+01:00')});await page.goto('https://euro.test/');await page.waitForFunction(()=>window.EuroScoutCatalogueReady&&STATE.data?.rumors?.skylinersFixture&&!document.querySelector('#coreLoadStatus'),{},{timeout:90000});
+
+ await page.evaluate(async()=>{
+  await loadMatchupRosterScripts();
+  const bonn=allClubs().find(c=>c.name==='Telekom Baskets Bonn'),alba=allClubs().find(c=>c.name==='ALBA BERLIN');
+  const league={id:'league-test',date:'2026-11-01',time:'18:00',comp:'bbl',compName:'German BBL',round:7,home:{key:bonn.key,code:'BON',name:bonn.name},away:{key:alba.key,code:'BER',name:alba.name},hs:95,as:88,played:true};
+  Object.assign(EuroScoutDragons,{active:()=>true,fixtures:()=>[league]});window.EuroScoutDragons=EuroScoutDragons;await ESFixtures.refresh(true);
+  window.__cup=ESFixtures.all().filter(g=>g.comp==='bblcup');window.__cupKeys=__cup.flatMap(g=>[g.home,g.away]).filter(t=>!t.key).map(t=>t.name);
+  const history=JSON.stringify({v:1,sessions:[{id:'keep-session',gameDate:'2026-09-01',a:{key:bonn.key,name:bonn.name},b:{key:alba.key,name:alba.name},competition:{id:'bbl',name:'German BBL'},players:[],note:'Keep previous scouting'}]});localStorage.setItem('euroscout:sessions:v1',history);window.__historyBefore=history;
+  const p=allPlayersEvery()[0];await Store.save(p.id,{report:JSON.stringify({nOff:'Preserve notes',_history:[{id:'old-note',report:{nOff:'Earlier note'}}]}),rating:4});window.__playerBefore={id:p.id,record:JSON.stringify(Store.get(p.id))};
+  STATE.view='scoutlog';render();
+ });
+ assert.equal(await page.evaluate(()=>__cup.length),20);assert.deepEqual(await page.evaluate(()=>__cupKeys),[],'Every cup team must have its existing club key');
+ await page.locator('[data-tab=upcoming]').click();assert.equal(await page.locator('[data-scout*="2026-10-16~bblcup"]').count(),0,'Old game should be outside last 14 days');
+ await page.locator('#sxGameSearch').fill('Bonn');await page.waitForTimeout(300);
+ assert.equal(await page.locator('#sxUpDays').inputValue(),'0');assert.equal(await page.locator('#sxGameSearch').inputValue(),'Bonn');assert(await page.locator('#sxGameSearch').evaluate(e=>e===document.activeElement));
+ const button=page.locator('[data-scout*="2026-10-16~bblcup"]');assert.equal(await button.count(),1);assert.equal(await page.locator('.sx-fixt tr').count(),2,'Bonn league + cup history across competitions');
+ await page.locator('#sxUpComp').selectOption('bblcup');assert.equal(await page.locator('.sx-fixt tr').count(),1);
+ await page.locator('#sxUpDays').selectOption('7');assert.equal(await page.locator('.sx-fixt tr').count(),0);await page.locator('#sxUpDays').selectOption('0');
+ await button.click();await page.locator('#sxStart').waitFor({timeout:2500});
+ const form=await page.locator('#sxStart').evaluate(f=>({a:f.elements.a.selectedOptions[0].textContent,b:f.elements.b.selectedOptions[0].textContent,date:f.elements.gameDate.value,comp:f.elements.comp.value,stage:f.elements.stage.value,scoreA:f.elements.scoreA.value,scoreB:f.elements.scoreB.value}));
+ assert.equal(form.a,'EWE Baskets Oldenburg');assert.equal(form.b,'Telekom Baskets Bonn');assert.equal(form.date,'2026-10-16');assert.equal(form.comp,'bblcup');assert.equal(form.stage,'Last 16');assert.equal(form.scoreA,'61');assert.equal(form.scoreB,'75');
+ await page.getByRole('button',{name:'Cancel',exact:true}).click();assert.equal(await page.evaluate(()=>ESSessions.active()),null);
+ await page.locator('#sxGameClear').click();await page.locator('#sxGameTeam').selectOption({label:'Telekom Baskets Bonn'});assert.equal(await page.locator('#sxUpDays').inputValue(),'0');assert.equal(await page.locator('.sx-fixt tr').count(),2);
+ await page.locator('#sxGameSearch').fill('not an existing team');await page.waitForTimeout(300);assert.equal(await page.locator('.sx-fixt tr').count(),0);await page.locator('#sxGameSearch').fill('');await page.waitForTimeout(300);
+ await page.screenshot({path:path.resolve(root,'../scouting-game-search-desktop.png'),fullPage:true});await page.setViewportSize({width:390,height:844});await page.evaluate(()=>{const b=[...document.querySelectorAll('button')].find(b=>/Collapse sidebar/i.test(b.textContent));if(b)b.click();});await page.waitForTimeout(350);await page.screenshot({path:path.resolve(root,'../scouting-game-search-phone.png'),fullPage:true});
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Phone controls must not cause page overflow');
+ assert(await page.evaluate(()=>localStorage.getItem('euroscout:sessions:v1')===__historyBefore&&JSON.stringify(Store.get(__playerBefore.id))===__playerBefore.record));assert.deepEqual(errors,[]);
+ await page.setViewportSize({width:1440,height:900});await page.locator('[data-scout*="2026-10-16~bblcup"]').click();await page.locator('#sxStart').waitFor();await page.locator('#sxStart [type=submit]').click();await page.locator('.liveScouting').waitFor();assert.equal(await page.evaluate(()=>ESSessions.active().competition.id),'bblcup');assert(await page.evaluate(()=>[...document.querySelectorAll('.mx-col .rosterList')].length===2&&[...document.querySelectorAll('.mx-col .rosterList')].every(e=>e.querySelectorAll('.rosterRow').length>0)));
+ console.log(JSON.stringify({passed:true,cupGames:20,unresolvedTeams:0,searchAcrossCompetitions:true,fullSeason:true,cupForm:form,privateDataPreserved:true,mobileWidth:390}));
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
