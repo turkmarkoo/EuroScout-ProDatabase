@@ -17,3 +17,6 @@
 .ol-profile-cell{text-align:center!important}.ol-profile{font-family:var(--body);font-size:11.5px;font-weight:700}
 .ol-summary dl div:nth-child(5){min-width:170px}.ol-summary dl div:nth-child(5) dd{white-space:nowrap;font-size:13px}
 .ol-source{font-family:var(--body);font-size:11.5px}
+.ol-filters{flex-wrap:wrap}.ol-filters select{width:auto;max-width:none;flex:0 1 auto;min-height:40px}.ol-team span{white-space:normal;overflow:visible;text-overflow:clip}.ol-summary{flex-wrap:wrap}
+@media(max-width:680px){.ol-league-card{min-height:52px;padding:8px;gap:8px}.ol-league-card .ol-logo{width:28px;height:28px;flex-basis:28px}.ol-summary{padding:12px}.ol-summary-name h2{font-size:21px}.ol-filters:not(.more-open) :is(#olPosition,#olCountry,#olDraft,.ol-mode){display:none}.ol-filters #olSearch{font-size:16px}.ol-filters select{max-width:100%}}
+@media(max-width:1180px){body.es-redesign:has(.ol-page){padding-left:0}body.es-redesign:has(.ol-page) .es-sidebar{transform:translateX(-100%)}body.es-redesign.es-nav-open:has(.ol-page) .es-sidebar{transform:translateX(0)}}

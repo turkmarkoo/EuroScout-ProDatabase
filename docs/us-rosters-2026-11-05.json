@@ -1,0 +1,83 @@
+{
+  "snapshot": "2026-11-05T07:28:29.761329+00:00",
+  "season": "2026-27",
+  "provider": "ESPN season-specific roster feeds; Mercer and seven class-year gaps checked against official school rosters",
+  "teams": {
+    "ncaam": 362,
+    "nba": 30,
+    "gleague": 31
+  },
+  "rosterMemberships": {
+    "ncaam": 5529,
+    "nba": 521,
+    "gleague": 506
+  },
+  "newSourceRecords": 2533,
+  "academicYears": {
+    "Sophomore": 1242,
+    "Junior": 1273,
+    "Freshman": 1395,
+    "Senior": 1615,
+    "Unknown": 2,
+    "Graduate": 1,
+    "Fifth year": 1
+  },
+  "legacyIdentityMatchesHeldForReview": 50,
+  "limitations": [
+    "Two college academic years were not published in the provider feed and could not be corroborated on the current school roster.",
+    "G League memberships are the provider snapshot, not a declaration of a standard or two-way contract.",
+    "Unresolved legacy ID matches remain separate; no surname-only merges."
+  ],
+  "officialTeamDirectory": "https://gleague.nba.com/teams",
+  "schoolClassEvidence": [
+    {
+      "player": "Ajak Nyuon",
+      "field": "academicYear",
+      "value": "Freshman",
+      "source": "https://thesundevils.com/sports/mens-basketball/roster",
+      "excerpt": "am Opens in a new window Ajak Nyuon #9 6′10″ Freshman F Canberra, Australia Ajak Nyuon Instagram Opens in a new window Jokubas Rudaitis #7 6′5″ Freshman G Kaunas, Lithuania Jokubas Rudaitis Instagram Opens in a new window Dillan Shaw #11 6′7″ Sophomore G/F Northridge, California Dillan Shaw Instagram Opens in a new window Dillan Shaw Twitter Opens in a "
+    },
+    {
+      "player": "Narcisse Ngoy",
+      "field": "academicYear",
+      "value": "Senior",
+      "source": "https://auburntigers.com/sports/mens-basketball/roster",
+      "excerpt": "pens in a new window #94 Narcisse Ngoy Center 7′0″ 280 lbs Senior Hometown Champigny-sur-Marne, France Narcisse Ngoy Instagram Opens in a new window Men's Basketball Coaching Staff Steven Pearl Head Coach Steven Pearl Twitter Opens in a new window Ira Bowman Associate Head Coach Corey Williams Assistant Coach Corey Williams Twitter Opens in a new window"
+    },
+    {
+      "player": "Ousmane N'Diaye",
+      "field": "academicYear",
+      "value": "Junior",
+      "source": "https://ukathletics.com/sports/mbball/roster/",
+      "excerpt": "er instagram Full Bio 19 Ousmane N'Diaye Forward - 7'0\" 220 lbs Junior instagram Full Bio 21 Justin McBride Forward - 6'8\" 245 lbs Senior twitter instagram Full Bio 22 Milan Momcilovic Forward - 6'9\" 220 lbs Senior twitter instagram Full Bio 24 Malachi Moreno Center - 7'0\" 250 lbs Sophomore twitter instagram Full Bio 33 Reece Potter Forward - 7'1\" 235 l"
+    },
+    {
+      "player": "Noah Cohen",
+      "field": "academicYear",
+      "value": "Freshman",
+      "source": "https://goprincetontigers.com/sports/mens-basketball/roster/2026-27",
+      "excerpt": "m Higgs Jersey Number 10 Noah Cohen Position G Academic Year Fr. Height 6' 0'' Weight 170 lbs Hometown Dresher, Penn. Full Bio for Noah Cohen Expand for more info about Noah Cohen Jersey Number 11 Will Kutzler Position F Academic Year Sr. Height 6' 8'' Weight 210 lbs Hometown Lakeville, Minn. Last School Lakeville North Full Bio for Will Kutzler Expand "
+    },
+    {
+      "player": "Elijah Saunders",
+      "field": "academicYear",
+      "value": "Graduate",
+      "source": "https://friars.com/sports/mens-basketball/roster/2026-27",
+      "excerpt": "Skip Ad Jersey Number 45 Elijah Saunders Position F Academic Year Gr. Height 6' 8'' Weight 240 lbs Hometown Phoenix, Ariz. Last School Sunnyslope High School '22 Previous School Previous School: Maryland Full Bio for Elijah Saunders Expand for more info about Elijah Saunders Coaching Staff Bryan Hodgson Head Coach Full Bio for Bryan Hodgson Tee Butters "
+    },
+    {
+      "player": "Trey Lewis",
+      "field": "academicYear",
+      "value": "Freshman",
+      "source": "https://tsusports.com/sports/mens-basketball/roster/2026-27",
+      "excerpt": "terson G 6'3\" 185 lbs 12 Trey Lewis Fr. Harlem, N.Y. Roselle Catholic Full Bio Freshman Harlem, N.Y. Roselle Catholic Full Bio Hide/Show Additional Information For Trey Lewis Guard G 6'6\" 196 lbs 32 Kehlin Farooq Gr. Houston, Texas Hampton Full Bio Graduate Student Houston, Texas Hampton Full Bio Hide/Show Additional Information For Kehlin Farooq Center"
+    },
+    {
+      "player": "Mohamed Sankhe",
+      "field": "academicYear",
+      "value": "Freshman",
+      "source": "https://wsucougars.com/sports/mens-basketball/roster/season/2026-27",
+      "excerpt": "Catholic HS Full Bio #93 Mohamed Sankhe Mohamed Sankhe Instagram Opens in a new window Mohamed Sankhe Twitter Opens in a new window Mohamed Sankhe TikTok Opens in a new window Forward 6′10″ 265 lbs Freshman France JA Vichy Full Bio Men's Basketball Coaching Staff David Riley David Riley Twitter Opens in a new window Head Coach Full Bio Pedro Garcia Rosa"
+    }
+  ]
+}

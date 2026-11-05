@@ -2,11 +2,13 @@
 (function(){
   esScoutEnhance=function(){};
   const escape=val=>String(val??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const fields=['player','primaryRole','secondaryRole','pos','height','age','nationality','club','competition','games','pts','reb','ast','pir','grade'];
-  const labels={primaryRole:'Primary Role',secondaryRole:'Secondary Role',player:'Player',pos:'Pos',height:'HT',age:'Age',nationality:'Nationality',club:'Club',competition:'Competition',games:'GP',pts:'PTS',reb:'REB',ast:'AST',pir:'PIR',grade:'Grade'};
+  const fields=['player','primaryRole','secondaryRole','pos','height','age','academicYear','nationality','club','competition','games','pts','reb','ast','pir','grade'];
+  const labels={primaryRole:'Primary Role',secondaryRole:'Secondary Role',player:'Player',pos:'Pos',height:'HT',age:'Age',academicYear:'College year',nationality:'Nationality',club:'Club',competition:'Competition',games:'GP',pts:'PTS',reb:'REB',ast:'AST',pir:'PIR',grade:'Grade'};
   const FILTER_VISIBILITY_KEY='euroscout:dbFiltersCollapsed:v1';
   const SEARCH_RESULT_LIMIT=160;
   let signalEvidenceJob=null,signalEvidenceState='idle',signalEvidenceError='';
+  let rosterJob=null,rosterError='';
+  function ensureRosterDatabase(){if(STATE._extraDone||rosterJob||rosterError)return;rosterJob=loadExtraLeagues().catch(e=>{rosterError=e.message||'US rosters could not load.';}).finally(()=>{rosterJob=null;if(STATE.view==='scout')renderScout();});}
   const needsSignalHistory=s=>s.signals?.has('college')||s.signals?.has('uspro');
   const signalEvidenceReady=()=>window.EuroScoutCatalogueReady&&window.ESSignals?.historyReady();
   function repaintSignals(){if(STATE.view!=='scout'||!STATE.scout.signals?.size)return;const active=document.activeElement,editing=active?.closest('.scoutwrap')&&active.matches('input:not([type=checkbox])'),saved=editing&&active.id?{id:active.id,value:active.value,start:active.selectionStart,end:active.selectionEnd}:null;renderScout();if(saved){const field=document.getElementById(saved.id);if(field){field.value=saved.value;field.focus({preventScroll:true});if(saved.start!=null&&field.setSelectionRange)try{field.setSelectionRange(saved.start,saved.end);}catch{}}}}
@@ -80,6 +82,7 @@
       '<td class="es-db-check"><input type="checkbox" aria-label="Select '+escape(p.name)+'" data-select="'+escape(p.id)+'"></td><td class="es-db-rank">'+(offset+i+1)+'</td>'+
       cell('player','<div class="es-db-identity"><span class="es-db-avatar">'+photo(p)+'</span><span>'+escape(p.name)+'</span><button type="button" class="eststar '+(watched?'on':'')+'" data-star="'+escape(p.id)+'" aria-label="'+(watched?'Remove from':'Add to')+' watchlist">'+(watched?'★':'☆')+'</button></div>','es-db-name')+
       cell('primaryRole',roleCell(p,'primaryRole'),'dq-role-cell')+cell('secondaryRole',roleCell(p,'secondaryRole'),'dq-role-cell')+cell('pos',escape(dbPositionGroup(p)||'—'))+cell('height',p.height?escape(p.height)+' cm':'—')+cell('age',p.age!=null?escape(p.age):'—')+
+      cell('academicYear',escape(window.EuroScoutNCAA?.info(p)?.classLabel||'—'))+
       cell('nationality',(flagEmoji(p.country)?flagEmoji(p.country)+' ':'')+escape(EuroScoutCountries.canonical(p.country)||p.country||'—'))+
       cell('club','<span class="es-db-club">'+(current.logo?'<img src="'+escape(current.logo)+'" loading="lazy" alt="">':'')+escape(current.name)+'</span>')+
       cell('competition',escape(playerLeague(p)))+
@@ -96,6 +99,7 @@
   renderScout=function(){
     // Free Agents owns delegated handlers on #app. Drop them before rebuilding the database.
     const app=document.getElementById('app');if(app){app.onclick=null;app.onchange=null;app.oninput=null;app.onkeydown=null;app.removeAttribute('data-view');}
+    ensureRosterDatabase();
     const s=STATE.scout,position=s.dbPos;s.dbPos=({PG:'Guard',SG:'Guard',SF:'Forward',PF:'Big',C:'Big'})[position]||position;
     const query=s.q||'';if(query)s.q='';
     document.body.classList.remove('fa2-active');document.body.classList.add('es-database-page');oldRender();
@@ -116,7 +120,7 @@
   };
   Object.assign(window,{render,renderScout});
   function select(label,value,options,handler){const box=document.createElement('label');box.className='es-db-filter';box.textContent=label;const el=document.createElement('select');el.innerHTML=options.map(([v,t])=>'<option value="'+escape(v)+'"'+(String(v)===String(value)?' selected':'')+'>'+escape(t)+'</option>').join('');el.onchange=()=>handler(el.value);box.append(el);return box;}
-  function clear(){const s=STATE.scout;s.q='';s.basketballRole='';s.dbPos='';s.dbCountry='';s.dbAgeMin=s.dbAgeMax=s.dbHeightMin=s.dbHeightMax=null;s.dbGrade='';s.dbWatchOnly=s.dbReviewOnly=s.dbNotesOnly=false;s.level=null;s.next26=null;s.leagues.clear();s.roles.clear();s.tags.clear();s.signals?.clear();s.status='all';s.filters=[];s.arch=null;s.ratingMin=null;renderScout();}
+  function clear(){const s=STATE.scout;s.q='';s.basketballRole='';s.dbPos='';s.dbCountry='';s.dbAgeMin=s.dbAgeMax=s.dbHeightMin=s.dbHeightMax=null;s.dbGrade='';s.dbAcademicYear='';s.dbWatchOnly=s.dbReviewOnly=s.dbNotesOnly=false;s.level=null;s.next26=null;s.leagues.clear();s.roles.clear();s.tags.clear();s.signals?.clear();s.status='all';s.filters=[];s.arch=null;s.ratingMin=null;renderScout();}
   function range(label,min,max,low,high,keyMin,keyMax){const block=document.createElement('div');block.className='es-db-filter es-db-range';const title=document.createElement('span');title.textContent=label;block.append(title);const row=document.createElement('div');for(const [key,val,bound] of [[keyMin,low,min],[keyMax,high,max]]){const input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.value=val??bound;input.setAttribute('aria-label',label+' '+(key===keyMin?'minimum':'maximum'));input.onchange=()=>{const value=input.value===''?null:Number(input.value);if(STATE.scout[key]===value)return;STATE.scout[key]=value;renderScout();};row.append(input);}block.append(row);return block;}
   function enhance(){const s=STATE.scout,wrap=$('#app .scoutwrap'),rail=wrap?.querySelector('.scoutrail'),head=wrap?.querySelector('.scouthead');if(!rail||!head)return;
     s.railHidden=false;wrap.classList.remove('rail-hidden');wrap.classList.toggle('es-db-rail-hidden',filtersCollapsed);
@@ -129,8 +133,9 @@
     const hint=document.createElement('p');hint.className='hint';hint.textContent='Select one or more. Includes players matching any selected signal.';signals.append(hint);
     for(const rule of window.ESSignals?.FILTERS||[]){const line=document.createElement('label');line.className='es-db-toggle';line.title=rule.title;const input=document.createElement('input');input.type='checkbox';input.dataset.signal=rule.key;input.checked=s.signals?.has(rule.key)||false;input.onchange=()=>{s.signals=s.signals||new Set();input.checked?s.signals.add(rule.key):s.signals.delete(rule.key);if(input.checked)s.season='2026/27';renderScout();};line.append(input,document.createTextNode(rule.label));signals.append(line);}rail.append(signals);
     rail.append(select('Level',s.level??'',[['','All levels'],...LEVEL_BANDS.map((v,i)=>[i,v])],v=>{s.level=v===''?null:Number(v);renderScout();}));
-    const leagues=STATE.data.leagues.filter(l=>!l.meta.teamsOnly&&!isOtherLeague(l.meta));const selected=[...s.leagues][0]||'';rail.append(select('Competition',s.competition||'all',[['all','All competitions'],['bclq','BCL Qualifiers · 2026/27']],v=>{s.competition=v;renderScout();}));
+    const leagues=STATE.data.leagues.filter(l=>!l.meta.teamsOnly&&(!isOtherLeague(l.meta)||isRosterDatabaseLeague(l.meta)));const selected=[...s.leagues][0]||'';rail.append(select('Competition',s.competition||'all',[['all','All competitions'],['bclq','BCL Qualifiers · 2026/27']],v=>{s.competition=v;renderScout();}));
     rail.append(select('League',selected,[['','All leagues'],...leagues.map(l=>[l.meta.id,l.meta.name])],v=>{s.leagues.clear();if(v)s.leagues.add(v);renderScout();}));
+    rail.append(select('College year',s.dbAcademicYear||'',[['','All college years'],...['Freshman','Sophomore','Junior','Senior','Graduate','Fifth year','Unknown'].map(y=>[y,y])],v=>{s.dbAcademicYear=v;renderScout();}));
     const countries=[...new Set(scoutPool().map(p=>p.country).filter(Boolean))].sort((a,b)=>countryLabel(a).localeCompare(countryLabel(b)));rail.append(select('Country',s.dbCountry||'',[['','All countries'],...countries.map(c=>[c,countryLabel(c)])],v=>{s.dbCountry=v;renderScout();}));
     rail.append(range('Age',16,45,s.dbAgeMin,s.dbAgeMax,'dbAgeMin','dbAgeMax'));rail.append(range('Height (cm)',150,235,s.dbHeightMin,s.dbHeightMax,'dbHeightMin','dbHeightMax'));
     rail.append(select('Stats grade',s.dbGrade||'',[['','All grades'],['9','9+'],['8','8+'],['7','7+'],['6','6+']],v=>{s.dbGrade=v;renderScout();}));
@@ -148,6 +153,7 @@
     const actions=document.createElement('div');actions.className='es-db-toolbar-actions';const saved=viewsGet(),active=saved.findIndex(viewIsActive);const viewPicker=select('Saved view',active<0?'':String(active),[['','Select a view…'],...saved.map((v,i)=>[String(i),v.name])],v=>{if(v!=='')applyView(viewsGet()[Number(v)]);});viewPicker.querySelector('select').id='esDbSavedView';actions.append(viewPicker);const save=document.createElement('button');save.textContent='♧  Save view';save.onclick=saveCurrentView;actions.append(save);
     actions.append(select('Sort',s.tsort?.key||'grade',[['grade','Stats grade'],['pts','Points'],['reb','Rebounds'],['ast','Assists'],['pir','PIR'],['name','Name'],['born','Birth year'],['primaryRole','Primary Role'],['secondaryRole','Secondary Role']],v=>{s.tsort={key:v,dir:['name','born','primaryRole','secondaryRole'].includes(v)?1:-1};s.sort=v==='name'?'name':v==='pts'?'ppg':'grade';renderScout();}));
     if(s.view==='table'){const columns=document.createElement('details');columns.className='es-db-columns';columns.innerHTML='<summary>▦  Columns</summary>';const panel=document.createElement('div');for(const key of fields){const line=document.createElement('label'),cb=document.createElement('input');cb.type='checkbox';cb.checked=visible().includes(key);cb.disabled=key==='player';cb.onchange=()=>{s.dbColumns=cb.checked?[...new Set([...visible(),key])]:visible().filter(x=>x!==key);renderScout();};line.append(cb,document.createTextNode(labels[key]));panel.append(line);}columns.append(panel);actions.append(columns);}toolbar.append(actions);head.after(toolbar);
+    if(!STATE._extraDone){const status=document.createElement('div');status.className='es-db-signal-status';status.setAttribute('role','status');status.textContent=rosterError?'US roster coverage is incomplete. '+rosterError:'Loading NCAA, NBA and G League rosters…';if(rosterError){const retry=document.createElement('button');retry.textContent='Retry';retry.onclick=()=>{rosterError='';renderScout();};status.append(retry);}toolbar.after(status);}
     if(needsSignalHistory(s)&&signalEvidenceState!=='ready'){
       const status=document.createElement('div');status.className='es-db-signal-status';status.setAttribute('role','status');
       status.textContent=signalEvidenceState==='error'?'Rookie / NBA-G League list is incomplete. '+signalEvidenceError:'Loading arrival history across all leagues… Results below are incomplete until loading finishes.';

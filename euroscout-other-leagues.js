@@ -24,12 +24,13 @@
   function logo(id,cls='ol-logo'){return `<span class="${cls} ol-logo-${id}"><img src="${attr(LOGOS[id]||'')}" alt="" loading="lazy" onerror="this.parentNode.textContent='${html((LABELS[id]?.[0]||id).slice(0,2).toUpperCase())}'"></span>`;}
   function rosterInfo(p,L){return L.meta.id==='ncaam'?window.EuroScoutNCAA?.info(p,'2026-27'):null;}
   function visiblePlayers(L){
+    if(window.EuroScoutUSARosters?.ready()&&['nba','gleague','ncaam'].includes(L.meta.id)){const seen=new Set();return L.players.filter(p=>{if(!p._usRoster)return false;const id=p._espnId||gid(p);if(seen.has(id))return false;seen.add(id);return true;});}
     if(L.meta.id==='nba'&&L.meta.rosterSeason==='2026-27')return L.players.filter(p=>p._nbaCurrent);
     if(L.meta.id==='ncaam'){const seen=new Set(),players=[];for(const p of L.players){if(!rosterInfo(p,L))continue;const key=p._ncaa?.espnId||p.id;if(seen.has(key))continue;seen.add(key);players.push(p);}return players;}
     if(L.meta.rosterStatus==='pending')return [];
     return L.players;
   }
-  function playerTeam(p,L){return rosterInfo(p,L)?.team||p.teamName||p.team||'';}
+  function playerTeam(p,L){return window.EuroScoutUSARosters?.records(p).find(r=>r.league===L.meta.id)?.teamName||rosterInfo(p,L)?.team||p.teamName||p.team||'';}
   function qualifiedCount(L,players=visiblePlayers(L)){return players.filter(p=>p.qualified).length;}
   function teamCount(L,players=visiblePlayers(L)){return new Set(players.map(p=>playerTeam(p,L)).filter(Boolean)).size;}
   function normalize(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
@@ -76,6 +77,7 @@
     if(st.position)pool=pool.filter(p=>posLabel(p)===st.position);
     if(st.team)pool=pool.filter(p=>playerTeam(p,L)===st.team);
     if(st.country)pool=pool.filter(p=>(p.country||'')===st.country);
+    if(st.classYear)pool=pool.filter(p=>rosterInfo(p,L)?.classYear===st.classYear);
     if(st.draft)pool=pool.filter(p=>String(p._draftYr||'')===st.draft);
     const cols=columns(st.mode),value=(p,key)=>Number(stat(p,key,st.mode));
     pool.sort((a,b)=>{if(st.sort==='name')return a.name.localeCompare(b.name)*st.dir;const av=value(a,st.sort),bv=value(b,st.sort);return ((Number.isFinite(bv)?bv:-Infinity)-(Number.isFinite(av)?av:-Infinity))*-st.dir;});
@@ -86,7 +88,7 @@
     const tabs=list.map(item=>{const count=visiblePlayers(item).length;const note=item.meta.rosterStatus==='pending'?'2026/27 roster pending':`${count.toLocaleString()} players`;return `<button class="ol-league-card${item.meta.id===id?' active':''}" data-league="${item.meta.id}">${logo(item.meta.id)}<span><b>${html(LABELS[item.meta.id]?.[0]||item.meta.name)}</b><small>${html(note)}</small></span></button>`;}).join('');
     const rows=shown.map((p,index)=>{const photo=playerPhoto(p),teamName=playerTeam(p,L),teamLogoSrc=teamLogo({...p,teamName},L);return `<tr data-player="${attr(p.id)}">
       <td class="ol-rank">${start+index+1}</td><td class="ol-player"><span class="ol-avatar">${photo?`<img src="${attr(photo)}" alt="" loading="lazy" onerror="this.remove()">`:html(initials(p.name))}</span><strong>${html(p.name)}</strong></td>
-      <td>${html(posLabel(p)||'—')}</td><td>${p.height?html(p.height)+' cm':'—'}</td><td>${p.weight?html(p.weight)+' kg':'—'}</td><td>${p.age??'—'}</td>
+      ${id==='ncaam'?`<td>${html(rosterInfo(p,L)?.classLabel||'Year not published')}</td>`:''}<td>${html(posLabel(p)||'—')}</td><td>${p.height?html(p.height)+' cm':'—'}</td><td>${p.weight?html(p.weight)+' kg':'—'}</td><td>${p.age??'—'}</td>
       <td>${html(countryLabel(p.country)||p.country||'—')}</td><td class="ol-team">${teamLogoSrc?`<img src="${attr(teamLogoSrc)}" alt="" loading="lazy" onerror="this.remove()">`:''}<span>${html(teamName||'—')}</span></td>
       ${cols.map(([key,,digits])=>`<td class="num">${fmt(stat(p,key,st.mode),digits)}</td>`).join('')}
       <td class="ol-profile-cell"><button class="ol-profile" data-open="${attr(p.id)}">Profile →</button></td></tr>`;}).join('');
@@ -97,15 +99,15 @@
       <section class="ol-summary">${logo(id,'ol-summary-logo')}<div class="ol-summary-name"><h2>${html(LABELS[id]?.[0]||L.meta.name)}</h2><p>${html(LABELS[id]?.[1]||L.meta.tier||'')}</p></div>
         <dl><div><dt>Roster season</dt><dd>${html(currentSeason(L))}</dd></div><div><dt>Players</dt><dd>${roster.length.toLocaleString()}</dd></div><div><dt>Teams</dt><dd>${teamCount(L,roster)}</dd></div><div><dt>Stats season</dt><dd>${html(statsSeason(L)||'—')}</dd></div><div><dt>Last update</dt><dd>${html(lastUpdate(L))}</dd></div></dl>
         <span class="ol-imported${L.meta.rosterStatus==='pending'?' pending':''}">● ${L.meta.rosterStatus==='pending'?'Roster pending':'Roster imported'}</span></section>
-      <section class="ol-database"><div class="ol-filters"><label class="ol-search">⌕<input id="olSearch" placeholder="Search players…" value="${attr(st.q)}"></label>
-        ${select('olPosition','All positions',['Guard','Forward','Big'],st.position)}${select('olTeam','All teams',teams,st.team)}${select('olCountry','All countries',countries,st.country,c=>countryLabel(c)||c)}${select('olDraft','All draft years',drafts.map(String),st.draft)}
-        <div class="ol-mode">${[['pg','Per game'],['totals','Totals'],['advanced','Advanced']].map(([key,label])=>`<button data-mode="${key}" class="${st.mode===key?'active':''}">${label}</button>`).join('')}</div><button class="ol-more" id="olMore">☷ More filters</button></div>
+      <section class="ol-database"><div class="ol-filters${st.more?' more-open':''}"><label class="ol-search">⌕<input id="olSearch" placeholder="Search players…" value="${attr(st.q)}"></label>
+        ${id==='ncaam'?select('olClass','All college years',['Freshman','Sophomore','Junior','Senior','Graduate','Fifth year','Unknown'],st.classYear||''):''}${select('olPosition','All positions',['Guard','Forward','Big'],st.position)}${select('olTeam','All teams',teams,st.team)}${select('olCountry','All countries',countries,st.country,c=>countryLabel(c)||c)}${select('olDraft','All draft years',drafts.map(String),st.draft)}
+        <div class="ol-mode">${[['pg','Per game'],['totals','Totals'],['advanced','Advanced']].map(([key,label])=>`<button data-mode="${key}" class="${st.mode===key?'active':''}">${label}</button>`).join('')}</div><button class="ol-more" id="olMore">${st.more?'Fewer filters':'☷ More filters'}</button></div>
         ${st.more?'<div class="ol-more-panel">Only the four supported league databases are included. Draft year is shown when supplied by the official feed.</div>':''}
         <div class="ol-season-context">${html(currentSeason(L))} roster · ${L.meta.rosterStatus==='pending'?'The official roster has not been published yet.':`${html(statsSeason(L))} statistics`}</div>
-        <div class="ol-table-wrap"><table class="ol-table"><thead><tr><th>#</th><th data-sort="name">Player</th><th>Pos</th><th>Ht</th><th>Wt</th><th>Age</th><th>Nationality</th><th>Current team</th>${cols.map(([key,label])=>`<th class="num" data-sort="${key}">${label}${st.sort===key?(st.dir<0?' ↓':' ↑'):''}</th>`).join('')}<th>Profile</th></tr></thead><tbody>${rows||`<tr><td colspan="21" class="empty">${html(L.meta.rosterStatus==='pending'?'The official 2026/27 roster has not been published yet.':'No players match these filters.')}</td></tr>`}</tbody></table></div>
+        <div class="ol-table-wrap"><table class="ol-table"><thead><tr><th>#</th><th data-sort="name">Player</th>${id==='ncaam'?'<th>College year</th>':''}<th>Pos</th><th>Ht</th><th>Wt</th><th>Age</th><th>Nationality</th><th>Current team</th>${cols.map(([key,label])=>`<th class="num" data-sort="${key}">${label}${st.sort===key?(st.dir<0?' ↓':' ↑'):''}</th>`).join('')}<th>Profile</th></tr></thead><tbody>${rows||`<tr><td colspan="21" class="empty">${html(L.meta.rosterStatus==='pending'?'The official 2026/27 roster has not been published yet.':'No players match these filters.')}</td></tr>`}</tbody></table></div>
         <div class="ol-pagination"><span>Showing ${pool.length?start+1:0}–${Math.min(start+st.pageSize,pool.length)} of ${pool.length.toLocaleString()} players</span><div>${pagesHtml}</div><label>Show ${select('olPageSize','', ['10','25','50','100'],String(st.pageSize))} per page</label></div>
       </section>
-      <footer class="ol-source"><span>● Data source: <a href="${attr(SOURCE[id][1])}" target="_blank" rel="noopener">${html(SOURCE[id][0])}</a> · Last updated: ${html(lastUpdate(L))}</span><span>Rosters and statistics are imported from official league and school sources.</span></footer>
+      <footer class="ol-source"><span>● Historical statistics: <a href="${attr(SOURCE[id][1])}" target="_blank" rel="noopener">${html(SOURCE[id][0])}</a> · Last updated: ${html(lastUpdate(L))}</span><span>Current rosters: ESPN and verified school rosters. Statistics retain the season shown above.</span></footer>
     </div>`;
     wire(L,pages);
   }
@@ -114,7 +116,8 @@
   function pageButtons(page,pages){const values=[1,page-2,page-1,page,page+1,page+2,pages].filter(x=>x>=1&&x<=pages);return [...new Set(values)].map((p,i,a)=>`${i&&p-a[i-1]>1?'<span>…</span>':''}<button data-page="${p}" class="${p===page?'active':''}">${p}</button>`).join('');}
   function wire(L,pages){
     const st=state();
-    $$('[data-league]').forEach(b=>b.onclick=()=>{st.league=b.dataset.league;st.page=1;st.q='';st.position='';st.team='';st.country='';st.draft='';render();});
+    $$('[data-league]').forEach(b=>b.onclick=()=>{st.league=b.dataset.league;st.page=1;st.q='';st.position='';st.team='';st.country='';st.draft='';st.classYear='';render();});
+    const classSelect=$('#olClass');if(classSelect)classSelect.onchange=e=>{st.classYear=e.target.value;st.page=1;render();};
     let timer;$('#olSearch').oninput=e=>{st.q=e.target.value;st.page=1;clearTimeout(timer);timer=setTimeout(render,160);};
     for(const [id,key] of [['olPosition','position'],['olTeam','team'],['olCountry','country'],['olDraft','draft']])$('#'+id).onchange=e=>{st[key]=e.target.value;st.page=1;render();};
     $$('[data-mode]').forEach(b=>b.onclick=()=>{st.mode=b.dataset.mode;st.page=1;render();});

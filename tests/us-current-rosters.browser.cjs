@@ -1,0 +1,33 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/PC/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const root=path.resolve(__dirname,'..'),out=path.resolve(root,'../../us-rosters-20261105');
+(async()=>{
+ const browser=await chromium.launch({executablePath:path.join(process.env.LOCALAPPDATA,'ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-win64/chrome-headless-shell.exe'),headless:true});
+ const context=await browser.newContext({viewport:{width:1500,height:900}}),page=await context.newPage(),errors=[];
+ page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE ERROR:',e.message);});
+ await context.route('**/*',r=>{const u=new URL(r.request().url());if(u.hostname!=='euro.test')return r.abort();
+  if(u.pathname==='/euroscout-access.js')return r.fulfill({contentType:'text/javascript',body:`window.ESAccess={internal:true,owner:true,user:{uid:'us-roster-test',email:'test@example.invalid'},state:{schema:1,records:{},appData:{},seeds:{}},seedReady:Promise.resolve({core:{season2627:{comps:{}},rumors:{usRosterTest:true}},seeds:{}}),saveState:async function(s){this.state=s;return true;},refresh:async()=>false,get:async()=>null};ESAccess.ready=Promise.resolve(ESAccess);`});
+  const file=path.resolve(root,u.pathname.slice(1)||'index.html');return file.startsWith(root)&&fs.existsSync(file)&&fs.statSync(file).isFile()?r.fulfill({path:file}):r.fulfill({status:404,body:''});});
+ try{
+  await page.goto('https://euro.test/',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.EuroScoutCatalogueReady&&STATE.data?.rumors?.usRosterTest,{},{timeout:90000}).catch(async e=>{console.error('BOOT',await page.locator('body').innerText());throw e;});console.log('Core catalogue ready');
+  // Opening Players must load the roster packs without an Other Leagues detour.
+  await page.evaluate(()=>{STATE.view='scout';STATE.scout.view='table';STATE.scout.season='2026/27';STATE.scout.statsSeason='2026/27';STATE.scout.leagues=new Set(['nba']);render();});
+  await page.waitForFunction(()=>STATE._extraDone,{},{timeout:120000});
+  console.log('Combined database roster packs ready');
+  await page.evaluate(()=>renderScout());
+  const nba=await page.evaluate(()=>{const rows=STATE.scout._displayPool;const p=rows.find(p=>p.name==='LeBron James');return {count:rows.length,born:p?.born,club:p?._seasonClub,currentStats:rows.filter(p=>p.ppg!=null).length,yearField:!!document.querySelector('[data-col="academicYear"]')};});
+  assert.equal(nba.count,521);assert.equal(nba.born,1984);assert(nba.yearField);assert.equal(nba.currentStats,0,'previous-season NBA numbers must not appear as current');
+  const saved=await page.evaluate(async()=>{const p=allPlayersEvery().find(p=>p.id==='nba-364');await Store.save(gid(p),{report:JSON.stringify({nOff:'• Existing NBA scouting observation'}),rating:4},{waitForCloud:false});const id=gid(p);EuroScoutUSARosters.apply(STATE.data);rebuildLinks();applyOverrides();mergeGroupRecords();return {sameId:gid(p)===id,report:recOf(p).report,rating:recOf(p).rating};});assert(saved.sameId&&saved.report.includes('Existing NBA scouting observation'));assert.equal(saved.rating,4);
+  await page.evaluate(()=>{STATE.scout.leagues=new Set(['ncaam']);STATE.scout.dbAcademicYear='Freshman';STATE.scout.q='';renderScout();});
+  const college=await page.evaluate(()=>({count:STATE.scout._displayPool.length,allFreshman:STATE.scout._displayPool.every(p=>EuroScoutNCAA.info(p)?.classYear==='Freshman'),unknownClubs:STATE.scout._displayPool.filter(p=>/unconfirmed/i.test(p._seasonClub)).length}));assert(college.count>1300&&college.allFreshman);assert.equal(college.unknownClubs,0);
+  const coverage=await page.evaluate(()=>{const expected=allPlayersEvery().filter(p=>p.league==='ncaam'&&p._usRoster&&EuroScoutNCAA.info(p)?.classYear==='Freshman'),shown=new Set(STATE.scout._displayPool.map(p=>gid(p))),missing=expected.filter(p=>!shown.has(gid(p)));return {expectedGroups:new Set(expected.map(p=>gid(p))).size,shown:shown.size,filters:{status:STATE.scout.status,roles:[...STATE.scout.roles],filters:STATE.scout.filters,level:STATE.scout.level},missing:missing.slice(0,12).map(p=>({id:p.id,name:p.name,gid:gid(p),year:EuroScoutNCAA.info(p)?.classYear,keys:effective26keys(p),group:(p._grp||[]).map(x=>x.id)}))};});assert.equal(coverage.shown,coverage.expectedGroups,'all verified college roster members must be reachable through existing merged profiles');console.log('College coverage',JSON.stringify({expected:coverage.expectedGroups,shown:coverage.shown}));
+  await page.screenshot({path:path.join(out,'combined-college-rosters-desktop.png')});
+  await page.evaluate(()=>{STATE.view='exhib';STATE.otherV2={league:'ncaam',q:'',position:'',team:'',country:'',draft:'',mode:'pg',page:1,pageSize:25,sort:'name',dir:1,more:false};render();});
+  await page.locator('[data-league="nba"]').click();await page.locator('#olSearch').fill('LeBron James');await page.waitForFunction(()=>document.querySelector('.ol-table tbody')?.innerText.includes('LeBron James'));assert((await page.locator('.ol-table tbody').innerText()).includes('Philadelphia 76ers'),'Other Leagues must show the current club rather than the historical statistics club');await page.locator('[data-league="ncaam"]').click();await page.locator('#olClass').selectOption('Graduate');assert((await page.locator('.ol-table tbody').innerText()).includes('Graduate'));assert((await page.locator('.ol-table thead').innerText()).toLowerCase().includes('college year'));
+  await page.screenshot({path:path.join(out,'other-leagues-college-years-desktop.png')});
+  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(250);console.log('Phone layout',await page.evaluate(()=>({body:document.body.className,sidebar:document.querySelector('.es-sidebar').getBoundingClientRect().right,scrollWidth:document.documentElement.scrollWidth,width:innerWidth})));assert((await page.locator('.es-sidebar').boundingBox()).x<0);await page.screenshot({path:path.join(out,'other-leagues-college-years-phone.png')});
+  await page.setViewportSize({width:1500,height:900});
+  const gl=await page.evaluate(()=>{STATE.view='scout';STATE.scout.dbAcademicYear='';STATE.scout.leagues=new Set(['gleague']);render();return {count:STATE.scout._displayPool.length,teams:new Set(STATE.scout._displayPool.map(p=>p._seasonClub)).size};});assert(gl.count>450&&gl.count<=506);assert(gl.teams>=31);
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,nba,college,gLeague:gl,notesPreserved:saved.sameId,realCloudRequests:0}));
+ }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1});
