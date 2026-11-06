@@ -2,7 +2,8 @@
 'use strict';
 const C=window.PlayerScouting;
 function bio(p){return personBio(p)||{};}
-function values(p){p=player(p.id)||p;const b=bio(p),assignment=effective26(p),club=assignment?(isStatus(assignment)?statusLabel(assignment):clubByKey(assignment)?.name||''):'';return{country:p.country,born:p.born,height:p.height,position:dbPositionGroup(p),hand:p.hand,club,primaryRole:C.validRole(b.primaryRole),secondaryRole:C.validRole(b.secondaryRole)};}
+function roles(p){const b=bio(p);return{primaryRole:C.validRole(b.primaryRole),secondaryRole:C.validRole(b.secondaryRole)};}
+function values(p){p=player(p.id)||p;const assignment=effective26(p),club=assignment?(isStatus(assignment)?statusLabel(assignment):clubByKey(assignment)?.name||''):'';return{country:p.country,born:p.born,height:p.height,position:dbPositionGroup(p),hand:p.hand,club,...roles(p)};}
 async function save(p,patch){if(!Store.canEdit())throw Error('Only an authorized editor can save player information.');for(const key of ['primaryRole','secondaryRole'])if(patch[key]&& !C.validRole(patch[key]))throw Error('Choose a role from the Role Library.');await window.wfFlushReport?.();ovrSaveLocal({bio:{[gid(p)||p.id]:patch}},{players:personLines(p)});await window.ESStorage?.flush();window.dispatchEvent(new Event('euroscout:profile-fields-updated'));notifyHub(player(p.id)||p);}
 function notifyHub(p){if(!HUB_EMBED||window.parent===window)return;const v=values(p),refs=[...new Set([p.id,...(p._grp||[]).map(x=>x.id)].map(x=>'euroscout:'+x))];window.parent.postMessage({type:'dragonshub:player-updated',from:'euroscout',player:{kind:'database',id:String(p.id),name:p.name,refs,born:v.born,height:v.height,country:v.country,position:v.position,club:v.club,team:v.club,primaryRole:v.primaryRole,secondaryRole:v.secondaryRole,hand:v.hand,photo:photoOf(p)||p.img||'',source:'EuroScout',url:location.origin+location.pathname+'#p='+encodeURIComponent(p.id),profilePriority:100}},'*');}
 function filterRole(role){if(DRAWER_OPEN)closeDrawer();STATE.scout.basketballRole=role;STATE.scout.q='';STATE.scout.view='table';STATE.view='scout';render();}
@@ -21,6 +22,6 @@ const baseRender=render;render=function(...args){if(STATE.view==='rolelibrary')C
 const baseScout=renderScout;renderScout=function(...args){baseScout(...args);decorateDatabase();};window.renderScout=renderScout;
 const setup=()=>{const nav=document.querySelector('#tabs');if(nav&&!nav.querySelector('[data-scout-resources]')){const group=document.createElement('div');group.dataset.scoutResources='1';group.innerHTML='<div class="es-nav-label">Scouting resources</div>';for(const [label,fn]of [['Role Library',()=>openLibrary()],['Data Quality Center',openQuality]]){const b=document.createElement('button');b.type='button';b.textContent=label;b.dataset.view=label==='Role Library'?'rolelibrary':'profilequality';b.dataset.navIcon=label==='Role Library'?'▤':'◉';b.title=label;b.onclick=fn;group.append(b);}nav.append(group);}};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-scout-role]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();filterRole(b.dataset.scoutRole);},true);
-window.ESPlayerScouting={values,save,markAutomaticLevel,mountProfile,mountMatchup,filterRole,openLibrary,openQuality,decorateDatabase,all};
+window.ESPlayerScouting={values,roles,save,markAutomaticLevel,mountProfile,mountMatchup,filterRole,openLibrary,openQuality,decorateDatabase,all};
 window.addEventListener('euroscout:catalogue-ready',setup);setTimeout(setup,0);
 })();

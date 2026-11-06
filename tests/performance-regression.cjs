@@ -11,7 +11,30 @@ async function checkLoader({protocol='http:',response,fail=false,scriptFails=fal
  const c={location:{protocol},window:{},console:{warn(){}},AbortController,setTimeout:(fn,delay)=>{if(timeout&&delay<=10000)fn();return 1;},clearTimeout:()=>clears++,fetch:async(url,opts)=>{fetches++;urls.push(url);if(fail||opts.signal.aborted)throw Error('unavailable');return response;},document:{createElement:()=>({}),head:{appendChild:s=>{scripts++;if(scriptFails)s.onerror();else{c.window.EUROSCOUT_INLINE={leagues:['fallback']};s.onload();}}}}};
  vm.createContext(c);vm.runInContext(loader,c);const result=await c.loadCoreData();return {result,fetches,scripts,clears,urls};
 }
+async function checkExtraPacks(){
+ const source=html.slice(html.indexOf('const EXTRA_JOBS=new Map();'),html.indexOf('function injectExhibitions'));
+ const fetched=[],installed=[];let failCollege=false;
+ const c={STATE:{},window:{},fetchPack:async label=>{
+  fetched.push(label);
+  if(label==='ncaa'&&failCollege)throw Error('College data unavailable');
+  return {leagues:[label]};
+ },installBatch:ready=>{installed.push(Array.from(ready,p=>p.label));c.STATE._extraLoaded=[...(c.STATE._extraLoaded||[]),...ready.map(p=>p.label)];}};
+ vm.createContext(c);
+ vm.runInContext(source+'\nloadExtraPack=fetchPack;installExtraLeagues=installBatch;',c);
+ await Promise.all([c.loadExtraLeagues(),c.loadExtraLeagues()]);
+ assert.deepEqual(fetched,['pro','ncaa'],'overlapping requests share their downloads');
+ assert.deepEqual(installed,[['pro','ncaa']],'one batch integration after both downloads');
+ await c.loadExtraLeagues();assert.equal(fetched.length,2);
+ vm.runInContext('EXTRA_JOBS.clear()',c);
+ c.STATE._extraLoaded=[];fetched.length=installed.length=0;failCollege=true;
+ await assert.rejects(c.loadExtraLeagues(),/College data unavailable/);
+ assert.deepEqual(installed,[['pro']],'working rosters survive a partial fetch failure');
+ failCollege=false;await c.loadExtraLeagues();
+ assert.deepEqual(fetched,['pro','ncaa','ncaa']);
+ assert.deepEqual(installed,[['pro'],['ncaa']],'retry only integrates the missing pack');
+}
 (async()=>{
+ await checkExtraPacks();
  const first=JSON.parse(read('data/data-first.json'));
  assert.equal(first.leagues.length,1,'first-paint payload must contain one league');
  assert.equal(first.leagues[0].meta.id,'euroleague');

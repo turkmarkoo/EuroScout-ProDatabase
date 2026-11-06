@@ -66,11 +66,11 @@
   // Build comparisons from the same canonical record and current-season assignment
   // used by Player Profile. Imported statistical rows remain available as history,
   // but their historical teamName/league fields are never shown as the current club.
-  function canonicalPlayerEntity(id, fallback) {
+  function canonicalPlayerEntity(id, fallback, identityOnly=false) {
     const profile=(typeof player==='function'&&player(id))||fallback||{};
     const group=profile._grp?.length?profile._grp:[profile];
     let assignment=null,club=null,currentClub='',currentLeague='';
-    try {
+    if(!identityOnly)try {
       assignment=typeof effective26==='function'?effective26(profile):null;
       if(assignment&&typeof isStatus==='function'&&isStatus(assignment))currentClub=statusLabel(assignment);
       else if(assignment){club=typeof clubByKey==='function'?clubByKey(assignment):null;currentClub=club?.name||'';}
@@ -88,11 +88,15 @@
     const value=key=>Object.hasOwn(manual||{},key)?profile[key]||'':profile[key]||group.find(p=>p[key])?.[key]||'';
     const born=Object.hasOwn(manual||{},'born')?profile.born||'':value('born')||birthYear(date);
     const position=Object.hasOwn(manual||{},'role')||Object.hasOwn(manual||{},'pos')?profile.role||profile.pos||'':value('role')||value('pos');
-    return {
+    const identity={
       id,name:profile.name||fallback?.name||'',born,birthDate:date,country:value('country'),
       identityEvidence:supported?{realgmId:rgIds.length===1?rgIds[0]:'',source:supported.source,checked:supported.checked}:null,
-      height:value('height'),position,team:currentClub,league:currentLeague,
-      photo:(typeof photoOf==='function'?photoOf(profile):profile.photo)||'',external,fiba,player:profile,
+      height:value('height'),position,external,fiba,player:profile
+    };
+    if(identityOnly)return identity;
+    return {
+      ...identity,team:currentClub,league:currentLeague,
+      photo:(typeof photoOf==='function'?photoOf(profile):profile.photo)||'',
       report:Store.get(id)||{report:'{}',rating:0,watch:false,eye:{}},sources:{
         profile:known?'Verified identity · '+known.source:'Player Profile · canonical record',current:'Player Profile · 2026/27',
         scouting:'Player Profile · saved scouting data',statistics:'Imported statistics · preserved entries'
@@ -100,13 +104,17 @@
     };
   }
 
+  function indexedPlayers(){
+    const map=new Map();
+    for(const p of allPlayersEvery()){
+      const id=gid(p);
+      if(!map.has(id)||p.id===id)map.set(id,p);
+    }
+    return map;
+  }
   function entities(type) {
     if(entityCache[type])return entityCache[type];
-    if (type === 'player') {
-      const map = new Map();
-      allPlayersEvery().forEach(p => { const id = gid(p); if (!map.has(id) || p.id === id) map.set(id, p); });
-      return entityCache[type]=[...map.entries()].map(([id,p]) => canonicalPlayerEntity(id,p));
-    }
+    if(type==='player')return entityCache[type]=[...indexedPlayers()].map(([id,p])=>canonicalPlayerEntity(id,p));
     if (type === 'club') return entityCache[type]=allClubs().map(c => ({ id:c.key, name:c.name, country:c.country || '',
       competitions:(c.leagues || []).map(l => l.name).join(', '), roster:(c.teams || []).length,
       logo:clubLogo(c) || '', club:c }));
@@ -234,22 +242,28 @@
     const candidates=entities('player').map(existing=>({id:existing.id,name:existing.name,born:existing.born,score:playerConfidence(player,existing)})).filter(x=>x.score>=60).sort((a,b)=>b.score-a.score).slice(0,20);
     return {status:candidates.length?'review':'new',candidates,requiresAdminConfirmation:!!candidates.length};
   }
-  function previewImport(players) {
+  async function previewImport(players) {
+    let deadline=performance.now()+12;
+    const yieldToPage=async()=>{await new Promise(resolve=>setTimeout(resolve,0));deadline=performance.now()+12;};
     const byName=new Map(),byBirthSurname=new Map(),byEurobasket=new Map(),byFiba=new Map();
     const add=(map,key,item)=>{if(!key)return;if(!map.has(key))map.set(key,[]);map.get(key).push(item);};
-    entities('player').forEach(existing=>{
+    for(const [id,p] of indexedPlayers()){
+      if(performance.now()>=deadline)await yieldToPage();
+      const existing=canonicalPlayerEntity(id,p,true);
       const name=playerFold(existing.name);add(byName,name,existing);
       if(existing.born)add(byBirthSurname,name.split(' ').at(-1)+'|'+existing.born,existing);
       add(byEurobasket,externalId(existing.external,'eurobasket'),existing);
       add(byFiba,externalId(existing.fiba,'fiba'),existing);
-    });
-    const flagged=(players||[]).flatMap(incoming=>{
+    }
+    const flagged=[];
+    for(const incoming of players||[]){
+      if(performance.now()>=deadline)await yieldToPage();
       const probe={name:incoming.name,born:incoming.born||'',height:incoming.height||'',country:incoming.country||'',position:incoming.role||incoming.pos||'',external:incoming._ext||incoming.eurobasketId||'',fiba:incoming.fibaId||incoming._fiba||''};
       const key=playerFold(probe.name);
       const matches=[...new Map([...(byName.get(key)||[]),...(probe.born?byBirthSurname.get(key.split(' ').at(-1)+'|'+probe.born)||[]:[]),...(byEurobasket.get(externalId(probe.external,'eurobasket'))||[]),...(byFiba.get(externalId(probe.fiba,'fiba'))||[])].map(item=>[item.id,item])).values()];
       const candidates=matches.map(existing=>({id:existing.id,name:existing.name,score:playerConfidence(probe,existing)})).filter(x=>x.score>=60).sort((a,b)=>b.score-a.score);
-      return candidates.length?[{id:incoming.id,name:incoming.name,candidates,requiresAdminConfirmation:true}]:[];
-    });
+      if(candidates.length)flagged.push({id:incoming.id,name:incoming.name,candidates,requiresAdminConfirmation:true});
+    }
     importQueue=[...new Map([...importQueue,...flagged].map(item=>[item.id,item])).values()];
     return flagged;
   }
@@ -669,7 +683,7 @@
     document.getElementById('mcMerge').onclick=async e=>{e.currentTarget.disabled=true;try{await merge(candidate,view.survivor,view.options);}catch(error){toast(error.message);e.currentTarget.disabled=false;}};
   }
   function invalidateCatalogue(){detectionCache={};entityCache={};view.detectionReady={};automaticAttempted='';}
-  function automaticBlocked(){return !!(STATE.view==='scouting'||window.ESMatchupBusy?.()||window.ESSessions?.active?.()||document.querySelector?.(".ep2-overlay.open, #drawer [contenteditable=true]:focus, #drawer input:focus, #drawer textarea:focus, #drawer select:focus"));}
+  function automaticBlocked(){return !!(STATE.view==='scout'||STATE.view==='scouting'||window.ESMatchupBusy?.()||window.ESSessions?.active?.()||document.querySelector?.(".ep2-overlay.open, #drawer [contenteditable=true]:focus, #drawer input:focus, #drawer textarea:focus, #drawer select:focus"));}
   function scheduleAutomatic(){if(automaticTimer!==null)clearTimeout(automaticTimer);automaticTimer=setTimeout(()=>{automaticTimer=null;if(automaticBlocked()){scheduleAutomaticDeferred();return;}runAutomatic().catch(error=>console.warn('Automatic identity consolidation delayed',error));},250);}
   function scheduleAutomaticDeferred(){if(automaticTimer!==null)return;automaticTimer=setTimeout(()=>{automaticTimer=null;scheduleAutomatic();},30000);}
   function linkedRecordPlan(){
