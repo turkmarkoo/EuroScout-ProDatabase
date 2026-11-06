@@ -138,7 +138,7 @@ function matchupHTML(p,club,season,competition){
  const group=(label,values)=>'<div class="mx-stat-group" role="group" aria-label="'+label+'"><strong>'+label+'</strong>'+values.join('')+'</div>';
  const scope=row?[competitionOf(row).name,season,row.g+' GP',n(row.mpg)+' MPG',row.multiTeam?'Multiple teams':'','Per game'].filter(Boolean).join(' · '):'No '+season+' stats for this team';
  return '<section class="mx-stats" aria-label="Season stats"><div class="mx-stats-scope">'+esc(scope)+'</div><div class="mx-stat-groups">'+
-  group('Offense',[stat('PTS',row?.ppg),stat('AST',row?.apg),shotStat('2P',row?.f2p,two),shotStat('3P',row?.f3p,three),shotStat('FT',row?.ftp,shotPair(row?.ftma))])+
+  group('Offense',[stat('PTS',row?.ppg),stat('AST',row?.apg),stat('TO',row?.topg),shotStat('2P',row?.f2p,two),shotStat('3P',row?.f3p,three),shotStat('FT',row?.ftp,shotPair(row?.ftma))])+
   group('Defense',[stat('STL',row?.spg),stat('BLK',row?.bpg),stat('DREB',row?.drpg)])+'</div></section>';
 }
 function paint(){
