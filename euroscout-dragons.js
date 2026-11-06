@@ -28,6 +28,11 @@ function officialDirectory(){
   const entry={key:'official:'+team.id,dbKey:team.currentKey||team.key||'',code:team.code||team.id,officialCode:team.code||'',name:team.name,aliases:team.aliases||[]};teams.push(entry);
   for(const row of (official.roster||[]).filter(player=>player.teamId===team.id))players.push({team:entry,name:row.name,ids:row.ids||[row.id],row});
  }
+ const plk=window.EuroScoutPLK?.directory();
+ if(plk)for(const team of plk.teams){
+  const entry={key:'plk:'+team.id,dbKey:team.key,code:team.code,officialCode:team.id,name:team.name,aliases:team.aliases||[]};teams.push(entry);
+  for(const row of plk.roster.filter(p=>p.teamId===team.id))players.push({team:entry,name:row.name,ids:row.ids,row});
+ }
  const fiba=window.EUROSCOUT_FIBA_CLUB_2026;
  if(fiba)for(const team of fiba.teams||[]){
   const entry={key:'fiba:'+team.id,dbKey:team.currentKey||team.key||'',code:team.code||team.id,officialCode:team.officialCode||team.code||'',name:team.name,aliases:team.aliases||[]};teams.push(entry);
@@ -142,6 +147,7 @@ function connectData(raw,data){
  // of nested stat values only delays startup and wastes memory.
  const result={...raw,leagues:(raw.leagues||[]).map(league=>({...league,players:[...(league.players||[])],teams:[...(league.teams||[])]}))};
  if(raw.notes&&typeof raw.notes==='object')result.notes=structuredClone(raw.notes);
+ window.EuroScoutPLK?.apply(result,data.plkRosters);
  const directory=officialDirectory(),resolved=[];links=[];registrations=new Map();clubAliases=new Map();
  prepareDirectory(directory,result);
  directory.feedTeams=feedTeamDirectory(data,directory);
@@ -190,7 +196,7 @@ let refreshJob=null,lastSourceCheck=0,lastSnapshot='';
 async function refresh(){
  if(!reader()||typeof STATE==='undefined'||!STATE.data)return false;
  if(refreshJob)return refreshJob;if(Date.now()-lastSourceCheck<60000)return false;lastSourceCheck=Date.now();
- refreshJob=(async()=>{const head=await ESAccess.get('dragonsDataState/current');if(!head)return false;const id=ESAccess.field(head,'snapshot');if(!/^[a-f0-9]{32}$/.test(id||''))throw Error('Invalid statistics snapshot pointer.');if(id===lastSnapshot)return false;const data=Object.assign(valid(JSON.parse(await ESAccess.readPayload('dragonsDataSnapshots',id))),{_sourceLabel:'cloud snapshot'});if(!reader())return false;lastSnapshot=id;if(data.generated&&data.generated===feed?.generated)return false;STATE.data=connectData(STATE.data,data);STATE._idx=null;seasonPoolCache=null;rebuildLinks();applyOverrides();finish(STATE.data);return true;})();try{return await refreshJob;}finally{refreshJob=null;}
+ refreshJob=(async()=>{const head=await ESAccess.get('dragonsDataState/current');if(!head)return false;const id=ESAccess.field(head,'snapshot');if(!/^[a-f0-9]{32}$/.test(id||''))throw Error('Invalid statistics snapshot pointer.');if(id===lastSnapshot)return false;const data=Object.assign(valid(JSON.parse(await ESAccess.readPayload('dragonsDataSnapshots',id))),{_sourceLabel:'cloud snapshot'});if(!reader())return false;lastSnapshot=id;if(data.generated&&data.generated===feed?.generated)return false;const rostersChanged=data.plkRosters?.checked!==feed?.plkRosters?.checked;STATE.data=connectData(STATE.data,data);if(rostersChanged){DBTEAM_LIST=null;DBTEAM_BYKEY=null;CLUBS=null;CLUB_BY_TEAMKEY=null;DOM27=null;NEXTCOMP=null;PLAYER_BY_NAME=null;}STATE._idx=null;seasonPoolCache=null;rebuildLinks();applyOverrides();finish(STATE.data);return true;})();try{return await refreshJob;}finally{refreshJob=null;}
 }
 function key(player){const ids=[player.id,player.linkedEuroScoutId,...(player._grp||[]).map(p=>p.id)].filter(Boolean);return ids.map(id=>registrations.get(id)).filter(Boolean).sort((a,b)=>b.date.localeCompare(a.date))[0]?.key||null;}
 function link(unite){for(const [left,right] of links)unite(left,right);}
