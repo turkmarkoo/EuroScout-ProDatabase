@@ -99,6 +99,20 @@ body:has(.liveScouting) #esBackTop{display:none!important}
 .liveScouting .mx-stock [data-stock=down].on{background:#c2503f;border-color:#c2503f;color:#fff}
 
 /* notebook body */
+.liveScouting .mx-stats{grid-column:1/-1;min-width:0;padding:6px 9px;background:var(--panel2);border:1px solid var(--line);border-radius:8px}
+.liveScouting .mx-stats-scope{color:var(--muted);font-size:11px;margin-bottom:3px}
+.liveScouting .mx-stat-groups{display:flex;flex-wrap:wrap;gap:4px 14px}
+.liveScouting .mx-stat-group{display:flex;align-items:center;flex-wrap:wrap;gap:0 9px}
+.liveScouting .mx-stat-group strong{font-size:11px}
+.liveScouting .mx-stat{display:inline-flex;align-items:baseline;gap:3px;white-space:nowrap;font-size:12px;font-variant-numeric:tabular-nums}
+.liveScouting .mx-stat>span{color:var(--muted);font-size:10px}
+.liveScouting .mx-shot{position:relative;font-weight:700}
+.liveScouting .mx-shot summary{display:block;list-style:none;cursor:pointer;padding-block:2px;text-decoration:underline dotted;text-underline-offset:3px}
+.liveScouting .mx-shot summary::-webkit-details-marker{display:none}
+.liveScouting .mx-shot>span,.liveScouting .mx-shot summary::after{position:absolute;z-index:4;top:100%;right:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--txt);font-size:11px;font-weight:500;white-space:nowrap;pointer-events:none}
+@media(hover:hover){
+ .liveScouting .mx-shot:not([open]) summary:hover::after{content:attr(data-shot-count)}
+}
 .liveScouting .liveBody{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:10px 14px 0}
 .liveScouting .mx-catbar{flex:none;display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;min-width:0}
 .liveScouting .liveCategories{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:5px;margin:0;overflow:visible;padding-bottom:0}
@@ -148,14 +162,15 @@ body:has(.liveScouting) #esBackTop{display:none!important}
  .liveScouting .mx-vs,.liveScouting #liveStatus{display:none}
  .liveScouting .mx-scorebox input{width:40px;font-size:17px}
  .liveScouting .mx-game{margin-left:0}
- .liveScouting .mx-layout{gap:6px;grid-template-rows:minmax(96px,26%) minmax(0,1fr)}
+ .liveScouting .mx-layout{gap:6px;grid-template-rows:minmax(96px,16%) minmax(0,1fr)}
  .liveScouting .mx-col{padding:6px}
  .liveScouting .mx-rsearch{display:none}
  .liveScouting .mx-player{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"photo id" "buttons buttons";padding:8px 10px}
- .liveScouting .mx-rate{display:none}
+ .liveScouting .mx-player>.mx-rate{display:none}
  .liveScouting .mx-avatar{width:52px;height:46px}
  .liveScouting .mx-id h2{font-size:19px}
  .liveScouting .liveBody{padding:8px 8px 0}
+ .liveScouting .liveCategories{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
  .liveScouting .mx-similar{display:none}
  .liveScouting input,.liveScouting .bl-txt{font-size:16px}
 }
@@ -163,7 +178,7 @@ body:has(.liveScouting) #esBackTop{display:none!important}
 /* Keep room for the notes when the expanded sidebar narrows the notebook. */
 @container (max-width:620px){
  .liveScouting .mx-player{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"photo id" "buttons buttons"}
- .liveScouting .mx-rate{display:none}
+ .liveScouting .mx-player>.mx-rate{display:none}
 }
 
 /* Compact searchable player details and session-team menus. */

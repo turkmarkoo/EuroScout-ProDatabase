@@ -70,7 +70,12 @@ function competitionOf(p){
  const id=({ec:'eurocup',el:'euroleague',ita:'lba',otp:'slo',gre:'gbl',pol:'plk',fra:'lnb'})[provider]||provider||meta.id;
  return window.ESTeamSelection?.competitionIdentity?.({...meta,id})||{id,name:String(meta.name||id).replace(/20\d{2}\s*[/-]\s*(?:20)?\d{2}/g,'').trim()};
 }
-function clubNameOf(row){const comp=competitionOf(row),club=typeof clubByKey==='function'?(row._sourceTeamKey&&clubByKey(row._sourceTeamKey))||[comp.id+'26',comp.id,...(row._dragonsData?[]:[row.league])].map(id=>clubByKey(id+'|'+row.team)).find(Boolean):null;return club?.name||row.teamName||row.team;}
+function clubOf(row,comp=competitionOf(row)){
+ if(typeof clubByKey!=='function')return null;
+ return (row._sourceTeamKey&&clubByKey(row._sourceTeamKey))||
+  [comp.id+'26',comp.id,...(row._dragonsData?[]:[row.league])].map(id=>clubByKey(id+'|'+row.team)).find(Boolean);
+}
+function clubNameOf(row){return clubOf(row)?.name||row.teamName||row.team;}
 const teamName=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/^(?:bk|bc|kk|cb) /,'');
 let clubNamesCache=null;
 function distinctLines(rows){
@@ -78,7 +83,7 @@ function distinctLines(rows){
  let names=clubNamesCache?.clubs===clubs?clubNamesCache.names:null;
  if(!names){names=new Map();const add=(name,key)=>{name=teamName(name);if(!name)return;if(!names.has(name))names.set(name,key);else if(names.get(name)!==key)names.set(name,null);};
  for(const club of clubs){const key=canonKey(club.key);add(club.name,key);for(const team of club.teams||[])for(const name of [team.name,...(team.searchAliases||[])])add(name,key);}clubNamesCache={clubs,names};}
- const resolved=rows.map(row=>{const comp=competitionOf(row),club=typeof clubByKey==='function'?(row._sourceTeamKey&&clubByKey(row._sourceTeamKey))||[comp.id+'26',comp.id,...(row._dragonsData?[]:[row.league])].map(id=>clubByKey(id+'|'+row.team)).find(Boolean):null;return{row,comp,club};});
+ const resolved=rows.map(row=>{const comp=competitionOf(row);return{row,comp,club:clubOf(row,comp)};});
  const localNames=new Map();for(const {row,comp,club}of resolved)if(club){const name=comp.id+'|'+teamName(row.teamName||club.name),key=canonKey(club.key);if(!localNames.has(name))localNames.set(name,key);else if(localNames.get(name)!==key)localNames.set(name,null);}
  const groups=new Map(),rank=p=>[Number(p.g)||0,(p.gameLog||[]).map(g=>String(g[0]||'')).sort().at(-1)||'',(p.gameLog||[]).length,p._dragonsData?1:0,Object.keys(p).filter(k=>p[k]!=null&&p[k]!=='').length];
  const better=(a,b)=>{const ar=rank(a),br=rank(b);for(let i=0;i<ar.length;i++)if(ar[i]!==br[i])return ar[i]>br[i];return false;};
@@ -97,6 +102,44 @@ function seasonOf(p){
  if(scope)return scope;
  if(currentRosterOnly(p))return seasonLabel(p.currentRosterSeason||p._officialRoster?.season||p._seasonLabel||p.season)||'2026/27';
  return seasonLabel(p.season||p._seasonLabel||leagueOf(p)?.meta?.statsSeason||leagueOf(p)?.meta?.season)||'Season unknown';
+}
+function matchupLine(p,club,season,competition){
+ const key=canonKey(club.key),name=teamName(club.name);
+ const rows=linesOf(p).filter(row=>{
+  if(seasonOf(row)!==season||!(Number(row.g)>0))return false;
+  const team=clubOf(row);
+  return team?canonKey(team.key)===key:!!name&&teamName(row.teamName)===name;
+ });
+ const target=(competition?.id||competition?.name)?window.ESTeamSelection?.competitionIdentity?.(competition)||competition:null;
+ const matched=target?rows.filter(row=>{
+  const identity=competitionOf(row);
+  return (target.id&&identity.id===target.id)||(target.name&&teamName(identity.name)===teamName(target.name));
+ }):[];
+ return (matched.length?matched:rows).sort((a,b)=>Number(b.g)-Number(a.g)||Number(!!b._dragonsData)-Number(!!a._dragonsData))[0];
+}
+function shotPair(value){
+ const match=String(value??'').match(/^\s*(\d+)\s*[-–/]\s*(\d+)\s*$/);
+ if(!match)return null;
+ const made=Number(match[1]),attempts=Number(match[2]);
+ return made<=attempts?[made,attempts]:null;
+}
+function shotStat(label,pct,pair){
+ const value=pair?(pair[1]?pc(100*pair[0]/pair[1]):'—'):pc(pct);
+ const count=pair?pair[0]+' made / '+pair[1]+' attempted':'';
+ return '<div class="mx-stat"><span>'+label+'</span>'+(count?
+  '<details class="mx-shot"><summary data-shot-count="'+count+'" aria-label="'+label+' shooting, '+(value==='—'?'no attempts':value)+', makes and attempts">'+value+'</summary><span>'+count+'</span></details>':
+  '<b>'+value+'</b>')+'</div>';
+}
+function matchupHTML(p,club,season,competition){
+ const row=club?matchupLine(p,club,season,competition):null;
+ const fg=shotPair(row?.fgma),three=shotPair(row?.f3ma);
+ const two=shotPair(row?.f2ma)||(fg&&three?shotPair((fg[0]-three[0])+'-'+(fg[1]-three[1])):null);
+ const stat=(label,value)=>'<div class="mx-stat"><span>'+label+'</span><b>'+n(value)+'</b></div>';
+ const group=(label,values)=>'<div class="mx-stat-group" role="group" aria-label="'+label+'"><strong>'+label+'</strong>'+values.join('')+'</div>';
+ const scope=row?[competitionOf(row).name,season,row.g+' GP',row.multiTeam?'Multiple teams':'','Per game'].filter(Boolean).join(' · '):'No '+season+' stats for this team';
+ return '<section class="mx-stats" aria-label="Season stats"><div class="mx-stats-scope">'+esc(scope)+'</div><div class="mx-stat-groups">'+
+  group('Offense',[stat('PTS',row?.ppg),stat('AST',row?.apg),shotStat('2P',row?.f2p,two),shotStat('3P',row?.f3p,three),shotStat('FT',row?.ftp,shotPair(row?.ftma))])+
+  group('Defense',[stat('STL',row?.spg),stat('BLK',row?.bpg),stat('DREB',row?.drpg)])+'</div></section>';
 }
 function paint(){
  const host=document.getElementById('qsPanel');if(!host||!current)return;
@@ -129,5 +172,5 @@ function open(p){
 function close(){const m=document.getElementById('qsMask');if(m)m.remove();current=null;loading=false;loadError='';loadToken++;}
 const isOpen=()=>!!document.getElementById('qsMask');
 document.addEventListener('keydown',e=>{if(!isOpen()||document.getElementById('mtscMask'))return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return;}if(/^[1-8]$/.test(e.key)&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();tab=TABS[+e.key-1][0];paint();}},true);
-window.ESQuickStats={open,close,isOpen,seasonOf,distinctLines,competitionOf,clubNameOf,follow(p){if(isOpen()&&p){loadToken++;current=player(p.id)||p;line=null;seasonChoice='';loading=false;loadError='';percentilePools.clear();paint();refreshOfficialStats(current);}}};
+window.ESQuickStats={open,close,isOpen,seasonOf,distinctLines,competitionOf,clubNameOf,matchupHTML,follow(p){if(isOpen()&&p){loadToken++;current=player(p.id)||p;line=null;seasonChoice='';loading=false;loadError='';percentilePools.clear();paint();refreshOfficialStats(current);}}};
 })();

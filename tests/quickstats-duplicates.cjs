@@ -13,3 +13,21 @@ console.log('PASS repeated FEC and BCL qualifier imports collapse without summin
 const iraOfficial={...official,id:'ira-official',team:'IRA',teamName:'Iraklis BC'},iraLegal={...feed,id:'ira-feed',team:'dragons-team-278',teamName:'Gymnastikos Syllogos Agias Iraklis KAE',_sourceTeamKey:'fec26|IRA'};
 const original=JSON.stringify([iraOfficial,iraLegal]),ira=api.distinctLines([iraOfficial,iraLegal]);assert.equal(ira.length,1);assert.equal(ira[0].g,1);assert.equal(JSON.stringify([iraOfficial,iraLegal]),original);assert.equal(api.distinctLines([iraLegal,{...iraLegal,id:'moved',_sourceTeamKey:'fec26|LEV'}]).length,2,'Per-line club IDs retain transfer stops');
 console.log('PASS legal-name Iraklis imports share one competition entry while transferred club lines stay separate.');
+
+c.esc=s=>String(s);
+const activeLine={...feed,_sourceTeamKey:clubs[0].key,g:4,fgma:'18-32',f3ma:'7-16',ftma:'0-0',apg:4.5,spg:0,bpg:0.5,drpg:2.25};
+const otherCompetition={...official,league:'bclq',g:9,ppg:25};
+const formerClub={...activeLine,_sourceTeamKey:clubs[1].key,g:20,ppg:35};
+const olderSeason={...activeLine,season:'2025/26',g:20,ppg:45};
+c.personLines=()=>[otherCompetition,formerClub,olderSeason,activeLine];
+const strip=api.matchupHTML(official,clubs[0],'2026/27',{id:'fec'});
+assert.match(strip,/FIBA Europe Cup .* 4 GP/);
+assert.match(strip,/11 made \/ 16 attempted.*68\.8%/);
+assert.match(strip,/7 made \/ 16 attempted.*43\.8%/);
+assert.match(strip,/0 made \/ 0 attempted.*no attempts/);
+assert.match(strip,/>STL<\/span><b>0\.0/);
+assert.match(strip,/>DREB<\/span><b>2\.3/);
+assert.doesNotMatch(strip,/DRTG|35\.0|45\.0/);
+c.personLines=()=>[formerClub,olderSeason];
+assert.match(api.matchupHTML(official,clubs[0],'2026/27'),/No 2026\/27 stats for this team/);
+console.log('PASS matchup scope, shooting totals and percentages, and real zero vs unavailable.');
