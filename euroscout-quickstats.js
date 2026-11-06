@@ -67,7 +67,7 @@ const PAGES={
 function linesOf(p){const rows=typeof personLines==='function'?personLines(p):allPlayersEvery().filter(x=>gid(x)===gid(p));return rows.filter(x=>x.league!=='sl').sort((a,b)=>(b.min||0)-(a.min||0));}
 function competitionOf(p){
  const meta=leagueOf(p)?.meta||{id:p.league,name:p.league},provider=String(p.league||'').match(/^dragons-([^-]+)-/i)?.[1];
- const id=({ec:'eurocup',el:'euroleague',ita:'lba',otp:'slo',gre:'gbl',pol:'plk',fra:'lnb'})[provider]||provider||meta.id;
+ const id=({ec:'eurocup',el:'euroleague',ita:'lba',otp:'slo',gre:'gbl',pol:'plk',fra:'lnb',swe:'sbl'})[provider]||provider||meta.id;
  return window.ESTeamSelection?.competitionIdentity?.({...meta,id})||{id,name:String(meta.name||id).replace(/20\d{2}\s*[/-]\s*(?:20)?\d{2}/g,'').trim()};
 }
 function clubOf(row,comp=competitionOf(row)){
@@ -163,8 +163,8 @@ function refreshOfficialStats(p){
  if(!window.EuroScoutKzsPro?.needsStats(p))return;const token=++loadToken;loading=true;loadError='';paint();
  EuroScoutKzsPro.loadStats(p).then(()=>{if(token!==loadToken)return;loading=false;line=null;percentilePools.clear();paint();}).catch(error=>{if(token!==loadToken)return;loading=false;loadError='Official KZS statistics could not be loaded. Please try again.';console.warn(loadError,error);paint();});
 }
-function open(p){
- if(!p)return;loadToken++;current=player(p.id)||p;line=null;seasonChoice='';loading=false;loadError='';percentilePools.clear();
+function open(p,matchup){
+ if(!p)return;loadToken++;current=player(p.id)||p;line=matchup?.club?matchupLine(p,matchup.club,'2026/27',matchup.competition):null;seasonChoice='';loading=false;loadError='';percentilePools.clear();
  let mask=document.getElementById('qsMask');
  if(!mask){mask=document.createElement('div');mask.id='qsMask';mask.className='qs-mask';mask.innerHTML='<aside id="qsPanel" class="qs-panel" role="dialog" aria-modal="true" aria-label="Quick stats"></aside>';mask.addEventListener('mousedown',e=>{if(e.target===mask)close();});document.body.appendChild(mask);requestAnimationFrame(()=>mask.classList.add('open'));}
  paint();refreshOfficialStats(current);

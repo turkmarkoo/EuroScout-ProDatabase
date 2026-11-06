@@ -25,7 +25,7 @@ function numberKey(p){return '2026/27|'+p._liveClub;}
 function jerseyRecords(p){return typeof reportRecords==='function'?reportRecords(p):[recOf(p)];}
 function jerseyNumbers(p){const out={};for(const r of jerseyRecords(p))for(const [key,value] of Object.entries(r?.jerseyNumbers||{}))if(out[key]==null)out[key]=value;return out;}
 function storedShirt(p){const numbers=jerseyNumbers(p),exact=numbers[numberKey(p)];if(exact!=null)return String(exact);const target=canonKey(p._liveClub),prefix='2026/27|';for(const [key,value] of Object.entries(numbers))if(key.startsWith(prefix)&&canonKey(key.slice(prefix.length))===target&&value!=null)return String(value);return null;}
-function officialRosterRow(p){for(const provider of [window.EuroScoutPLK,window.EuroScoutBBL,window.EuroScoutEuroCup,window.EuroScoutOfficialRosters]){const row=provider?.current?.(p);if(row&&(!p._liveClub||canonKey(provider.key(p))===canonKey(p._liveClub)))return row;}return null;}
+function officialRosterRow(p){for(const provider of [window.EuroScoutNordic,window.EuroScoutPLK,window.EuroScoutBBL,window.EuroScoutEuroCup,window.EuroScoutOfficialRosters]){const row=provider?.current?.(p);if(row&&(!p._liveClub||canonKey(provider.key(p))===canonKey(p._liveClub)))return row;}return null;}
 function shirt(p){const v=storedShirt(p);if(v!=null)return v;const official=officialRosterRow(p);if(official?.number!=null)return String(official.number);const r=window.EuroScoutExpansion?.record(p);return r&&canonKey('directory|'+r.club)===p._liveClub&&r.jersey!=null?String(r.jersey):'';}
 function jerseyOrder(a,b){const rank=p=>{const n=shirt(p);return n==='00'?-2:n==='0'?-1:/^\d{1,2}$/.test(n)?Number(n):1000};return rank(a)-rank(b)||a.name.localeCompare(b.name);}
 function resetRosters(){clubIndex=null;rosters.clear();}
@@ -49,12 +49,12 @@ function ensureMatchupDirectories(){
  rosterDirectoriesPending=true;rosterDirectoriesFailed=false;
  window.loadMatchupRosterScripts().then(()=>{rosterDirectoriesPending=false;scheduleRosterRefresh();}).catch(()=>{rosterDirectoriesPending=false;rosterDirectoriesFailed=true;scheduleRosterRefresh();});
 }
-function officialDirectories(){return [window.EuroScoutPLK?.directory(),window.EUROSCOUT_EUROCUP_ROSTERS,window.EUROSCOUT_OFFICIAL_ROSTERS,window.EUROSCOUT_BBL_ROSTERS].filter(Boolean);}
+function officialDirectories(){return [...(window.EuroScoutNordic?.directories()||[]),window.EuroScoutPLK?.directory(),window.EUROSCOUT_EUROCUP_ROSTERS,window.EUROSCOUT_OFFICIAL_ROSTERS,window.EUROSCOUT_BBL_ROSTERS].filter(Boolean);}
 window.addEventListener?.("euroscout:rosters-ready",scheduleRosterRefresh);
-let plkRosterChecked;
+let rosterChecked;
 window.addEventListener?.("euroscout-dragons",()=>{
- const checked=window.EuroScoutPLK?.directory()?.checked;
- if(checked&&checked!==plkRosterChecked){plkRosterChecked=checked;scheduleRosterRefresh();}
+ const checked=[window.EuroScoutPLK?.directory()?.checked,window.EuroScoutNordic?.checked()].filter(Boolean).join('|');
+ if(checked!==rosterChecked){rosterChecked=checked;scheduleRosterRefresh();}
 });
 function rosterNameTokens(p){return fold(p?.name||'').replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(Boolean).filter(token=>!['jr','sr','ii','iii','iv'].includes(token));}
 function rosterBaseName(p){return rosterNameTokens(p).join(' ');}
@@ -67,7 +67,7 @@ function addClubPlayer(index,seen,key,p){key=canonKey(key);if(!key||!p)return;co
 function buildClubIndex(){
  const index=new Map(),seen=new Map(),m=next26Get(),mb=next26bGet(),auto=autoAppliedGet(),pool=assignPool(),directories=officialDirectories();
  const manualKeys=p=>[gid(p),p.id,...(p._grp||[]).map(x=>x.id)].some(id=>m[id]&&!auto[id])?effective26keys(p,m,mb):null;
- const currentPLKKeys=p=>{const key=window.EuroScoutPLK?.key(p);return key?[key]:null;};
+ const currentDomesticKeys=p=>{const key=window.EuroScoutNordic?.key(p)||window.EuroScoutPLK?.key(p);return key?[key]:null;};
  const currentBBLKeys=p=>{const key=window.EuroScoutBBL?.key(p);return key?[canonKey(key)]:null;};
  const catalogue=typeof allPlayersEvery==='function'?allPlayersEvery():[],byId=new Map(),sources=[...pool,...catalogue,...directories.flatMap(d=>d.players||[])];
  for(const p of catalogue)if(!byId.has(p.id))byId.set(p.id,p);
@@ -79,8 +79,8 @@ function buildClubIndex(){
   const teams=new Map();for(const team of directory.teams||[]){const base=team.currentKey||team.key,keys=new Set([base,canonKey(base),team.key,team.currentKey].filter(Boolean));for(const name of [team.name,...(team.aliases||[])])for(const key of clubKeysByName.get(fold(name))||[])keys.add(key);for(const id of [team.id,team.code])if(id)teams.set(id,keys);}
   for(const row of directory.roster||[]){const keys=teams.get(row.teamId||row.teamCode);if(!keys?.size)continue;const ids=row.ids||[row.id],p=ids.map(id=>byId.get(id)).find(Boolean);if(!p)continue;officialRows.push({keys,p});for(const id of [...ids,p.id,gid(p),...(p._grp||[]).map(x=>x.id)])for(const key of keys)mark(id,key);}
  }
- for(const p of pool){const registered=new Set();for(const id of [p.id,gid(p),...(p._grp||[]).map(x=>x.id)])for(const key of officialKeys.get(id)||[])registered.add(key);for(const key of manualKeys(p)??currentPLKKeys(p)??currentBBLKeys(p)??(registered.size?registered:effective26keys(p,m,mb)))addClubPlayer(index,seen,key,p);}
- for(const {keys,p} of officialRows)for(const key of manualKeys(p)??currentPLKKeys(p)??currentBBLKeys(p)??keys)addClubPlayer(index,seen,key,p);
+ for(const p of pool){const registered=new Set();for(const id of [p.id,gid(p),...(p._grp||[]).map(x=>x.id)])for(const key of officialKeys.get(id)||[])registered.add(key);for(const key of manualKeys(p)??currentDomesticKeys(p)??currentBBLKeys(p)??(registered.size?registered:effective26keys(p,m,mb)))addClubPlayer(index,seen,key,p);}
+ for(const {keys,p} of officialRows)for(const key of manualKeys(p)??currentDomesticKeys(p)??currentBBLKeys(p)??keys)addClubPlayer(index,seen,key,p);
  return index;
 }
 function liveRoster(key){if(!key)return null;key=canonKey(key);if(rosters.has(key))return rosters.get(key);const club=allClubs().find(c=>c.key===key)||window.ESTeamSelection?.teamForKey?.(key);if(!club)return null;
@@ -212,7 +212,7 @@ function wirePlayer(p){
  const level=document.querySelector('#mxLevel');if(level)level.onchange=()=>{const value=level.value;return saveField(level,{projLevel:value},value===''?'Level back to automatic.':'Estimated level saved.');};
  for(const [id,field,label] of [['mxHand','hand','Dominant hand'],['mxPosition','role','Position'],['mxBorn','born','Birth year'],['mxHeight','height','Height'],['mxCountry','country','Nationality']]){const control=document.getElementById(id);if(!control)continue;control.onchange=()=>{const value=control.value,patch={[field]:['born','height','weight'].includes(field)&&value!==''?Number(value):value};if(field==='born'){const dob=String(p.birthDate||p.dob||'');patch.birthDate=value&&/^\d{4}-\d{2}-\d{2}$/.test(dob)?value+dob.slice(4):'';}if(field==='role')patch.pos={Guard:'G',Forward:'F',Big:'C'}[value]||'';return saveField(control,patch,label+' saved to player profile.');};}
  const logsBtn=document.querySelector('#mxLogs');if(logsBtn)logsBtn.onclick=()=>SX?SX.openPlayerLog(p):openProfile(p.id);
- const statsBtn=document.querySelector('#mxStats');if(statsBtn)statsBtn.onclick=()=>ESQuickStats.open(p);
+ const statsBtn=document.querySelector('#mxStats');if(statsBtn)statsBtn.onclick=()=>ESQuickStats.open(p,{club:liveRoster(p._liveClub)?.club,competition:SX?.active()?.competition});
  window.ESQuickStats?.follow(p);
  document.querySelector('#mxPrev').onclick=()=>step(-1);document.querySelector('#mxNext').onclick=()=>step(1);
  document.querySelector('#mxWatch').onclick=()=>{if(!editable())return;toggleTag(p.id,WATCH_TAG).then(()=>renderScouting(true));};
