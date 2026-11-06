@@ -88,3 +88,6 @@ html[data-theme=dark] .sx-status.sx-down{color:#eaa79b}
 @media(max-width:700px){.sx-filters label{min-width:0;max-width:100%}.sx-log .sx-filters select{max-width:100%}.sx-game-search label{flex-basis:100%;display:grid;grid-template-columns:65px minmax(0,1fr)}.sx-log .sx-game-search input,.sx-log .sx-filters select{font-size:16px}.sx-game-search .sx-hint{margin:0}}
 
 .sx-scouted-chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;width:auto;padding:7px 12px;border:1px solid #b8dfc9;border-radius:8px;background:#e2f4e9;color:#08713f;font:600 12px var(--body,Arial,sans-serif);white-space:normal;cursor:pointer}.sx-scouted-chip:hover{background:#d3eddf;border-color:#7bb795}.sx-scouted-chip:focus-visible{outline:2px solid #08713f;outline-offset:2px}
+
+/* Polish flag for browsers that display regional-indicator letters. */
+.es-flag-pl{display:inline-block;width:1.15em;height:.8em;box-sizing:border-box;border:1px solid var(--line,#d6e1dd);border-radius:2px;background:linear-gradient(#fff 50%,#dc143c 50%);vertical-align:-.04em;margin-right:.4em}
