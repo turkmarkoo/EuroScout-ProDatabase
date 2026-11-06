@@ -42,7 +42,17 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  assert.equal(live.fixtures[1].home.key,'hun|NHS');
  assert.equal(live.fixtures[1].away.key,'plk|OZZ');
  assert(events.includes('euroscout-dragons'));
-assert.match(html,/euroscout-dragons\.js\?v=20261104-distinct-fosters-v1/);
+ const polishRoster={id:'71',ids:['sweden-alex'],name:'Alex Example',born:2001};
+ context.window.EuroScoutPLK={apply(){},directory:()=>({teams:[],roster:[polishRoster]})};
+ const polishBase={leagues:[{meta:{id:'sbl'},players:[{id:'sweden-alex',league:'sbl',name:'Alex Example',born:2001}]}]};
+ const polishFeed={...live,fixtures:[],leagues:[{meta:{id:'dragons-pol-test'},players:[
+  {id:'dragons-plk-alex',plkPlayerId:'71',name:'Alex Example',g:2},
+  {id:'dragons-plk-other',plkPlayerId:'72',name:'Alex Example',g:1,linkedEuroScoutId:'sweden-alex'},
+ ]}]};
+ const polishStats=context.window.EuroScoutDragons.connectData(polishBase,polishFeed).leagues.at(-1).players;
+ assert.equal(polishStats[0].linkedEuroScoutId,'sweden-alex');
+ assert.equal(polishStats[1].linkedEuroScoutId,null,'Unverified PLK IDs must never be linked by name alone');
+ assert.match(html,/euroscout-dragons\.js\?v=20261106-plk-stats/);
  assert.doesNotMatch(code,/Promise\.race\(\[localPromise/);
  assert.doesNotMatch(code,/data-dd-check|Check latest/);
  assert.match(code,/Update stats ↗/);

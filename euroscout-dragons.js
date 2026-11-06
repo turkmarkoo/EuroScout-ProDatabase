@@ -86,6 +86,7 @@ function abbreviationMatches(shortName,fullName){
 function nameKeys(value){const parts=nameTokens(value);if(parts.length<2)return[];return [...new Set([parts[0][0]+'|'+parts.slice(1).join(' '),parts[0][0]+'|'+parts.at(-1)])];}
 function prepareDirectory(directory,raw){
  directory.byId=new Map(allPlayers(raw).filter(p=>!p._dragonsData).map(p=>[p.id,p]));directory.teamCache=new Map();
+ directory.plkPlayers=new Map((window.EuroScoutPLK?.directory()?.roster||[]).map(row=>[String(row.id),row]));
  for(const league of raw.leagues||[]){if(league.meta?.privateOwnerFeed||league.meta?.exhibition)continue;for(const team of league.teams||[]){
   const existing=directory.teams.find(t=>t.dbKey===league.meta.id+'|'+team.code);if(existing)continue;
   directory.teams.push({key:league.meta.id+':'+team.code,dbKey:league.meta.id+'|'+team.code,code:team.code,name:team.name,aliases:team.aliases||[],catalogue:true});
@@ -109,6 +110,13 @@ function verifiedProfile(source,directory){
 }
 function resolve(source,directory,raw){
  if(!directory.nameIndex)prepareDirectory(directory,raw);
+ if(/^dragons-pol-/.test(source.league||'')&&/^\d+$/.test(String(source.plkPlayerId||''))){
+  const row=directory.plkPlayers.get(String(source.plkPlayerId));
+  if(!row)return null;
+  const id=row.ids.find(candidate=>directory.byId.has(candidate));
+  if(!id)return null;
+  return {id,ids:row.ids,player:directory.byId.get(id),row,officialId:'pol:'+row.id,source:row.profile};
+ }
  const verified=verifiedProfile(source,directory);if(verified)return verified;
  // The BBL feed reused PAOK's provider person code and 1995 bio for Bonn's
  // Foster. Resolve this exact club/name against Bonn's official 2002 profile.
@@ -167,6 +175,10 @@ function connectData(raw,data){
   }
   for(const player of league.players||[]){
    player.league=league.meta.id;player.statsSeason='2026/27';player._dragonsData=true;player._verifiedExternal=true;player._sourceSeason=league.meta.season;
+   if(/^dragons-pol-/.test(player.league)&&player.plkPlayerId){
+    player._strictIdentity=true;
+    player.linkedEuroScoutId=null;
+   }
    player._sourceTeamKey=teamMatch(player,directory)?.dbKey||null;
    const identity=resolve(player,directory,result);if(!identity)continue;
    if(identity.id){player.linkedEuroScoutId=identity.id;for(const id of identity.ids||[identity.id])links.push([player.id,id]);resolved.push(player.id);}
