@@ -3,16 +3,17 @@
   let palette=null,cache=null,backgroundQueued=false;
   const api=()=>window.GlobalCommandPalette;
   const folded=value=>api().fold(value);
+  const searchKey=value=>folded(value).replace(/['\u2018\u2019\u02bc\uff07]/g,'');
   let searchKeys=new WeakMap();
   window.addEventListener("euroscout:profile-fields-updated",()=>{searchKeys=new WeakMap();matchCache.clear();palette?.refresh();});
   const matchCache=new Map();
   function scored(query,items,title,extra,scope){
-    const q=folded(query),words=q.split(/\s+/).filter(Boolean),best=[];
+    const q=searchKey(query),words=q.split(/\s+/).filter(Boolean),best=[];
     const previous=matchCache.get(scope),source=previous&&previous.base===items&&previous.size===items.length&&previous.query&&q.startsWith(previous.query)?previous.matches:items;
     const matches=[];
     for(const item of source){
       let key=searchKeys.get(item);
-      if(!key){key={title:folded(title(item)),all:folded(title(item)+' '+extra(item))};searchKeys.set(item,key);}
+      if(!key){key={title:searchKey(title(item)),all:searchKey(title(item)+' '+extra(item))};searchKeys.set(item,key);}
       if(!words.every(word=>key.all.includes(word)))continue;
       matches.push(item);
       const rank=key.title===q?1000:key.title.startsWith(q)?700:key.title.split(/\s+/).some(word=>word.startsWith(q))?500:key.title.includes(q)?300:100;
@@ -93,7 +94,7 @@
   }
   function search(query){
     if(!STATE.data?.leagues)return {};
-    if(folded(query).length<2)return {};
+    if(searchKey(query).length<2)return {};
     const {players,dupes,clubs,agencies,competitions,notes,sessions}=index();
     const playerMatches=scored(query,players,x=>x.p.name,x=>[x.p.teamName,x.p.country,x.L.meta.name,...(window.PlayerScouting&&window.ESPlayerScouting?PlayerScouting.rolesOf(ESPlayerScouting.values(x.p)):[])].join(' '),'players');
     const clubMatches=scored(query,clubs,x=>x.name,x=>[x.country,...x.leagues.map(l=>l.name)].join(' '),'clubs');
@@ -101,7 +102,7 @@
     const compMatches=scored(query,competitions,x=>x.name,x=>[x.season,x.id].join(' '),'competitions');
     const noteMatches=scored(query,notes,x=>x.player.name,x=>x.label+' '+x.text,'notes');
     const sessionMatches=scored(query,sessions,x=>[x.a?.name,x.b?.name].filter(Boolean).join(' vs '),x=>[x.competition?.name,x.gameDate,x.note].join(' '),'events');
-    if(folded(query).length>=3)queueBackgroundIndex();
+    if(searchKey(query).length>=3)queueBackgroundIndex();
     const agencyLogo=name=>{try{const map=JSON.parse(localStorage.getItem('euroscout:agencyLogos:v1')||'{}');return map[folded(name).replace(/[^a-z0-9]+/g,' ')]?.data||'';}catch{return '';}};
     return {
       Players:{total:playerMatches.total,items:playerMatches.items.map(({item})=>playerItem(item.p,dupes)),seeAll:()=>{STATE.scout.q=query;STATE.scout.basketballRole='';goView('scout');}},
