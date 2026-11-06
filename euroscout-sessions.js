@@ -589,8 +589,10 @@ function renderLog() {
     b.disabled=true;b.textContent='Opening…';b.setAttribute('aria-busy','true');
     // Paint feedback before building the team/game options. Repeated clicks
     // cannot open duplicate dialogs while the catalogue is being prepared.
-    requestAnimationFrame(()=>setTimeout(()=>{
-      try{openStart({ a: h, b: aw, gameDate: date, game: { date, comp } }, s => { if (s) { STATE.scouting.a = s.a.key; STATE.scouting.b = s.b.key; go(); } });}
+    requestAnimationFrame(()=>setTimeout(async()=>{
+      try{
+       if(['nba','gleague','ncaam'].includes(comp))await loadExtraLeagues(comp==='ncaam'?'ncaa':'pro');
+       openStart({ a: h, b: aw, gameDate: date, game: { date, comp } }, s => { if (s) { STATE.scouting.a = s.a.key; STATE.scouting.b = s.b.key; go(); } });}
       catch(error){console.warn('Could not open game scouting',error);toast('Could not open this game. Please try again.');}
       finally{b.disabled=false;b.textContent=label;b.removeAttribute('aria-busy');}
     },0));

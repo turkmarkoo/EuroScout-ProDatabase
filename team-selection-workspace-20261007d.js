@@ -56,7 +56,7 @@ const COMPETITION_ALIASES=[
  ['aba2','ABA League 2',/^abaleague2$/],['aba','ABA League',/^(admiralbet)?abaleague$/],
  ['bclq','BCL Qualifiers',/^(basketballchampionsleague|bcl)qualifiers$/],['bcl','Basketball Champions League',/^(basketball)?championsleague$/],['fec','FIBA Europe Cup',/^fibaeuropecup$/],['acb','Liga ACB',/^(ligaendesa|ligaacb|acb)$/],
  ['lnb','Betclic Élite',/^(lnbproa|betclicelite|francebetclicelite|franceproa)$/],['elite2','France · Élite 2',/^(france)?elite2$/],
- ['bnxt','BNXT League',/^bnxt(league)?$/],['proa','Germany · ProA',/^(german|germany)?proa$/],['prob','Germany · ProB',/^(german|germany)?prob$/],
+ ['hun','Hungary · NB I/A',/^(hungarian|hungary)?nbia$/],['bnxt','BNXT League',/^bnxt(league)?$/],['proa','Germany · ProA',/^(german|germany)?proa$/],['prob','Germany · ProB',/^(german|germany)?prob$/],
  ['lba','Lega A',/^(legabasketseriea|legaseriea|lba|legaa)$/],['seriea2','Serie A2',/^(italy)?seriea2(italy)?$/],
  ['jbl','B.League (Japan B1)',/^(japanbpremier|bleaguejapanb1)$/],['gleague','NBA G League',/^(nba)?gleague$/]
 ];
@@ -112,7 +112,8 @@ let competitionCache=null;
 function buildCompetitions(){
  if(typeof allClubs!=='function')return[];
  const clubs=allClubs(),defs=new Map(),data=window.STATE?.data||{};
- const sources=[data.leagues,data.leagues?.length,data.season2627?.comps,data.domestic2627?.leagues,window.EuroScoutFIBAClub?.data?.competitions,window.EUROSCOUT_BCLQ_2026?.teams,window.EUROSCOUT_ABA_ROSTERS?.teams];
+ const officialRosters=window.EuroScoutLeagueRosters?.directories();
+ const sources=[data.leagues,data.leagues?.length,data.season2627?.comps,data.domestic2627?.leagues,window.EuroScoutFIBAClub?.data?.competitions,window.EUROSCOUT_BCLQ_2026?.teams,window.EUROSCOUT_ABA_ROSTERS?.teams,window.EuroScoutUSARosters?.ready(),officialRosters];
  if(competitionCache?.data===data&&competitionCache.clubs===clubs&&competitionCache.count===clubs.length&&sources.every((source,i)=>source===competitionCache.sources[i]))return competitionCache.value;
  const lookup=teamLookup(clubs,data);
  const addDef=(value,replaceTeams=false)=>{if(!value?.id||value.id==='n2627'||value.id==='directory')return;const identity=competitionIdentity(value),old=defs.get(identity.key)||{},incoming=value._teamKeys||[],teamKeys=replaceTeams&&incoming.length?incoming:[...(old._teamKeys||[]),...incoming],rawRefs=[...(old._rawRefs||[]),...(value._rawRefs||[])];defs.set(identity.key,{...old,...value,id:identity.id,name:identity.name,_ids:[...new Set([...(old._ids||[]),value.id])],_teamKeys:[...new Set(teamKeys)],_rawRefs:rawRefs});};
@@ -142,10 +143,16 @@ function buildCompetitions(){
   const teams=(competition.teams||[]).map(team=>lookup.resolve(team.currentKey)).map((club,index)=>club||(()=>{const team=competition.teams[index];return{key:team.currentKey,name:team.name,country:team.country||'',logo:team.logo||'',leagues:[{id:id+'26',name:competition.name}],teams:[{lg:id+'26',name:team.name,country:team.country||'',logo:team.logo||''}]};})());
   defs.set(identity.key,{...old,id:identity.id,name:identity.name,_ids:[...new Set([...(old._ids||[]),id,id+'26'])],_teamKeys:[],_clubs:teams,_officialFiba:true});
  }
+ for(const pack of officialRosters||[]){
+  const identity=competitionIdentity({id:pack.id,name:pack.name}),old=defs.get(identity.key)||{};
+  const teams=pack.teams.map(team=>currentTeamClub({...team,country:pack.country},pack.id,pack.name,clubs,data,lookup));
+  defs.set(identity.key,{...old,id:identity.id,name:identity.name,_clubs:teams,_teamKeys:[],_currentRefs:[]});
+ }
  defs.delete('n2627');
  const value=[...defs.values()].map(meta=>{
    /* Resolve only the field actually used; official/current lists take priority. */
-   let rawTeams=meta._clubs;
+   const usTeams=window.EuroScoutUSARosters?.teams(meta.id)||[];
+   let rawTeams=usTeams.length?usTeams.map(t=>({...t,key:meta.id+'|'+t.code,leagues:[{id:meta.id,name:meta.name}]})):meta._clubs;
    if(!rawTeams&&meta._currentRefs?.length)rawTeams=meta._currentRefs.map(ref=>currentTeamClub(ref,meta.id,meta.name,clubs,data,lookup));
    if(!rawTeams&&meta._rawRefs?.length)rawTeams=meta._rawRefs.map(ref=>currentTeamClub(ref,meta.id,meta.name,clubs,data,lookup));
    if(!rawTeams){const keyed=(meta._teamKeys||[]).map(lookup.resolve).filter(Boolean);if(keyed.length)rawTeams=[...new Map(keyed.map(c=>[c.key,c])).values()];}

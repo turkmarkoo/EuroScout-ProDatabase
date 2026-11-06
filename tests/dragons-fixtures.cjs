@@ -22,12 +22,24 @@ const fixture = {
   played: false,
   venue: 'Tiszaligeti Sportcsarnok',
 };
+const scheduled = (id, comp, a, b, awayKey = true) => ({
+  id, comp, compName: comp, date: '2027-01-03', time: '01:00', played: false,
+  home: { key: comp + '|' + a, code: a, name: a },
+  away: { key: awayKey ? comp + '|' + b : '', code: b, name: b }
+});
+const us = [
+  scheduled('nba-fixture-1', 'nba', 'NY', 'BOS'),
+  scheduled('gleague-fixture-2', 'gleague', 'WIS', 'AUS'),
+  scheduled('ncaam-fixture-3', 'ncaam', 'DUKE', 'UNC'),
+  scheduled('ncaam-fixture-4', 'ncaam', 'DUKE', 'UNC'),
+  scheduled('ncaam-fixture-5', 'ncaam', 'DUKE', 'NON-D1', false)
+];
 const fallbackGame = 'fec-rs1-lanl-lion|1|2026-10-07|LANL|83|LION|105';
 const localStorage = { getItem: () => null, setItem() {} };
 const context = {
   window: {
     EUROSCOUT_FIXTURES_2627: { comps: { fec: { name: 'FIBA Europe Cup', teams: { LANL: 'LANDAU Lions', LION: 'Lions de Geneve' }, games: fallbackGame } } },
-    EuroScoutDragons: { active: () => true, fixtures: () => [fixture] },
+    EuroScoutDragons: { active: () => true, fixtures: () => [fixture, ...us] },
   },
   EuroScoutDragons: null,
   STATE: { data: { season2627: { comps: { fec: { teams: [
@@ -67,8 +79,13 @@ assert.equal(landauGeneva[0].date, '2026-10-07');
 assert.equal(landauGeneva[0].hs, '83');
 assert.equal(landauGeneva[0].as, '105');
 
+const fixtures = context.window.ESFixtures;
+assert.equal(fixtures.between('nba|NY', 'nba|BOS').length, 1, 'NBA links survive before team packs load');
+assert.equal(fixtures.between('gleague|WIS', 'gleague|AUS').length, 1, 'G League links use current US keys');
+assert.equal(fixtures.between('ncaam|DUKE', 'ncaam|UNC').length, 2, 'distinct provider IDs remain distinct');
+assert.equal(fixtures.all().find(g => g.id === 'ncaam-fixture-5').away.key, '', 'do not guess an out-of-catalogue opponent');
 const html = fs.readFileSync('index.html', 'utf8');
 assert.match(html, /data\/fixtures-2627\.js\?v=20261009-matchup-safe-v12/);
-assert.match(html, /euroscout-fixtures\.js\?v=20261105-cup-search-v1/);
-assert.match(html, /euroscout-sessions\.js\?v=20261106-competition-flags/);
+assert.match(html, /euroscout-fixtures\.js\?v=20261106-priority/);
+assert.match(html, /euroscout-sessions\.js\?v=20261106-priority/);
 console.log('DragonsData FIBA Europe Cup fixtures resolve to canonical club IDs.');

@@ -1,16 +1,18 @@
-/* Protected 2026/27 rosters from the Swedish and Finnish federations. */
+/* Protected 2026/27 rosters from league and federation sources. */
 (function(){
 'use strict';
-const season='2026/27', leagueIds={sbl:'dragons-swe-',fin:'dragons-fin-'};
+const season='2026/27', leagueIds={sbl:'dragons-swe-',fin:'dragons-fin-',hun:'dragons-hun-',bnxt:'dragons-bnxt-',enbl:'dragons-enbl-',aba2:'dragons-aba2-'};
+const secondary=new Set(['enbl','aba2']);
 let directories=[], players=new Map(), registrations=new Map();
 
 function apply(raw,packs){
  const leagues=new Map(raw.leagues.map(l=>[l.meta.id,l]));
+ const original=new Map(raw.leagues.flatMap(l=>l.players).map(p=>[p.id,p]));
  const names=new Map();
  directories=[];players=new Map();registrations=new Map();
  if(!packs?.length)return;
  for(const league of raw.leagues){
-  league.players=league.players.filter(p=>!p._nordicRosterOnly);
+  league.players=league.players.filter(p=>!p._leagueRosterOnly);
   if(league.meta.privateOwnerFeed)continue;
   for(const p of league.players){
    const name=normName(p.name);
@@ -51,6 +53,8 @@ function apply(raw,packs){
    const source=active.length===1?active[0]:records[0];
    const team=teams.get(source.teamId);
    const id=pack.id+'-official-'+officialId;
+   const direct=pack.id==='aba2'?original.get('aba-'+officialId):null;
+   const compatibleDirect=direct&&(!source.born||!direct.born||Number(direct.born)===Number(source.born));
    const exact=names.get(normName(source.name))||[];
    const compatible=exact.filter(p=>!source.birthDate||!(p.birthDate||p.dob)||(p.birthDate||p.dob)===source.birthDate);
    const sameYear=compatible.filter(p=>source.born&&Number(p.born)===Number(source.born));
@@ -58,11 +62,11 @@ function apply(raw,packs){
    // and the previous official season club for that exact federation person ID.
    const prior=compatible.filter(p=>!p.born&&p.league===pack.id&&source.priorClubs?.includes(p.team));
    const matches=sameYear.length?sameYear:prior.length===1?prior:[];
-   const ids=[...matches.map(p=>p.id),id];
-   const record={...source,ids,teamKey:team?.key,teamName:team?.name};
+   const ids=[...new Set([...(compatibleDirect?[direct.id]:[]),...matches.map(p=>p.id),id])];
+   const record={...source,ids,teamKey:team?.key,teamName:team?.name,league:pack.id};
    league.players.push({id,code:id,name:source.name,league:pack.id,team:team?.code||'',teamName:team?.name,
-    born:source.born,birthDate:source.birthDate,height:source.height,country:source.country,pos:source.pos,role:source.role,
-    img:source.img,jersey:active.length===1?source.number:null,_nordicRosterOnly:true,_nordicIdentity:true,
+    born:source.born,birthDate:source.birthDate,height:source.height,weight:source.weight,country:source.country,pos:source.pos,role:source.role,
+    img:source.img,jersey:active.length===1?source.number:null,_leagueRosterOnly:true,_leagueRosterIdentity:true,
     _rosterOnly:true,_strictIdentity:true,statsScope:season,qualified:false,g:null,gameLog:[],pct:{},z:{},arch:[],
     currentRosterSeason:active.length===1?season:null,currentRosterSource:source.source,currentRosterProfile:source.profile});
    players.set(pack.id+'|'+officialId,record);
@@ -78,18 +82,21 @@ function apply(raw,packs){
  }
  if(directories.length)raw.domestic2627={...raw.domestic2627,season,leagues:domestic};
 }
-function current(p){
- if(!p)return null;
- let active=null;
- for(const id of [p.id,p.linkedEuroScoutId,...(p._grp||[]).map(r=>r.id)]){
-  for(const row of registrations.get(id)||[]){
-   if(active&&row.teamKey!==active.teamKey)return null;
-   active=row;
-  }
- }
- return active;
+function currentRows(p){
+ if(!p)return [];
+ const rows=new Set();
+ for(const id of [p.id,p.linkedEuroScoutId,...(p._grp||[]).map(r=>r.id)])for(const row of registrations.get(id)||[])rows.add(row);
+ return [...rows];
+}
+function current(p,club){
+ const rows=currentRows(p);
+ if(club)return rows.find(row=>canonKey(row.teamKey)===canonKey(club))||null;
+ const primary=rows.filter(row=>!secondary.has(row.league));
+ const clubs=new Map(primary.map(row=>[canonKey(row.teamKey),row]));
+ return clubs.size===1?[...clubs.values()][0]:null;
 }
 function key(p){const team=current(p)?.teamKey;return team?canonKey(team):null;}
+function keys(p){return [...new Set(currentRows(p).map(row=>canonKey(row.teamKey)))];}
 function resolve(league,id){
  const code=Object.keys(leagueIds).find(key=>league.startsWith(leagueIds[key]));
  return players.get(code+'|'+id)||null;
@@ -102,7 +109,7 @@ function statLeagues(){
   players:pack.stats,teams:pack.teams,statMeta:{},games:[],
  }));
 }
-window.EuroScoutNordic={apply,current,key,resolve,link,statLeagues,directories:()=>directories,
+window.EuroScoutLeagueRosters={apply,current,key,keys,resolve,link,statLeagues,directories:()=>directories,
  checked:()=>directories.map(p=>p.checked).join('|')};
 })();
 

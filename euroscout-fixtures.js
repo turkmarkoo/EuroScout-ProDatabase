@@ -72,10 +72,15 @@ function registeredFixtureKey(comp,side){
  const name=fold(side.name),matches=(window.EUROSCOUT_EUROCUP_ROSTERS?.teams||[]).filter(t=>name&&[t.name,...(t.aliases||[])].some(n=>fold(n)===name));
  const keys=[...new Set(matches.map(t=>t.key&&canonKey(t.key)).filter(k=>k&&clubByKey(k)))];return keys.length===1?keys[0]:'';
 }
+const usFixtureCompetitions=new Set(['nba','gleague','ncaam']);
 function fromDragons(rows){
  const grouped=new Map();
  for(const g of rows||[]){const comp=g.comp||g.league_id||'',list=grouped.get(comp)||[];list.push(g);grouped.set(comp,list);}
  return [...grouped.entries()].flatMap(([comp,list])=>{
+  if(usFixtureCompetitions.has(comp))return list.map(g=>{
+   const side=s=>({...s,key:s?.code&&s.key===comp+'|'+s.code?s.key:'',name:s?.name||''});
+   return {...g,comp,home:side(g.home),away:side(g.away)};
+  });
   const teams=new Map();
   for(const g of list)for(const side of [g.home,g.away])if(side?.code)teams.set(side.code,{code:side.code,name:side.name||side.code});
   const keyOf=resolver(comp,[...teams.values()]);
@@ -88,6 +93,7 @@ function fromDragons(rows){
 function mergeFixtures(primary,fallback){
  const seen=new Set(),out=[];
  const identity=g=>{
+  if(usFixtureCompetitions.has(g.comp))return g.id;
   const side=s=>s?.key||fold(s?.name||s?.code);
   const sides=[side(g.home),side(g.away)].filter(Boolean).sort().join('~');
   return g.comp+'|'+g.date+'|'+sides;
@@ -105,7 +111,7 @@ function assemble(rowsByComp){lastRows=rowsByComp;problems=[];games=LIVE.flatMap
 function refresh(force){
  if(window.EuroScoutDragons?.active()){
   const rows=EuroScoutDragons.fixtures();
-  problems=[];games=mergeFixtures(fromDragons(rows),fromFile()).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
+  problems=[];games=mergeFixtures(fromDragons(rows),fromFile()).sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')));
   loadedAt=Date.now();state='ready';window.dispatchEvent(new Event('euroscout-fixtures'));return Promise.resolve(games);
  }
 
@@ -126,13 +132,16 @@ function refresh(force){
 }
 
 const todayStr=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+function isPastUSFixture(g,today,now){
+ return g.played||g.status==='live'||(g.utc?Date.parse(g.utc)<now:g.date<today);
+}
 const api=window.ESFixtures={
  refresh,all:()=>games,state:()=>state,problems:()=>problems.slice(),loadedAt:()=>loadedAt,
  competitions:()=>{const m=new Map();games.forEach(g=>{const c=m.get(g.comp)||{id:g.comp,name:g.compName,games:0,played:0};c.games++;if(g.played)c.played++;m.set(g.comp,c);});return [...m.values()];},
  between(ka,kb){ka=canonKey(ka||'');kb=canonKey(kb||'');if(!ka||!kb)return [];return games.filter(g=>(canonKey(g.home.key)===ka&&canonKey(g.away.key)===kb)||(canonKey(g.home.key)===kb&&canonKey(g.away.key)===ka));},
  forTeam(k){k=canonKey(k||'');return k?games.filter(g=>canonKey(g.home.key)===k||canonKey(g.away.key)===k):[];},
- recent(days,comp){const to=todayStr(),from=days?new Date(Date.now()-days*86400000).toISOString().slice(0,10):'2026-07-01';return games.filter(g=>g.date>=from&&g.date<'2027-07-01'&&g.date<=to&&(!comp||g.comp===comp)).reverse();},
- upcoming(days,comp){const from=todayStr(),to=days?new Date(Date.now()+days*86400000).toISOString().slice(0,10):'2027-06-30';return games.filter(g=>g.date>='2026-07-01'&&g.date>=from&&g.date<=to&&(!comp||g.comp===comp));}
+ recent(days,comp){const to=todayStr(),now=Date.now(),from=days?new Date(now-days*86400000).toISOString().slice(0,10):'2026-07-01';return games.filter(g=>g.date>=from&&g.date<'2027-07-01'&&g.date<=to&&(!comp||g.comp===comp)&&(!usFixtureCompetitions.has(g.comp)||isPastUSFixture(g,to,now))).reverse();},
+ upcoming(days,comp){const from=todayStr(),now=Date.now(),to=days?new Date(now+days*86400000).toISOString().slice(0,10):'2027-06-30';return games.filter(g=>g.date>='2026-07-01'&&g.date>=from&&g.date<=to&&(!comp||g.comp===comp)&&(!usFixtureCompetitions.has(g.comp)||!isPastUSFixture(g,from,now)));}
 };
 window.addEventListener?.('euroscout:rosters-ready',()=>refresh(false));
 window.addEventListener?.('euroscout-dragons',()=>{const load=()=>refresh(true);if(pending)pending.finally(load);else load();});

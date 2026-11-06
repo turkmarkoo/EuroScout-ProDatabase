@@ -55,5 +55,6 @@ function preferredIds(ids){const old=ids.filter(id=>!addedIds.has(id));return ol
 function link(uni){for(const pair of data?.links||[])uni(...pair);if(!data)return;for(const r of data.players)for(const id of r.ids)if(id!==r.id)uni(r.id,id);
  // ESPN's person ID is shared between its college and professional feeds.
  if(typeof allPlayersEvery==='function'){const groups=new Map();for(const p of allPlayersEvery()){const eid=p._espnId||(p.league==='ncaam'&&/^\d+$/.test(String(p.code))?String(p.code):null);if(!eid)continue;if(!groups.has(eid))groups.set(eid,[]);groups.get(eid).push(p);}for(const ps of groups.values()){const years=new Set(ps.map(p=>p.born).filter(Boolean));if(years.size>1)continue;for(const p of ps.slice(1))uni(ps[0].id,p.id);}}}
-window.EuroScoutUSARosters={enrich,apply,key,keys,records,ncaa,collegeResolved,link,preferredIds,ready:()=>!!data,coverage:()=>data?.coverage||[]};
+function teams(league){return data?.teams.filter(t=>t.league===league)||[];}
+window.EuroScoutUSARosters={enrich,teams,apply,key,keys,records,ncaa,collegeResolved,link,preferredIds,ready:()=>!!data,coverage:()=>data?.coverage||[]};
 })();
