@@ -30,4 +30,24 @@ const cedevita=pro.leagues.flatMap(league=>(league.teams||[]).filter(team=>/cede
 assert.ok(cedevita.length>=2);
 assert.ok(cedevita.reduce((sum,row)=>sum+row.league.players.filter(player=>player.team===row.team.code&&!player._rosterOnly&&Number(player.g)>0).length,0)>=18);
 
+// These clubs have the same numeric logo filename on different providers.
+const vm=require('node:vm');
+const partizan={key:'aba|PAR',code:'PAR',name:'Partizan Mozzart Bet',logo:'https://www.aba-liga.com/images/club/150x150/22.png?v=2026'};
+const lublin={key:'plk|PSL',code:'PSL',name:'PGE Start Lublin',logo:'https://s1.static.esor.pzkosz.pl/internalfiles/image/kluby/s28/150-150/22.png'};
+const abaContext={window:{},structuredClone,allDbTeams:()=>[lublin,partizan],canonKey:key=>key};
+vm.createContext(abaContext);
+for(const file of ['data/aba-rosters-2026.js','euroscout-aba-rosters.js']){
+  vm.runInContext(fs.readFileSync(file,'utf8'),abaContext);
+}
+const aba=abaContext.window.EuroScoutABA;
+const willis={id:'euroleague-009664'};
+aba.apply({leagues:[
+  {meta:{id:'plk'},teams:[lublin],players:[]},
+  {meta:{id:'aba'},teams:[partizan],players:[willis]},
+]});
+assert.equal(aba.key(willis),partizan.key,'a Polish logo ID must never resolve an ABA registration');
+const aliases=abaContext.window.EUROSCOUT_CLUB_DIRECTORY.find(row=>row.id==='aba-2026-22').aliases;
+assert.ok(aliases.includes(partizan.name));
+assert.ok(!aliases.includes(lublin.name),'a Polish team must never become an alias for Partizan');
+
 console.log('Club identity, NCAA roster size and previous-season roster regressions are guarded.');
