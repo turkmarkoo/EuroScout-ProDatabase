@@ -89,5 +89,4 @@ html[data-theme=dark] .sx-status.sx-down{color:#eaa79b}
 
 .sx-scouted-chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;width:auto;padding:7px 12px;border:1px solid #b8dfc9;border-radius:8px;background:#e2f4e9;color:#08713f;font:600 12px var(--body,Arial,sans-serif);white-space:normal;cursor:pointer}.sx-scouted-chip:hover{background:#d3eddf;border-color:#7bb795}.sx-scouted-chip:focus-visible{outline:2px solid #08713f;outline-offset:2px}
 
-/* Polish flag for browsers that display regional-indicator letters. */
-.es-flag-pl{display:inline-block;width:1.15em;height:.8em;box-sizing:border-box;border:1px solid var(--line,#d6e1dd);border-radius:2px;background:linear-gradient(#fff 50%,#dc143c 50%);vertical-align:-.04em;margin-right:.4em}
+.es-competition-flag{display:inline-block;width:16px;height:12px;object-fit:contain;border-radius:2px;box-shadow:0 0 0 1px var(--line,#d6e1dd);vertical-align:-1px;margin-right:.45em}
