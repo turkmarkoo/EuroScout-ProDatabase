@@ -52,7 +52,7 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  const polishStats=context.window.EuroScoutDragons.connectData(polishBase,polishFeed).leagues.at(-1).players;
  assert.equal(polishStats[0].linkedEuroScoutId,'sweden-alex');
  assert.equal(polishStats[1].linkedEuroScoutId,null,'Unverified PLK IDs must never be linked by name alone');
- assert.match(html,/euroscout-dragons\.js\?v=20261106-plk-stats/);
+ assert.match(html,/euroscout-dragons\.js\?v=20261107-aba-identities/);
  assert.doesNotMatch(code,/Promise\.race\(\[localPromise/);
  assert.doesNotMatch(code,/data-dd-check|Check latest/);
  assert.match(code,/Update stats ↗/);
@@ -78,5 +78,9 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  const verified=context.window.EuroScoutDragons.connectData(bioRaw,supplementFeed).leagues.at(-1).players;assert.equal(verified[0].name,'Gabriel Olaseni');assert.equal(verified[0].img,'verified.png');assert.equal(verified[0].country,'United Kingdom');assert.equal(verified[0].linkedEuroScoutId,undefined);assert.equal(verified[0].g,1);assert.equal(verified[0].ppg,7);assert.equal(context.window.EuroScoutDragons.key(verified[0]),'acb|UNI');assert.equal(verified[1].name,'A. Olaseni');assert.equal(verified[2].name,'A. Olaseni');
  supplementFeed.leagues[0].meta.season='2025/26';assert.equal(context.window.EuroScoutDragons.connectData(bioRaw,supplementFeed).leagues.at(-1).players[0].name,'A. Olaseni');
  const metadata={window:{}};vm.runInNewContext(fs.readFileSync('data/acb-verified-identities-20261008.js','utf8'),metadata);assert.equal(metadata.window.EUROSCOUT_ACB_IDENTITY_FIXES.length,27);assert.ok(metadata.window.EUROSCOUT_ACB_IDENTITY_FIXES.every(p=>p.source.startsWith('https://acb.com/')&&p.img.startsWith('https://static.acb.com/')&&p.birthDate&&p.country));
- console.log('Approved reader access, blocked external access, snapshot isolation and rejected-feed tests passed.');
+ const abaRaw={leagues:[{meta:{id:'aba'},teams:[{code:'BOR',name:'Borac Mozzart'}],players:[{id:'aba-5648',name:'Kahliel Leronne Spear',born:2000,team:'BOR',teamName:'Borac Mozzart',league:'aba'}]}]};
+ const abaFeed={...live,fixtures:[],leagues:[{meta:{id:'dragons-aba-test',name:'ABA League',season:'2026/27',privateOwnerFeed:true},players:[{id:'aba-test-stat',name:'Kahliel Spear',abaPlayerId:'5648',team:'dd-bor',teamName:'Borac Mozzart',g:5,ppg:20,gameLog:[]},{id:'aba-birth-conflict',name:'Kahliel Spear',abaPlayerId:'5648',born:1995,team:'dd-bor',teamName:'Borac Mozzart',g:2,gameLog:[]}]}]};
+ const abaRows=context.window.EuroScoutDragons.connectData(abaRaw,abaFeed).leagues.at(-1).players;
+ assert.equal(abaRows[0].linkedEuroScoutId,'aba-5648');assert.equal(abaRows[0]._sourcePlayerId,'aba:5648');assert.equal(abaRows[0].g,5);assert.equal(abaRows[0].ppg,20);assert.equal(abaRows[1].linkedEuroScoutId,undefined);
+ console.log('Approved reader access, blocked external access, snapshot isolation, ABA source IDs and rejected-feed tests passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

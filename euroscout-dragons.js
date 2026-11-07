@@ -115,6 +115,14 @@ function verifiedProfile(source,directory){
 }
 function resolve(source,directory,raw){
  if(!directory.nameIndex)prepareDirectory(directory,raw);
+ if(/^dragons-aba-/.test(source.league||'')&&/^\d+$/.test(String(source.abaPlayerId||''))){
+  const id='aba-'+source.abaPlayerId,base=directory.byId.get(id);
+  if(base){
+   const born=Number(source.born||source.birthYear||0);
+   if(born&&base.born&&born!==Number(base.born))return null;
+   return {id,player:base,team:teamMatch(source,directory),officialId:'aba:'+source.abaPlayerId,source:'https://www.aba-liga.com/player/'+source.abaPlayerId+'/26/1/'};
+  }
+ }
  if(/^dragons-pol-/.test(source.league||'')&&/^\d+$/.test(String(source.plkPlayerId||''))){
   const row=directory.plkPlayers.get(String(source.plkPlayerId));
   if(!row)return null;
