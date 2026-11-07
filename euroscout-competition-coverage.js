@@ -1,6 +1,23 @@
 /* Read-only coverage model. Team identity is supplied by the existing club map. */
 (function(root){
 'use strict';
+function resolveTeams({clubs,preferredKeys=[],canonicalKey=x=>x,nameKey}){
+ const byKey=new Map(),byName=new Map(),preferred=new Set(preferredKeys.map(canonicalKey)),preferredNames=new Map(),redirects=new Map();
+ const names=c=>[c.name,...(c.teams||[]).flatMap(t=>[t.name,...(t.searchAliases||[])])].map(nameKey).filter(Boolean);
+ const add=(map,name,key)=>{if(!map.has(name))map.set(name,key);else if(map.get(name)!==key)map.set(name,null);};
+ for(const c of clubs){byKey.set(c.key,c);for(const t of c.teams||[])byKey.set(t.key,c);for(const name of names(c)){add(byName,name,c.key);if(preferred.has(c.key))add(preferredNames,name,c.key);}}
+ const codes=c=>new Set([c.key,...(c.teams||[]).map(t=>t.key)].map(k=>String(k||'').split('|')[1]).filter(Boolean));
+ for(const c of clubs){if(preferred.has(c.key))continue;const candidates=new Set(names(c).map(n=>preferredNames.get(n)).filter(Boolean));if(candidates.size!==1)continue;
+  const target=byKey.get([...candidates][0]);if(!target)continue;
+  const sameCountry=c.country&&target.country&&nameKey(c.country)===nameKey(target.country),targetCodes=codes(target);
+  // An exact full club name plus country or source code is needed. Never use
+  // city/nickname similarity or combine two entries within the selected field.
+  if(sameCountry||[...codes(c)].some(code=>targetCodes.has(code)))redirects.set(c.key,target.key);
+ }
+ const resolve=t=>{if(!t?.key&&!t?.name)return null;const original=canonicalKey(t.key||byName.get(nameKey(t.name))||''),key=redirects.get(original)||original,c=byKey.get(key);return{key:key||'name:'+nameKey(t.name),name:c?.name||t.name||key,club:c};};
+ resolve.aliases=key=>[key,...[...redirects].filter(([,target])=>target===key).map(([source])=>source)];
+ return resolve;
+}
 function build({competition,competitions=[],sessions=[],fixtures=[],resolveTeam,competitionKey,roster=()=>[],playerId=x=>x.pid||x.id,noted=()=>false,watched=()=>false}){
  const compKey=c=>competitionKey(c||{}),id=compKey(competition),rows=new Map();
  const ensure=t=>{if(!t)return null;const team=resolveTeam(t);if(!team?.key)return null;
@@ -26,6 +43,6 @@ function build({competition,competitions=[],sessions=[],fixtures=[],resolveTeam,
  const current=teams.filter(r=>r.current);
  return {teams,current:current.length,league:current.filter(r=>r.leagueSessions.length).length,any:current.filter(r=>r.sessions.length).length,never:current.filter(r=>!r.sessions.length).length,watchDate};
 }
-root.ESCompetitionCoverage={build};
-if(typeof module!=='undefined')module.exports={build};
+root.ESCompetitionCoverage={build,resolveTeams};
+if(typeof module!=='undefined')module.exports={build,resolveTeams};
 })(typeof window==='undefined'?globalThis:window);

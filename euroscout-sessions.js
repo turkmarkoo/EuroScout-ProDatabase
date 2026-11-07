@@ -512,11 +512,11 @@ function coverageDetail(id){
  if(!summary)return null;
  const aliases=new Map();for(const c of known){aliases.set(competitionNameKey(c.name),c.id);for(const a of c.aliasIds)aliases.set('id:'+a,c.id);}
  const key=c=>aliases.get('id:'+c.id)||aliases.get(competitionNameKey(c.name))||c.id||'name:'+competitionNameKey(c.name);
- const names=new Map();for(const c of allClubs())for(const n of [c.name,...(c.teams||[]).flatMap(t=>[t.name,...(t.searchAliases||[])])]){const nkey=competitionNameKey(n);if(!names.has(nkey))names.set(nkey,c.key);else if(names.get(nkey)!==c.key)names.set(nkey,null);}
- const resolveTeam=t=>{if(!t?.key&&!t?.name)return null;const k=canonKey(t.key||names.get(competitionNameKey(t.name))||'');const c=k?club(k):null;return{key:k||'name:'+competitionNameKey(t.name),name:c?.name||t.name||k,club:c};};
+ const preferred=known.find(c=>c.id===id||c.aliasIds.has(id));
+ const resolveTeam=window.ESCompetitionCoverage.resolveTeams({clubs:allClubs(),preferredKeys:[...(preferred?.field||[])],canonicalKey:canonKey,nameKey:competitionNameKey});
  // Names are alternate labels for the ID-backed field, not additional teams.
  const competitions=known.map(c=>({...c,members:c.field.size?[...c.field].map(k=>({key:k})):[...c.fieldNames].map(n=>({name:n}))}));
- const result=window.ESCompetitionCoverage.build({competition:summary,competitions,sessions:everything(),fixtures:window.ESFixtures?.all?.()||[],resolveTeam,competitionKey:key,roster:k=>snap().rosters.get(k)||[],playerId:p=>{const item=P(p.pid||p.id);return item?gid(item):p.pid||p.id;},noted:hasReport,watched:p=>{try{return isWatched(p);}catch{return false;}}});
+ const result=window.ESCompetitionCoverage.build({competition:summary,competitions,sessions:everything(),fixtures:window.ESFixtures?.all?.()||[],resolveTeam,competitionKey:key,roster:k=>[...new Map(resolveTeam.aliases(k).flatMap(alias=>snap().rosters.get(alias)||[]).map(p=>[gid(p),p])).values()],playerId:p=>{const item=P(p.pid||p.id);return item?gid(item):p.pid||p.id;},noted:hasReport,watched:p=>{try{return isWatched(p);}catch{return false;}}});
  const value={...result,summary};coverageCache={id,snapshot:snapshotRef,fixtures:fixtureRef,value};return value;
 }
 function coverageBadge(t,size=34){return t.club?clubBadge(t.club,size):'<span class="clubBadge clubBadgeFallback" style="--bs:'+size+'px">'+esc(initials(t.name))+'</span>';}

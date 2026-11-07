@@ -14,3 +14,11 @@ const original=JSON.stringify(input.sessions);build(input);assert.equal(JSON.str
 m=build({...input,competition:{id:'nba'},competitions:[],fixtures:[{comp:'nba',compName:'NBA',date:'2026-10-22',home:{key:'a'},away:{key:'b'}},{comp:'nba',date:'2025-10-22',home:{key:'old'},away:{key:'c'}}]});assert.equal(m.current,2);assert.equal(m.teams.length,2);
 for(const id of ['bbl','eurocup','fec','ncaam','gleague','cup','name:Custom'])assert.equal(build({...input,competition:{id},competitions:[{id,members:[{key:'a'}]}],sessions:[]}).current,1);
 console.log('PASS: league aliases, current membership, replay dates, cross-competition history, unknown fields, all competition types, inactive sessions, notes/watchlist deduplication and read-only data.');
+const {resolveTeams}=require('../euroscout-competition-coverage.js');
+const clubs=[{key:'bbl|MBC',name:'SYNTAINICS MBC',country:'Germany'},{key:'enbl|MBC',name:'SYNTAINICS MBC',country:'Europe'},{key:'other|XYZ',name:'SYNTAINICS MBC',country:'Other country'},{key:'bbl|TWO',name:'SYNTAINICS MBC',country:'Germany'}];
+const resolver=resolveTeams({clubs:clubs.slice(0,3),preferredKeys:['bbl|MBC'],nameKey:s=>String(s||'').toLowerCase()});
+assert.equal(resolver({key:'enbl|MBC'}).key,'bbl|MBC');assert.equal(resolver({key:'other|XYZ'}).key,'other|XYZ');assert.deepEqual(resolver.aliases('bbl|MBC'),['bbl|MBC','enbl|MBC']);
+const ambiguous=resolveTeams({clubs,preferredKeys:['bbl|MBC','bbl|TWO'],nameKey:s=>String(s||'').toLowerCase()});assert.equal(ambiguous({key:'enbl|MBC'}).key,'enbl|MBC');
+const linked=build({...input,competition:{id:'bbl'},competitions:[{id:'bbl',name:'BBL',members:[{key:'bbl|MBC'}]},{id:'enbl',name:'ENBL',members:[{key:'enbl|MBC'}]}],resolveTeam:resolver,sessions:[s('mbc','bbl','2026-11-05','enbl|MBC','other|XYZ')]});
+assert.equal(linked.current,1);assert.equal(linked.league,1);assert.equal(linked.teams.filter(t=>t.name==='SYNTAINICS MBC'&&t.current).length,1);assert.deepEqual(linked.teams[0].otherCompetitions,['ENBL']);
+console.log('PASS: duplicate club identifiers combine only with exact name and corroborating country/code; ambiguous or different-country clubs remain separate.');
