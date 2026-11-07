@@ -297,6 +297,8 @@ function competitionsKnown() {
   Object.entries(d.season2627?.comps||{}).forEach(([id,c])=>add(id,c,true));
   Object.entries(d.domestic2627?.leagues||{}).forEach(([id,c])=>add(id,c,true));
   (d.leagues||[]).forEach(L=>{const m=L.meta||{};if(m.id)add(m.id,{...m,teams:L.teams},m.season==='2026/27');});
+  // Fixture-only competitions (including cups and US leagues) also belong here.
+  for(const g of window.ESFixtures?.all?.()||[])if(g.date>='2026-07-01'&&g.date<'2027-07-01')add(g.comp,{name:g.compName,complete:false},true);
   return out;
 }
 function coverage() {
@@ -316,7 +318,7 @@ function coverage() {
   });
   return [...rows.values()].map(r=>{
     const shortlisted=[...r.players].filter(id=>{const p=P(id);try{return p&&isWatched(p);}catch(e){return false;}}).length;
-    return{id:r.id,name:r.name,total:r.total,games:r.games.size,teams:r.teams.size,covered:r.covered.size,players:r.players.size,shortlisted,sessions:r.sessions,last:r.last,pct:r.total?Math.round(r.covered.size/r.total*100):null};
+    return{id:r.id||'name:'+competitionNameKey(r.name),name:r.name,total:r.total,games:r.games.size,teams:r.teams.size,covered:r.covered.size,players:r.players.size,shortlisted,sessions:r.sessions,last:r.last,pct:r.total?Math.round(r.covered.size/r.total*100):null};
   }).sort((x,y)=>y.games-x.games||(y.pct||0)-(x.pct||0)||x.name.localeCompare(y.name));
 }
 
@@ -501,6 +503,63 @@ function openTeamLog(key) {
 
 /* ── Scouting log view: sessions · teams · competitions ── */
 let tab = 'sessions', showUnscouted = false, upComp = '', upDays = 14, upMode = 'recent', gameSearch = '', gameTeam = '', gameSearchTimer = null;
+let coverageSelection='',coverageTeam='',coverageSearch='',coverageFilter='all',coverageSort='oldest';
+let coverageCache=null;
+function coverageDetail(id){
+ const snapshotRef=snap(),fixtureRef=window.ESFixtures?.all?.()||null;
+ if(coverageCache?.id===id&&coverageCache.snapshot===snapshotRef&&coverageCache.fixtures===fixtureRef)return coverageCache.value;
+ const known=[...competitionsKnown().values()],summary=coverage().find(c=>c.id===id);
+ if(!summary)return null;
+ const aliases=new Map();for(const c of known){aliases.set(competitionNameKey(c.name),c.id);for(const a of c.aliasIds)aliases.set('id:'+a,c.id);}
+ const key=c=>aliases.get('id:'+c.id)||aliases.get(competitionNameKey(c.name))||c.id||'name:'+competitionNameKey(c.name);
+ const names=new Map();for(const c of allClubs())for(const n of [c.name,...(c.teams||[]).flatMap(t=>[t.name,...(t.searchAliases||[])])]){const nkey=competitionNameKey(n);if(!names.has(nkey))names.set(nkey,c.key);else if(names.get(nkey)!==c.key)names.set(nkey,null);}
+ const resolveTeam=t=>{if(!t?.key&&!t?.name)return null;const k=canonKey(t.key||names.get(competitionNameKey(t.name))||'');const c=k?club(k):null;return{key:k||'name:'+competitionNameKey(t.name),name:c?.name||t.name||k,club:c};};
+ // Names are alternate labels for the ID-backed field, not additional teams.
+ const competitions=known.map(c=>({...c,members:c.field.size?[...c.field].map(k=>({key:k})):[...c.fieldNames].map(n=>({name:n}))}));
+ const result=window.ESCompetitionCoverage.build({competition:summary,competitions,sessions:everything(),fixtures:window.ESFixtures?.all?.()||[],resolveTeam,competitionKey:key,roster:k=>snap().rosters.get(k)||[],playerId:p=>{const item=P(p.pid||p.id);return item?gid(item):p.pid||p.id;},noted:hasReport,watched:p=>{try{return isWatched(p);}catch{return false;}}});
+ const value={...result,summary};coverageCache={id,snapshot:snapshotRef,fixtures:fixtureRef,value};return value;
+}
+function coverageBadge(t,size=34){return t.club?clubBadge(t.club,size):'<span class="clubBadge clubBadgeFallback" style="--bs:'+size+'px">'+esc(initials(t.name))+'</span>';}
+function openCoverageRoster(t){
+ const list=t.roster.slice().sort((a,b)=>a.name.localeCompare(b.name));
+ const row=p=>{
+  const photo=photoOf(p),jersey=p.jersey??p.number;
+  return '<button type="button" class="sx-reviewrow" data-coverage-player="'+escAttr(p.id)+'"><span class="sx-cov-playerphoto" data-initials="'+escAttr(initials(p.name))+'">'+(photo?'<img src="'+escAttr(photo)+'" alt="" loading="lazy" onerror="this.parentNode.textContent=this.parentNode.dataset.initials">':esc(initials(p.name)))+'</span><span class="sx-rname"><b>'+esc(p.name)+'</b><small>'+esc([jersey!=null?'#'+jersey:'',p.born||p.birthYear,p.pos||p.role,p.height?p.height+' cm':''].filter(Boolean).join(' · '))+'</small></span><span aria-hidden="true">↗</span></button>';
+ };
+ const box=modal('<h3>'+esc(t.name)+'</h3><p class="sx-hint">Current 2026/27 assignments · '+list.length+' players</p><div class="sx-cov-roster">'+(list.length?list.map(row).join(''):'<p class="sx-hint">No confirmed current roster is loaded for this team. Earlier-season players are not used to fill it.</p>')+'</div>',true);
+ box.querySelectorAll('[data-coverage-player]').forEach(b=>b.onclick=()=>{closeModal();openProfile(b.dataset.coveragePlayer);});
+}
+function renderCoverageDetail(){
+ const detail=coverageDetail(coverageSelection);if(!detail){coverageSelection='';renderLog();return;}
+ const {summary}=detail;
+ const fold=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+ const rows=detail.teams.filter(t=>fold(t.name+' '+t.otherCompetitions.join(' ')).includes(fold(coverageSearch))&&(coverageFilter==='all'||coverageFilter==='never'&&!t.sessions.length||coverageFilter==='stale'&&t.lastDate&&daysSince(t.lastDate)>=30||coverageFilter==='watchlist'&&t.watchlist.size));
+ rows.sort((a,b)=>coverageSort==='name'?a.name.localeCompare(b.name):coverageSort==='recent'?b.lastDate.localeCompare(a.lastDate)||a.name.localeCompare(b.name):a.lastDate.localeCompare(b.lastDate)||a.name.localeCompare(b.name));
+ const selected=rows.find(t=>t.key===coverageTeam)||rows[0];if(selected)coverageTeam=selected.key;
+ const status=t=>t.status==='league'?'Watched in this competition':t.status==='elsewhere'?'Watched elsewhere':'Not watched';
+ const sessionHTML=(s)=>'<button type="button" class="sx-cov-session" data-session="'+escAttr(s.id)+'"><strong>'+esc([s.a?.name,s.b?.name].filter(Boolean).join(' vs '))+'</strong><span>'+fmtDate(detail.watchDate(s))+' · '+esc(s.mode||'Mode unknown')+' · '+esc(s.competition?.name||'Unspecified')+'</span><small>Game: '+fmtDate(s.gameDate)+'</small></button>';
+ const pane=selected?'<div class="sx-cov-teamhead">'+coverageBadge(selected,48)+'<div><h2>'+esc(selected.name)+'</h2><span class="sx-cov-status '+selected.status+'">'+status(selected)+'</span></div></div><div class="sx-cov-actions"><button type="button" class="btn primary" id="sxCoverageRoster">Open roster</button><button type="button" class="btn ghost" id="sxCoverageGames">Find team games</button></div><div class="sx-cov-totals"><span><b>'+selected.players.size+'</b> Players viewed</span><span><b>'+selected.noted.size+'</b> Players with notes</span><span><b>'+selected.watchlist.size+'</b> On watchlist</span></div><h3>Recent viewings</h3>'+(selected.sessions.length?selected.sessions.slice(0,8).map(sessionHTML).join(''):'<p class="sx-hint">No completed viewing sessions recorded.</p>')+(selected.sessions.length>8?'<button class="btn ghost sm" id="sxCoverageHistory">All '+selected.sessions.length+' sessions</button>':''):'<p class="sx-hint">No teams match these filters.</p>';
+ const searchFocus=document.activeElement?.id==='sxCoverageSearch',cursor=searchFocus?document.activeElement.selectionStart:null;
+ $1('#app').innerHTML='<div class="view sx-log sx-coverage"><div class="sx-loghead"><div><button type="button" class="btn ghost sm" id="sxCoverageBack">‹ Competition coverage</button><h1 class="title">'+esc(summary.name)+'</h1><p class="sx-hint">2026/27 teams · all recorded viewing history · completed sessions only</p></div></div><div class="sx-cov-metrics">'+[[detail.current,'Current teams found'],[detail.league,'Watched here'],[detail.any,'Watched anywhere'],[detail.never,'Never watched']].map(([n,l])=>'<div><strong>'+n+'</strong><span>'+l+'</span></div>').join('')+'</div>'+(!summary.total?'<p class="sx-hint">A complete current team list is not confirmed. Teams below come from the available fixtures and viewing history; historical-only teams are labelled.</p>':'')+'<div class="sx-cov-filters"><label>Find team<input type="search" id="sxCoverageSearch" placeholder="Team or other competition…" value="'+escAttr(coverageSearch)+'"></label><label>Show<select id="sxCoverageFilter">'+[['all','All teams'],['never','Never watched'],['stale','Last watched 30+ days ago'],['watchlist','Players on watchlist']].map(([v,l])=>'<option value="'+v+'"'+(coverageFilter===v?' selected':'')+'>'+l+'</option>').join('')+'</select></label><label>Sort<select id="sxCoverageSort">'+[['oldest','Oldest viewing first'],['recent','Latest viewing first'],['name','Team name']].map(([v,l])=>'<option value="'+v+'"'+(coverageSort===v?' selected':'')+'>'+l+'</option>').join('')+'</select></label><span class="sx-hint" role="status">'+rows.length+' teams</span></div><div class="sx-cov-layout"><div class="sx-tablewrap"><table class="sx-table sx-cov-table"><thead><tr><th>Team</th><th>Other competitions</th><th>Sessions<br>Here / All</th><th>Last watched</th><th>Notes</th><th>Watchlist</th></tr></thead><tbody>'+rows.map(t=>'<tr class="sx-click'+(t===selected?' selected':'')+'" data-coverage-team="'+escAttr(t.key)+'" tabindex="0" aria-label="View '+escAttr(t.name)+'"><td><div class="sx-cov-team">'+coverageBadge(t)+'<div><b>'+esc(t.name)+'</b><small class="sx-cov-status '+t.status+'">'+status(t)+(t.current?'':' · historical team')+'</small></div></div></td><td>'+t.otherCompetitions.map(n=>'<span class="sx-cov-tag">'+esc(n)+'</span>').join(' ')+'</td><td><b>'+t.leagueSessions.length+'</b> / '+t.sessions.length+'</td><td>'+fmtDate(t.lastDate)+(t.last?'<small>'+esc(t.last.mode||'')+' · '+esc(t.last.competition?.name||'')+'</small>':'')+'</td><td>'+t.noted.size+'</td><td>'+t.watchlist.size+'</td></tr>').join('')+'</tbody></table>'+(rows.length?'':'<div class="empty">No matching teams.</div>')+'</div><aside class="sx-cov-pane" aria-label="Selected team">'+pane+'</aside></div><p class="sx-hint">Here / All counts completed sessions in this competition / across competitions. Notes and watchlist counts refer to the current roster plus notes made during these viewings. Last watched is the viewing date, not the fixture date.</p></div>';
+ $1('#sxCoverageBack').onclick=()=>{coverageSelection='';renderLog();};
+ $1('#sxCoverageSearch').oninput=e=>{coverageSearch=e.target.value;renderCoverageDetail();};
+ $1('#sxCoverageFilter').onchange=e=>{coverageFilter=e.target.value;renderCoverageDetail();};
+ $1('#sxCoverageSort').onchange=e=>{coverageSort=e.target.value;renderCoverageDetail();};
+ document.querySelectorAll('[data-coverage-team]').forEach(r=>{const select=()=>{coverageTeam=r.dataset.coverageTeam;renderCoverageDetail();if(innerWidth<=1350)$1('.sx-cov-pane').scrollIntoView({behavior:'smooth',block:'start'});};r.onclick=select;r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select();}};});
+ document.querySelectorAll('[data-session]').forEach(b=>b.onclick=()=>openSession(b.dataset.session));
+ if(selected){$1('#sxCoverageRoster').onclick=async e=>{
+  const button=e.currentTarget;button.disabled=true;button.textContent='Loading roster…';
+  try{
+   await loadMatchupRosterScripts();
+   const ids=[...selected.competitions.keys()];
+   if(ids.some(id=>['nba','gleague','ncaam','ncaa'].includes(id)))await loadExtraLeagues(ids.some(id=>['ncaam','ncaa'].includes(id))?'ncaa':'pro');
+   fresh();const latest=coverageDetail(coverageSelection)?.teams.find(t=>t.key===canonKey(selected.key))||selected;
+   openCoverageRoster(latest);
+  }catch(error){console.warn('Coverage roster unavailable',error);toast('Could not load this roster. Please try again.');}
+  finally{button.disabled=false;button.textContent='Open roster';}
+ };$1('#sxCoverageGames').onclick=()=>{coverageSelection='';tab='upcoming';gameTeam=selected.key;gameSearch='';upComp='';upDays=0;renderLog();};const history=$1('#sxCoverageHistory');if(history)history.onclick=()=>openTeamLog(selected.key);}
+ if(searchFocus){const el=$1('#sxCoverageSearch');el.focus({preventScroll:true});el.setSelectionRange(cursor,cursor);}
+}
 // Search all competition aliases of each canonical club; no player data is changed.
 function fixtureTeams(fixtures){
  const teams=new Map();for(const g of fixtures)for(const side of [g.home,g.away]){const key=side.key?canonKey(side.key):'name:'+competitionNameKey(side.name);if(!teams.has(key))teams.set(key,{key,name:side.name,aliases:[]});teams.get(key).aliases.push(side.name,side.code);}
@@ -514,7 +573,7 @@ function searchGames(fixtures,teams){
 }
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 function dayLabel(v) { const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? DAYS[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] + ' ' + fmtDate(v) : v; }
-window.addEventListener('euroscout-fixtures', () => { if (STATE.view === 'scoutlog' && tab === 'upcoming' && !document.getElementById('sxMask')) renderLog(); });
+window.addEventListener('euroscout-fixtures', () => { if (STATE.view === 'scoutlog' && ['upcoming','comps'].includes(tab) && !document.getElementById('sxMask')) renderLog(); });
 /* Match saved scouting evidence by game date, both clubs and competition. */
 function fixtureScoutIndex(sessions,fixtures){
  const nameKey=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(),byName=new Map(),known=competitionsKnown(),compIds=new Map(),compNames=new Map();
@@ -534,6 +593,7 @@ function fixtureLeagueHTML(id,name){
 function fixtureAction(g,scouted){return scouted?'<button type="button" class="sx-scouted-chip" data-session="'+escAttr(scouted.id)+'" title="Open saved scouting session">✓ Scouted</button>':canEdit()&&g.home.key&&g.away.key?'<button type="button" class="btn ghost sm" data-scout="'+escAttr([g.home.key,g.away.key,g.date,g.comp].join('~'))+'">Scout this game</button>':'';}
 
 function renderLog() {
+  if(tab==='comps'&&coverageSelection){renderCoverageDetail();return;}
   clearTimeout(gameSearchTimer);
   const searchFocus=document.activeElement?.id==='sxGameSearch',searchCursor=searchFocus?document.activeElement.selectionStart:null;
   const sessions = everything();
@@ -567,7 +627,7 @@ function renderLog() {
     const list = comps.filter(c => showUnscouted || c.games);
     body = '<label class="sx-check"><input type="checkbox" id="sxUnscouted" ' + (showUnscouted ? 'checked' : '') + '> Show competitions with nothing watched yet (' + comps.filter(c => !c.games).length + ')</label>' +
       (list.length ? '<div class="sx-tablewrap"><table class="sx-table"><thead><tr><th>Competition</th><th>Coverage</th><th>Teams watched</th><th>Games watched</th><th>Players viewed</th><th>On watchlist</th><th>Last session</th></tr></thead><tbody>' +
-      list.map(c => '<tr><td><b>' + esc(c.name) + '</b></td><td>' + (c.pct == null ? '<span class="sx-hint">team list unknown</span>' : '<span class="sx-fam"><span class="sx-fam-track"><i style="width:' + c.pct + '%"></i></span><b>' + c.pct + '%</b></span>') + '</td><td>' + (c.total ? c.covered + ' / ' + c.total : c.teams) + '</td><td>' + c.games + '</td><td>' + c.players + '</td><td>' + c.shortlisted + '</td><td>' + fmtDate(c.last) + '</td></tr>').join('') + '</tbody></table></div><p class="sx-hint">Coverage counts current 2026/27 teams watched. Games and players also include earlier recorded sessions.</p>'
+      list.map(c => '<tr class="sx-click" data-coverage="' + escAttr(c.id) + '" tabindex="0" aria-label="Open ' + escAttr(c.name) + ' coverage"><td><b>' + esc(c.name) + '</b></td><td>' + (c.pct == null ? '<span class="sx-hint">team list unknown</span>' : '<span class="sx-fam"><span class="sx-fam-track"><i style="width:' + c.pct + '%"></i></span><b>' + c.pct + '%</b></span>') + '</td><td>' + (c.total ? c.covered + ' / ' + c.total : c.teams) + '</td><td>' + c.games + '</td><td>' + c.players + '</td><td>' + c.shortlisted + '</td><td>' + fmtDate(c.last) + '</td></tr>').join('') + '</tbody></table></div><p class="sx-hint">Coverage counts current 2026/27 teams watched. Games and players also include earlier recorded sessions.</p>'
       : '<div class="empty">Nothing watched yet.</div>');
   }
   $1('#app').innerHTML = '<div class="view sx-log">' + head + body + '</div>';
@@ -597,6 +657,7 @@ function renderLog() {
       finally{b.disabled=false;b.textContent=label;b.removeAttribute('aria-busy');}
     },0));
   });
+  document.querySelectorAll('[data-coverage]').forEach(r=>{const open=()=>{coverageSelection=r.dataset.coverage;coverageTeam='';coverageSearch='';coverageFilter='all';renderLog();};r.onclick=open;r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}};});
   const un = $1('#sxUnscouted'); if (un) un.onchange = () => { showUnscouted = un.checked; renderLog(); };
   const rowKey = (el, fn) => { el.onclick = fn; el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } }; };
   document.querySelectorAll('[data-team]').forEach(r => rowKey(r, () => openTeamLog(r.dataset.team)));
@@ -776,5 +837,5 @@ renderTeam = function () {
 
 window.addEventListener?.('euroscout:rosters-ready',fresh);
 window.ESSessions = { STATUS, DWELL_MS, active, start, update, select, setStock, stockOf, markOf, review, finish, discard, remove, adopt, saveEdit, merge, openEdit, openMerge, all, everything,
-  fixtureScoutIndex, fixtureAction, me, teamLog, teamLogs, coverage, compsFor, knownGames, timeline, openStart, openFinish, openTeamLog, openPlayerLog, openSession, fmtDate, fmtTime, clock, modal, closeModal, hash };
+  fixtureScoutIndex, fixtureAction, me, teamLog, teamLogs, coverage, coverageDetail, compsFor, knownGames, timeline, openStart, openFinish, openTeamLog, openPlayerLog, openSession, fmtDate, fmtTime, clock, modal, closeModal, hash };
 })();

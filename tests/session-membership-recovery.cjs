@@ -4,7 +4,7 @@ const read=f=>fs.readFileSync(f,'utf8');
 const events=[],records=new Map();
 const c={window:{addEventListener(){},dispatchEvent:e=>events.push(e.type)},STATE:{data:JSON.parse(read('data/data.json'))},structuredClone,
  searchFold:s=>String(s||'').toLowerCase(),ovrMerged:()=>({clubs:{}}),isStatus:()=>false,console,Promise,Map,Set,Event:class{constructor(type){this.type=type}},
- localStorage:{getItem:k=>records.get(k)||null,setItem:(k,v)=>records.set(k,v)},document:{addEventListener(){}},setTimeout(){},clearTimeout(){},rebuildLinks(){},
+ localStorage:{getItem:k=>records.get(k)||null,setItem:(k,v)=>records.set(k,v)},document:{addEventListener(){},querySelector(){return null;}},setTimeout(){},clearTimeout(){},rebuildLinks(){},
  player:()=>null,parseReport:v=>typeof v==='string'?JSON.parse(v):v,effective26keys:()=>[],next26Get:()=>({}),next26bGet:()=>({})};
 vm.createContext(c);
 vm.runInContext(html.match(/const normClub=([^\n]+)/)[0],c);
