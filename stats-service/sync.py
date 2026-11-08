@@ -3,8 +3,22 @@ import argparse,json,os,shutil,sqlite3,subprocess,hashlib
 from datetime import datetime,timezone
 from pathlib import Path
 from contextlib import closing
+from collections import Counter,defaultdict
 from prepare import prepare
 from delta import export
+
+def stable_person_ids(source,baseline):
+    """Choose a retained stats ID within native-verified groups, never by matching names."""
+    if not Path(baseline).exists():return {}
+    profiles={p['id']:p for l in source.get('leagues',[]) for p in l.get('players',[])}
+    groups=defaultdict(Counter)
+    with closing(sqlite3.connect(baseline)) as con:
+        for payload, in con.execute('SELECT payload FROM stats_rows'):
+            old=json.loads(payload);p=profiles.get(old['profileId'])
+            if not p or old.get('born') and p.get('born') and old['born']!=p['born']:continue
+            canonical=p.get('_canonicalPersonId') or p.get('linkedEuroScoutId') or p['id']
+            groups[old['season']+'|'+old['competition']+'|'+str(canonical)][old['personId']]+=1
+    return {group:sorted(counts,key=lambda id:(-counts[id],id))[0] for group,counts in groups.items()}
 
 def estimate_writes(baseline,candidate,delta):
     with closing(sqlite3.connect(baseline)) as old,closing(sqlite3.connect(candidate)) as new:
@@ -63,8 +77,10 @@ def sync(config,dry_run=False):
     try:
         run([cfg.get('node','node'),str(service/'project.cjs'),str(Path(config).resolve())],timeout=300)
         source=json.loads(Path(cfg['projection']).read_text(encoding='utf-8'));countries=json.loads(Path(cfg['countries']).read_text(encoding='utf-8'))
+        baseline=directory/'published.sqlite'
+        source['canonicalStatsIds']=stable_person_ids(source,baseline)
         candidate=directory/'candidate.sqlite';built=prepare([source],countries,candidate)
-        baseline=directory/'published.sqlite';delta=directory/'delta.sql'
+        delta=directory/'delta.sql'
         changes=export(baseline,candidate,delta) # unexpected removals stop, retaining published data
         estimate=estimate_writes(baseline,candidate,delta)
         date=datetime.now(timezone.utc).date().isoformat();ledger=json.loads(ledger_path.read_text()) if ledger_path.exists() else {'date':date,'writes':0}

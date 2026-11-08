@@ -72,7 +72,10 @@ def build(con,sources,countries):
                 if not team.get('logo'):team['logo']=canonical_logos.get(team_id)
                 teams[py+'|'+comp+'|'+team_id]={'id':team_id,'name':p.get('teamName') or team.get('name') or 'Unknown team','competition':comp,'season':py,'logo':team.get('logo')}
                 # Source IDs and established links only; no automatic same-name merging.
-                person=p.get('linkedEuroScoutId') or p.get('_canonicalPersonId') or p['id']
+                # The native canonical ID already resolves a link's merged aliases.
+                # A provider's direct link can point to an older member of that group.
+                canonical=p.get('_canonicalPersonId') or p.get('linkedEuroScoutId') or p['id']
+                person=source.get('canonicalStatsIds',{}).get(py+'|'+comp+'|'+str(canonical),canonical)
                 key=py+'|'+comp+'|'+str(person)
                 metrics={k:numeric(p.get(k)) for k in METRICS}
                 for field,src in TOTALS.items():

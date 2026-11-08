@@ -13,6 +13,9 @@ class QueryTests(unittest.TestCase):
     def test_season_and_cross_competition(self):
         rows=self.q(q='One Player',qualified=0)['rows'];self.assertEqual(len(rows),2);self.assertEqual({r['metrics']['ppg'] for r in rows},{11,20});self.assertEqual(self.q(season='2025/26')['rows'][0]['metrics']['ppg'],99)
     def test_same_names_are_separate(self):self.assertEqual(self.q(q='Marcus Foster')['total'],2)
+    def test_verified_native_canonical_id_precedes_older_link_alias(self):
+        source={'leagues':[{'meta':{'id':'bclq','name':'Qualifiers','season':'2026/27'},'teams':[],'players':[{'id':'native','name':'Player','team':'A','born':2001,'g':2,'ppg':10,'_canonicalPersonId':'verified-person'},{'id':'provider','linkedEuroScoutId':'native','name':'Player','team':'A','born':2001,'g':2,'ppg':12,'_canonicalPersonId':'verified-person'}]}]}
+        build(self.c,[source],[]);rows=self.q(qualified=0)['rows'];self.assertEqual(len(rows),1);self.assertEqual(rows[0]['personId'],'verified-person');self.assertEqual(rows[0]['metrics']['ppg'],12)
     def test_multi_filter_and_dual_nationality(self):
         self.assertEqual(self.q(competitions=['euroleague','eurocup'],positions=['Guard','Forward'],countries=['HR'])['rows'][0]['name'],'De’Jour Reaves')
         self.assertEqual(self.q(competitions=['eurocup'],positions=['Big'])['total'],0)
