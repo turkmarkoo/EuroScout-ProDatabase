@@ -4,3 +4,5 @@
 .st-avatar{position:relative}.st-avatar img{position:absolute;inset:0}.st-table{color:var(--txt)}
 .es-stats button{min-height:0}.es-stats .st-tabs>button{min-height:40px}.es-stats .st-chip button{min-height:0;width:18px;height:18px}.es-stats .st-pagination button{min-height:36px}
 .es-stats .st-table{font-family:var(--body,Inter,system-ui,sans-serif)}.es-stats .st-notice:empty{display:none}
+
+.es-stats .st-coverage{padding:9px 12px;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:12px;line-height:1.5;background:var(--panel)}
