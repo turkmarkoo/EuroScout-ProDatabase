@@ -1,7 +1,7 @@
 /* Protected 2026/27 rosters from league and federation sources. */
 (function(){
 'use strict';
-const season='2026/27', leagueIds={sbl:'dragons-swe-',fin:'dragons-fin-',hun:'dragons-hun-',bnxt:'dragons-bnxt-',enbl:'dragons-enbl-',aba2:'dragons-aba2-',denmark:'dragons-den-',slovakia:'dragons-svk-',nbl:'dragons-aus-',britain:'dragons-gbr-',cebl:'dragons-cebl-',bul:'dragons-bul-',lnb:'dragons-fra-',elite2:'dragons-fra2-',swiss:'dragons-sui-'};
+const season='2026/27', leagueIds={lba:'dragons-ita-',sbl:'dragons-swe-',fin:'dragons-fin-',hun:'dragons-hun-',bnxt:'dragons-bnxt-',enbl:'dragons-enbl-',aba2:'dragons-aba2-',denmark:'dragons-den-',slovakia:'dragons-svk-',nbl:'dragons-aus-',britain:'dragons-gbr-',cebl:'dragons-cebl-',bul:'dragons-bul-',lnb:'dragons-fra-',elite2:'dragons-fra2-',swiss:'dragons-sui-'};
 const secondary=new Set(['enbl','aba2']);
 let directories=[], players=new Map(), registrations=new Map();
 
@@ -34,7 +34,7 @@ function apply(raw,packs){
   const teams=new Map(pack.teams.map(team=>{
    const nameMatches=[...oldTeams.values()].filter(t=>[t.name,t.city,...t.aliases||[]].some(n=>n&&normName(n)===normName(team.name)));
    const old=oldTeams.get(team.code)||(nameMatches.length===1?nameMatches[0]:null);
-   if(old){team={...team,code:old.code,key:pack.id+'|'+old.code};}
+   if(old){team={...team,code:old.code,key:team.key||pack.id+'|'+old.code};}
    const aliases=[...new Set([old?.name,...old?.aliases||[],...team.aliases||[]].filter(n=>n&&n!==team.name))];
    oldTeams.set(team.code,{...old,...team,aliases,country:pack.country,league:pack.id});
    return [team.id,{...team,aliases}];
@@ -57,7 +57,7 @@ function apply(raw,packs){
    const source=active.length===1?active[0]:records[0];
    const team=teams.get(source.teamId);
    const id=pack.id+'-official-'+officialId;
-   const providerMatches=pack.provider==='lnb'?[...original.values()].filter(p=>p.id==='lnb-'+officialId||new RegExp('^elite2-'+String(officialId).replace(/\D/g,'')+'-\\d+$').test(p.id)):[];
+   const providerMatches=pack.provider==='lba'?[...original.values()].filter(p=>p.id==='lba-'+officialId):pack.provider==='lnb'?[...original.values()].filter(p=>p.id==='lnb-'+officialId||new RegExp('^elite2-'+String(officialId).replace(/\D/g,'')+'-\\d+$').test(p.id)):[];
    const direct=source.linkedEuroScoutId?original.get(source.linkedEuroScoutId):pack.id==='aba2'?original.get('aba-'+officialId):providerMatches[0]||null;
    const compatibleDirect=direct&&(!source.born||!direct.born||Number(direct.born)===Number(source.born));
    const exact=names.get(normName(source.name))||[];

@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+const c={window:{},structuredClone,console,Event:class Event{},normName:v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''),canonKey:v=>v};
+for(const file of ['euroscout-league-rosters.js','euroscout-dragons.js'])vm.runInNewContext(fs.readFileSync(file,'utf8'),c);
+const raw={notes:{'lba-9390':{text:'Private note',rating:4}},leagues:[{meta:{id:'lba'},teams:[{code:'TSS',name:'Trieste'},{code:'RMB',name:'BC Roma'}],players:[{id:'lba-9390',name:'Lajae Jones',league:'lba',born:2004,team:'TSS'},{id:'same-name',name:'Lajae Jones',born:1995,league:'lba',team:'RMB'}]}]};
+const pack={id:'lba',provider:'lba',season:'2026/27',country:'Italy',complete:true,checked:'2026-11-08',teams:[{id:'1767',code:'TSS',key:'lba|TSS',name:'Pallacanestro Trieste'},{id:'1761',code:'RMB',key:'eurocup|RBB',name:'BC Roma'}],roster:[{id:'9390',name:'Lajae Jones',born:2004,birthDate:'2004-05-21',height:201,country:'United States',role:'Guard',pos:'Shooting Guard',img:'portrait.png',number:'25',active:true,teamId:'1767'}]};
+const feed={schema:1,quality_policy:'accepted_live_boxscores_only',leagueRosters:[pack],fixtures:[],leagues:[{meta:{id:'dragons-ita-3',season:'2026/27'},teams:[{code:'dragons-team-32',name:'Pallacanestro Trieste'}],players:[{id:'dragons-ita-3-player-1624',name:'Lajae JONES',rosterPlayerId:'9390',team:'dragons-team-32',teamName:'Pallacanestro Trieste',g:5,ppg:15.2,gameLog:[]}]}]};
+const before=JSON.stringify(raw),result=c.window.EuroScoutDragons.connectData(raw,feed),p=result.leagues.at(-1).players[0];
+assert.equal(p.linkedEuroScoutId,'lba-9390');assert.equal(p.born,2004);assert.equal(p.height,201);assert.equal(p.img,'portrait.png');assert.equal(p.jersey,'25');assert.equal(p.g,5);assert.equal(p.ppg,15.2);
+assert.equal(c.window.EuroScoutLeagueRosters.key(p),'lba|TSS');
+assert.equal(c.window.EuroScoutLeagueRosters.resolve('dragons-ita-3','9390').ids.includes('same-name'),false);
+assert.equal(c.window.EuroScoutLeagueRosters.directories()[0].teams.find(t=>t.id==='1761').key,'eurocup|RBB');
+assert.equal(JSON.stringify(raw),before);assert.equal(result.notes['lba-9390'].text,'Private note');
+console.log('Italian exact source identity, current club, biography, cross-competition team keys and note preservation passed.');
