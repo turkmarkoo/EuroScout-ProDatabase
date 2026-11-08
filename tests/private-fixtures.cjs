@@ -10,6 +10,8 @@ vm.createContext(context);vm.runInContext(fs.readFileSync('euroscout-private-fix
  assert.throws(()=>api.validate({...payload,delivery:'public'}));
  assert.throws(()=>api.validate({...payload,leagues:[{...payload.leagues[0],players:[{id:'private-stat'}]}]}));
  assert.throws(()=>api.validate({...payload,fixtures:[{...payload.fixtures[0],hs:null}]}));
+ assert.equal(api.validate({...payload,rosterPacks:[{id:'lba',season:'2026/27',teams:[{id:'1767'}],roster:[{id:'9390',name:'Lajae Jones',teamId:'1767'}]}]}).rosterPacks[0].id,'lba');
+ assert.throws(()=>api.validate({...payload,rosterPacks:[{id:'unreviewed',season:'2026/27',teams:[],roster:[]}]}));
  assert.equal(await api.refresh(true),true);assert.equal(api.fixtures().length,3);assert.equal(teams.length,2);assert.equal(api.fixtures()[0].home.key,'bul|A');
  assert.equal(api.coverage('bul').undated,2);assert.equal(api.coverage('bul').completed,1);
  fail=true;await api.refresh(true);assert.equal(api.fixtures().length,3,'last good schedule retained');assert.equal(api.problems().length,1);
