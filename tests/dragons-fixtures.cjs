@@ -80,12 +80,15 @@ assert.equal(landauGeneva[0].hs, '83');
 assert.equal(landauGeneva[0].as, '105');
 
 const fixtures = context.window.ESFixtures;
+context.STATE.data.leagues=[{meta:{id:'bsl',name:'Turkish BSL'}},{meta:{id:'fec26',name:'FIBA Europe Cup 2026/27'}},{meta:{id:'n2627',name:'2026/27 new entrants',teamsOnly:true}},{meta:{id:'registry',name:'Manual Registry'}},{meta:{id:'aba26',name:'ABA League · 2026/27 rosters'}}];
+assert(fixtures.competitions().some(c=>c.id==='bsl'&&c.unavailable));
+assert(!fixtures.competitions().some(c=>['fec26','n2627','registry','aba26'].includes(c.id)),'roster packs are not separate schedule competitions');
 assert.equal(fixtures.between('nba|NY', 'nba|BOS').length, 1, 'NBA links survive before team packs load');
 assert.equal(fixtures.between('gleague|WIS', 'gleague|AUS').length, 1, 'G League links use current US keys');
 assert.equal(fixtures.between('ncaam|DUKE', 'ncaam|UNC').length, 2, 'distinct provider IDs remain distinct');
 assert.equal(fixtures.all().find(g => g.id === 'ncaam-fixture-5').away.key, '', 'do not guess an out-of-catalogue opponent');
 const html = fs.readFileSync('index.html', 'utf8');
 assert.match(html, /data\/fixtures-2627\.js\?v=20261009-matchup-safe-v12/);
-assert.match(html, /euroscout-fixtures\.js\?v=20261106-priority/);
-assert.match(html, /euroscout-sessions\.js\?v=20261106-priority/);
+assert.match(html, /euroscout-fixtures\.js\?v=20261108-all-leagues/);
+assert.match(html, /euroscout-sessions\.js\?v=20261108-all-leagues/);
 console.log('DragonsData FIBA Europe Cup fixtures resolve to canonical club IDs.');

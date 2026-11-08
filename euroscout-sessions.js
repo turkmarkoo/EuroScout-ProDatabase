@@ -193,7 +193,7 @@ function legacy() {
   const sessionRaw=localStorage.getItem(KEY)||'',saved=readJSON(KEY,{sessions:[]}).sessions||[],savedIds=new Set(saved.map(s=>s.id)),activeId=active()?.id;
   const raw = localStorage.getItem(RECORDS) || '', stamp = raw.length + ':' + hash(raw.slice(0, 2000) + raw.slice(-2000)) + ':' + hash(sessionRaw);
   if (cache.stamp === stamp) return cache.legacy;
-  const groups = new Map(), byName = new Map(), nameKey=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const groups = new Map(), byName = new Map(), nameKey=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
   allClubs().forEach(c=>{for(const name of [c.name,...(c.teams||[]).flatMap(t=>[t.name,...(t.searchAliases||[])])]){const key=nameKey(name);if(!key)continue;if(!byName.has(key))byName.set(key,c);else if(byName.get(key)?.key!==c.key)byName.set(key,null);}});
   let recs = {}; try { recs = JSON.parse(raw) || {}; } catch (e) { recs = {}; }
   const reports = new Set();
@@ -288,7 +288,7 @@ function teamLogs() {
 }
 
 /* ── Competition coverage ──────────────────────────────── */
-function competitionNameKey(name){const key=String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b20\d{2}\s*[\/-]\s*(?:20)?\d{2}\b/g,'').replace(/[^a-z0-9]+/g,' ').trim();return ({'bcl':'basketball champions league','bcl qualifiers':'basketball champions league qualifiers','liga endesa':'liga acb','betclic elite':'france betclic elite'})[key]||key;}
+function competitionNameKey(name){const key=String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b20\d{2}\s*[\/-]\s*(?:20)?\d{2}\b/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();return ({'bcl':'basketball champions league','bcl qualifiers':'basketball champions league qualifiers','liga endesa':'liga acb','betclic elite':'france betclic elite'})[key]||key;}
 function competitionsKnown() {
   const out=new Map(),byName=new Map(),d=STATE.data||{};
   const add=(id,c,current)=>{const name=competitionNameKey(c.name),existing=out.get(id)||byName.get(name);if(existing){existing.aliasIds.add(id);if(name)byName.set(name,existing);return;}
@@ -298,7 +298,7 @@ function competitionsKnown() {
   Object.entries(d.domestic2627?.leagues||{}).forEach(([id,c])=>add(id,c,true));
   (d.leagues||[]).forEach(L=>{const m=L.meta||{};if(m.id)add(m.id,{...m,teams:L.teams},m.season==='2026/27');});
   // Fixture-only competitions (including cups and US leagues) also belong here.
-  for(const g of window.ESFixtures?.all?.()||[])if(g.date>='2026-07-01'&&g.date<'2027-07-01')add(g.comp,{name:g.compName,complete:false},true);
+  for(const g of window.ESFixtures?.all?.()||[])if((g.date>='2026-07-01'&&g.date<'2027-07-01')||(!g.date&&g.privateSchedule))add(g.comp,{name:g.compName,complete:false},true);
   return out;
 }
 function coverage() {
@@ -566,17 +566,17 @@ function fixtureTeams(fixtures){
  return [...teams.values()].sort((a,b)=>a.name.localeCompare(b.name));
 }
 function searchGames(fixtures,teams){
- const fold=v=>String(v||'').replace(/[đĐ]/g,'dj').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+ const fold=v=>String(v||'').replace(/[đĐ]/g,'dj').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
  const query=fold(gameSearch).split(' ').filter(Boolean),byKey=new Map(teams.map(t=>[t.key,t]));
  return fixtures.filter(g=>{const sides=[g.home,g.away],keys=sides.map(s=>s.key?canonKey(s.key):'name:'+competitionNameKey(s.name));if(gameTeam&&!keys.includes(gameTeam))return false;
   const text=fold(sides.flatMap((s,i)=>[s.name,s.code,...(byKey.get(keys[i])?.aliases||[])]).join(' '));return query.every(token=>text.includes(token));});
 }
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-function dayLabel(v) { const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? DAYS[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] + ' ' + fmtDate(v) : v; }
+function dayLabel(v) { if(!v)return 'Date to be confirmed'; const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? DAYS[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] + ' ' + fmtDate(v) : v; }
 window.addEventListener('euroscout-fixtures', () => { if (STATE.view === 'scoutlog' && ['upcoming','comps'].includes(tab) && !document.getElementById('sxMask')) renderLog(); });
 /* Match saved scouting evidence by game date, both clubs and competition. */
 function fixtureScoutIndex(sessions,fixtures){
- const nameKey=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(),byName=new Map(),known=competitionsKnown(),compIds=new Map(),compNames=new Map();
+ const nameKey=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim(),byName=new Map(),known=competitionsKnown(),compIds=new Map(),compNames=new Map();
  allClubs().forEach(c=>{for(const name of [c.name,...(c.teams||[]).flatMap(t=>[t.name,...(t.searchAliases||[])])]){const n=nameKey(name),k=canonKey(c.key);if(n)byName.set(n,byName.has(n)&&byName.get(n)!==k?null:k);}});
  known.forEach(c=>{c.aliasIds.forEach(id=>compIds.set(id,c.id));compNames.set(competitionNameKey(c.name),c.id);});
  const team=t=>{const k=t?.key?canonKey(t.key):'',n=nameKey(t?.name);return k&&club(k)?k:byName.get(n)||(!k&&n?'name:'+n:k);};
@@ -590,7 +590,7 @@ function fixtureScoutIndex(sessions,fixtures){
 function fixtureLeagueHTML(id,name){
  return (window.EuroScoutOptionSearch?.competitionFlagHTML(id)||'')+esc(name);
 }
-function fixtureAction(g,scouted){return scouted?'<button type="button" class="sx-scouted-chip" data-session="'+escAttr(scouted.id)+'" title="Open saved scouting session">✓ Scouted</button>':canEdit()&&g.home.key&&g.away.key?'<button type="button" class="btn ghost sm" data-scout="'+escAttr([g.home.key,g.away.key,g.date,g.comp].join('~'))+'">Scout this game</button>':'';}
+function fixtureAction(g,scouted){return scouted?'<button type="button" class="sx-scouted-chip" data-session="'+escAttr(scouted.id)+'" title="Open saved scouting session">✓ Scouted</button>':canEdit()&&g.date&&g.home.key&&g.away.key?'<button type="button" class="btn ghost sm" data-scout="'+escAttr([g.home.key,g.away.key,g.date,g.comp].join('~'))+'">Scout this game</button>':'';}
 
 function renderLog() {
   if(tab==='comps'&&coverageSelection){renderCoverageDetail();return;}
@@ -617,12 +617,14 @@ function renderLog() {
   } else if (tab === 'upcoming') {
     const FX = window.ESFixtures, teams = fixtureTeams(FX?.all?.()||[]), list = searchGames(FX ? FX[upMode](upDays, upComp) : [], teams), cs = FX ? FX.competitions() : [];
     const scoutedGame=fixtureScoutIndex(sessions,FX?.all?.()||list);
+    const schedule=window.ESPrivateFixtures?.coverage(upComp),selected=cs.find(c=>c.id===upComp);
+    const coverageNote=schedule?'<p class="sx-hint">'+schedule.games+' published fixtures · '+schedule.completed+' results'+(schedule.undated?' · '+schedule.undated+' dates pending':'')+(schedule.scheduleCheckedAt?' · Checked '+fmtDate(schedule.scheduleCheckedAt):'')+(['failed','blocked'].includes(schedule.scheduleStatus)?' · Latest refresh incomplete; showing the last verified schedule.':'')+'</p>':'';
     const byDay = new Map(); list.forEach(g => { if (!byDay.has(g.date)) byDay.set(g.date, []); byDay.get(g.date).push(g); });
-    body = '<div class="sx-filters sx-game-search"><label for="sxGameSearch">Find team <input type="search" id="sxGameSearch" placeholder="Type a team name…" value="' + escAttr(gameSearch) + '"></label><label for="sxGameTeam">Team <select id="sxGameTeam" aria-label="Team" data-option-compact><option value="">All teams</option>' + teams.map(t=>'<option value="'+escAttr(t.key)+'"'+(t.key===gameTeam?' selected':'')+'>'+esc(t.name)+'</option>').join('') + '</select></label><button type="button" class="btn ghost sm" id="sxGameClear">Clear filters</button><span class="sx-hint" role="status">' + list.length + ' games found</span></div><div class="sx-filters"><label>Show <select id="sxUpMode"><option value="recent"' + (upMode === 'recent' ? ' selected' : '') + '>Past games</option><option value="upcoming"' + (upMode === 'upcoming' ? ' selected' : '') + '>Upcoming games</option></select></label><label>Competition <select id="sxUpComp" aria-label="Competition" data-option-search><option value="">All (' + cs.length + ')</option>' + cs.map(c => '<option value="' + escAttr(c.id) + '"' + (c.id === upComp ? ' selected' : '') + '>' + esc(c.name) + ' · ' + c.games + ' games</option>').join('') + '</select></label><label>Window <select id="sxUpDays">' + [0, 7, 14, 30, 60].map(n => '<option value="' + n + '"' + (n === upDays ? ' selected' : '') + '>' + (n ? (upMode === 'recent' ? 'last ' : 'next ') + n + ' days' : 'Full season · 2026/27') + '</option>').join('') + '</select></label><button type="button" class="btn ghost sm" id="sxUpRefresh">Refresh schedule</button><span class="sx-hint" style="margin:0">' + (FX && FX.loadedAt() ? 'Schedule checked ' + fmtDate(new Date(FX.loadedAt()).toISOString()) + ' ' + fmtTime(FX.loadedAt()) : FX && FX.state() === 'loading' ? 'Loading the schedule…' : '') + '</span></div>' +
+    body = '<div class="sx-filters sx-game-search"><label for="sxGameSearch">Find team <input type="search" id="sxGameSearch" placeholder="Type a team name…" value="' + escAttr(gameSearch) + '"></label><label for="sxGameTeam">Team <select id="sxGameTeam" aria-label="Team" data-option-compact><option value="">All teams</option>' + teams.map(t=>'<option value="'+escAttr(t.key)+'"'+(t.key===gameTeam?' selected':'')+'>'+esc(t.name)+'</option>').join('') + '</select></label><button type="button" class="btn ghost sm" id="sxGameClear">Clear filters</button><span class="sx-hint" role="status">' + list.length + ' games found</span></div><div class="sx-filters"><label>Show <select id="sxUpMode"><option value="recent"' + (upMode === 'recent' ? ' selected' : '') + '>Past games</option><option value="upcoming"' + (upMode === 'upcoming' ? ' selected' : '') + '>Upcoming games</option></select></label><label>Competition <select id="sxUpComp" aria-label="Competition" data-option-search><option value="">All (' + cs.length + ')</option>' + cs.map(c => '<option value="' + escAttr(c.id) + '"' + (c.id === upComp ? ' selected' : '') + '>' + esc(c.name) + ' · ' + (c.unavailable ? 'schedule not connected' : c.games+' games') + (c.undated ? ' · '+c.undated+' dates pending' : '') + '</option>').join('') + '</select></label><label>Window <select id="sxUpDays">' + [0, 7, 14, 30, 60].map(n => '<option value="' + n + '"' + (n === upDays ? ' selected' : '') + '>' + (n ? (upMode === 'recent' ? 'last ' : 'next ') + n + ' days' : 'Full season · 2026/27') + '</option>').join('') + '</select></label><button type="button" class="btn ghost sm" id="sxUpRefresh">Refresh schedule</button><span class="sx-hint" style="margin:0">' + (FX && FX.loadedAt() ? 'Schedule checked ' + fmtDate(new Date(FX.loadedAt()).toISOString()) + ' ' + fmtTime(FX.loadedAt()) : FX && FX.state() === 'loading' ? 'Loading the schedule…' : '') + '</span></div>' +
       (FX && FX.problems().length ? '<details class="sx-problems"><summary>' + FX.problems().length + ' thing' + (FX.problems().length === 1 ? '' : 's') + ' to check</summary><ul>' + FX.problems().map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></details>' : '') +
-      (list.length ? [...byDay.entries()].map(([d, gs]) => '<h4 class="sx-sub">' + dayLabel(d) + '</h4><div class="sx-tablewrap"><table class="sx-table sx-fixt"><tbody>' + gs.map(g => '<tr><td class="sx-ftime">' + esc(g.time || '—') + '</td><td class="sx-fcomp">' + fixtureLeagueHTML(g.comp,g.compName) + (g.group ? ' · ' + esc(g.group) : '') + (g.round ? ' <span class="sx-hint">· ' + esc(roundLabel(g.round)) + '</span>' : '') + '</td><td><b>' + esc(g.home.name) + '</b> vs <b>' + esc(g.away.name) + '</b>' + (g.played ? ' <span class="sx-hint">' + esc(g.hs + '–' + g.as) + '</span>' : '') + '</td><td class="sx-hint">' + esc(g.venue) + '</td><td class="sx-fact">' + fixtureAction(g,scoutedGame(g)) + '</td></tr>').join('') + '</tbody></table></div>').join('')
-        : '<div class="empty">' + (FX && FX.state() === 'loading' ? 'Loading the schedule…' : 'No games match these filters. Try Full season or clear the team and competition.') + '</div>') +
-      '<p class="sx-hint">Search covers games available in the database for 2026/27. Team searches start with the full season; you can narrow the window afterwards. BBL Cup fixtures are kept separate from league games.</p>' + (window.EUROSCOUT_BBL_CUP_2026 ? '<p class="sx-hint">BBL Cup schedule checked ' + fmtDate(window.EUROSCOUT_BBL_CUP_2026.checkedAt) + ' · <a href="https://netto-bbl-pokal.de/spielplan" target="_blank" rel="noopener noreferrer">Official schedule ↗</a></p>' : '');
+      coverageNote + (list.length ? [...byDay.entries()].map(([d, gs]) => '<h4 class="sx-sub">' + dayLabel(d) + '</h4><div class="sx-tablewrap"><table class="sx-table sx-fixt"><tbody>' + gs.map(g => '<tr><td class="sx-ftime">' + esc(g.time || '—') + '</td><td class="sx-fcomp">' + fixtureLeagueHTML(g.comp,g.compName) + (g.group ? ' · ' + esc(g.group) : '') + (g.round ? ' <span class="sx-hint">· ' + esc(roundLabel(g.round)) + '</span>' : '') + '</td><td><b>' + esc(g.home.name) + '</b> vs <b>' + esc(g.away.name) + '</b>' + (g.played ? ' <span class="sx-hint">' + esc(g.hs + '–' + g.as) + '</span>' : '') + '</td><td class="sx-hint">' + esc(g.venue) + '</td><td class="sx-fact">' + fixtureAction(g,scoutedGame(g)) + '</td></tr>').join('') + '</tbody></table></div>').join('')
+        : '<div class="empty">' + (FX && FX.state() === 'loading' ? 'Loading the schedule…' : selected?.unavailable?'No verified current-season schedule is connected for '+esc(selected.name)+'. You can still start a scouting session and select its teams.':'No games match these filters. Try Full season or clear the team and competition.') + '</div>') +
+      '<p class="sx-hint">Search covers published schedules available for this season; some leagues have partial coverage. Date-pending fixtures appear under Upcoming games → Full season; they cannot start a dated session yet. Team searches start with the full season; you can narrow the window afterwards. BBL Cup fixtures are kept separate from league games.</p>' + (window.EUROSCOUT_BBL_CUP_2026 ? '<p class="sx-hint">BBL Cup schedule checked ' + fmtDate(window.EUROSCOUT_BBL_CUP_2026.checkedAt) + ' · <a href="https://netto-bbl-pokal.de/spielplan" target="_blank" rel="noopener noreferrer">Official schedule ↗</a></p>' : '');
   } else {
     const list = comps.filter(c => showUnscouted || c.games);
     body = '<label class="sx-check"><input type="checkbox" id="sxUnscouted" ' + (showUnscouted ? 'checked' : '') + '> Show competitions with nothing watched yet (' + comps.filter(c => !c.games).length + ')</label>' +

@@ -96,11 +96,11 @@ function mergeFixtures(primary,fallback){
   if(usFixtureCompetitions.has(g.comp))return g.id;
   const side=s=>s?.key||fold(s?.name||s?.code);
   const sides=[side(g.home),side(g.away)].filter(Boolean).sort().join('~');
-  return g.comp+'|'+g.date+'|'+sides;
+  return g.date?g.comp+'|'+g.date+'|'+sides:g.comp+'|undated|'+g.id;
  };
  for(const g of [...primary,...fallback]){
   const id=identity(g);
-  if(!g.date||!g.comp||seen.has(id))continue;
+  if(!g.comp||seen.has(id)||(!g.date&&!g.privateSchedule))continue;
   seen.add(id);out.push(g);
  }
  return out;
@@ -110,9 +110,12 @@ function assemble(rowsByComp){lastRows=rowsByComp;problems=[];games=LIVE.flatMap
 
 function refresh(force){
  if(window.EuroScoutDragons?.active()){
-  const rows=EuroScoutDragons.fixtures();
-  problems=[];games=mergeFixtures(fromDragons(rows),fromFile()).sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')));
-  loadedAt=Date.now();state='ready';window.dispatchEvent(new Event('euroscout-fixtures'));return Promise.resolve(games);
+  const assemblePrivate=()=>{
+   const rows=[...EuroScoutDragons.fixtures(),...(window.ESPrivateFixtures?.fixtures()||[])];
+   problems=window.ESPrivateFixtures?.problems()||[];games=mergeFixtures(fromDragons(rows),fromFile()).sort((a,b)=>((a.date||'9999')+(a.time||'')).localeCompare((b.date||'9999')+(b.time||'')));
+   loadedAt=Date.now();state=problems.length?'partial':'ready';window.dispatchEvent(new Event('euroscout-fixtures'));return games;
+  };
+  return window.ESPrivateFixtures?ESPrivateFixtures.refresh(!!force).then(assemblePrivate):Promise.resolve(assemblePrivate());
  }
 
  if(pending){assemble(lastRows);return pending;}
@@ -137,11 +140,17 @@ function isPastUSFixture(g,today,now){
 }
 const api=window.ESFixtures={
  refresh,all:()=>games,state:()=>state,problems:()=>problems.slice(),loadedAt:()=>loadedAt,
- competitions:()=>{const m=new Map();games.forEach(g=>{const c=m.get(g.comp)||{id:g.comp,name:g.compName,games:0,played:0};c.games++;if(g.played)c.played++;m.set(g.comp,c);});return [...m.values()];},
+ competitions:()=>{
+  const m=new Map();games.forEach(g=>{const c=m.get(g.comp)||{id:g.comp,name:g.compName,games:0,played:0,undated:0};c.games++;if(g.played)c.played++;if(!g.date)c.undated++;m.set(g.comp,c);});
+  const aliases={bcl26:'bcl',fec26:'fec',lba:'seriea',plk:'pol',gbl:'greece',il:'isr',slo:'slovenia',fra:'lnb',fra2:'elite2',aus:'nbl',cro:'hrv',aut:'autbsl',ita2:'seriea2',gbr:'britain',kos:'kosovo',isl:'iceland',svk:'slovakia',mne:'montenegro',bih:'bosnia',den:'denmark',sui:'swiss',lebl:'elb'};
+  // Keep catalogue leagues discoverable without pretending their historic player logs are current fixtures.
+  for(const l of typeof STATE!=='undefined'?STATE.data?.leagues||[]:[]){const meta=l.meta||{},raw=meta.id,id=aliases[raw]||raw;if(!raw||meta.exhibition||meta.teamsOnly||/rosters|new entrants|^manual registry$/i.test(meta.name||'')||meta.privateOwnerFeed||/^dragons-/.test(raw)||m.has(id))continue;m.set(id,{id,name:meta.name||id,games:0,played:0,undated:0,unavailable:true});}
+  return [...m.values()];
+ },
  between(ka,kb){ka=canonKey(ka||'');kb=canonKey(kb||'');if(!ka||!kb)return [];return games.filter(g=>(canonKey(g.home.key)===ka&&canonKey(g.away.key)===kb)||(canonKey(g.home.key)===kb&&canonKey(g.away.key)===ka));},
  forTeam(k){k=canonKey(k||'');return k?games.filter(g=>canonKey(g.home.key)===k||canonKey(g.away.key)===k):[];},
  recent(days,comp){const to=todayStr(),now=Date.now(),from=days?new Date(now-days*86400000).toISOString().slice(0,10):'2026-07-01';return games.filter(g=>g.date>=from&&g.date<'2027-07-01'&&g.date<=to&&(!comp||g.comp===comp)&&(!usFixtureCompetitions.has(g.comp)||isPastUSFixture(g,to,now))).reverse();},
- upcoming(days,comp){const from=todayStr(),now=Date.now(),to=days?new Date(now+days*86400000).toISOString().slice(0,10):'2027-06-30';return games.filter(g=>g.date>='2026-07-01'&&g.date>=from&&g.date<=to&&(!comp||g.comp===comp)&&(!usFixtureCompetitions.has(g.comp)||!isPastUSFixture(g,from,now)));}
+ upcoming(days,comp){const from=todayStr(),now=Date.now(),to=days?new Date(now+days*86400000).toISOString().slice(0,10):'2027-06-30';return games.filter(g=>(g.date?g.date>='2026-07-01'&&g.date>=from&&g.date<=to:!days&&g.privateSchedule)&&(!comp||g.comp===comp)&&(!usFixtureCompetitions.has(g.comp)||!isPastUSFixture(g,from,now)));}
 };
 window.addEventListener?.('euroscout:rosters-ready',()=>refresh(false));
 window.addEventListener?.('euroscout-dragons',()=>{const load=()=>refresh(true);if(pending)pending.finally(load);else load();});

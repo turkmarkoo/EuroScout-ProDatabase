@@ -24,7 +24,7 @@ function build({competition,competitions=[],sessions=[],fixtures=[],resolveTeam,
   if(!rows.has(team.key))rows.set(team.key,{...team,competitions:new Map(),sessions:[],leagueSessions:[],players:new Set(),noted:new Set(),watchlist:new Set(),current:false});return rows.get(team.key);};
  const member=(c,t)=>{const r=ensure(t);if(!r)return;r.competitions.set(compKey(c),c.name);if(compKey(c)===id)r.current=true;};
  for(const c of competitions)for(const t of c.members||[])member(c,t);
- for(const g of fixtures)if(g.date>='2026-07-01'&&g.date<'2027-07-01')for(const t of [g.home,g.away])member({id:g.comp,name:g.compName},t);
+ for(const g of fixtures)if((g.date>='2026-07-01'&&g.date<'2027-07-01')||(!g.date&&g.privateSchedule))for(const t of [g.home,g.away])member({id:g.comp,name:g.compName},t);
  // Historical sessions are evidence of viewing, never proof of present membership.
  for(const s of sessions){if(s.removed||s.active)continue;const same=compKey(s.competition)===id;
   for(const t of [s.a,s.b]){const resolved=resolveTeam(t);let r=resolved&&rows.get(resolved.key);if(!r&&same)r=ensure(t);if(!r)continue;
