@@ -130,7 +130,7 @@ function resolve(source,directory,raw){
   if(!id)return null;
   return {id,ids:row.ids,player:directory.byId.get(id),row,officialId:'pol:'+row.id,source:row.profile};
  }
- if(/^dragons-(swe|fin|hun|bnxt|enbl|aba2)-/.test(source.league||'')&&(source.rosterPlayerId||source.nordicPlayerId)){
+ if(/^dragons-(swe|fin|hun|bnxt|enbl|aba2|den|svk|aus|gbr|cebl|bul|fra|fra2|sui)-/.test(source.league||'')&&(source.rosterPlayerId||source.nordicPlayerId)){
   const row=window.EuroScoutLeagueRosters?.resolve(source.league,source.rosterPlayerId||source.nordicPlayerId);
   const id=row?.ids.find(candidate=>directory.byId.has(candidate));
   return id?{id,ids:row.ids,player:directory.byId.get(id),row,officialId:source.rosterPlayerId||source.nordicPlayerId,source:row.profile||row.source}:null;
@@ -167,6 +167,10 @@ function resolve(source,directory,raw){
  const row={};for(const field of ['name','born','birthDate','height','weight','age','country','nationality','img','role','position','pos']){const value=rows.map(r=>r[field]).find(v=>v!=null&&v!==''&&v!=='Unknown');if(value!=null)row[field]=value;}
  row.name=item.name;const id=item.ids.find(id=>byId.has(id))||item.ids[0];return id?{id,ids:item.ids,player:byId.get(id),row,team}:null;
 }
+function supplement(data){
+ const extra=window.ESPrivateFixtures;
+ return {...data,leagues:[...data.leagues.filter(l=>!l._privateSupplement),...(extra?.statsLeagues()||[]).map(l=>({...l,_privateSupplement:true}))],leagueRosters:[...(data.leagueRosters||[]).filter(p=>!p._privateSupplement),...(extra?.rosterPacks()||[]).map(p=>({...p,_privateSupplement:true}))],_privateVersion:extra?.generated()||''};
+}
 function connectData(raw,data){
  // Copy the data shell and league arrays so adding private lines cannot leak
  // into the saved core. Player records are read-only here, so cloning millions
@@ -187,7 +191,7 @@ function connectData(raw,data){
  const ids=new Set(sourceLeagues.map(league=>league.meta.id));
  result.leagues=result.leagues.filter(league=>!ids.has(league.meta.id));
  for(const sourceLeague of sourceLeagues){
-  const league=structuredClone(sourceLeague);league.meta={...league.meta,season:league.meta.season||'2026/27',statsSeason:'2026/27',privateOwnerFeed:true};
+  const league=structuredClone(sourceLeague);league.meta={...league.meta,season:league.meta.season||'2026/27',statsSeason:league.meta.statsSeason||'2026/27',privateOwnerFeed:true};
   // Saved games retain provider team IDs. Resolve them to the same verified
   // destination used by manual assignments and official roster registrations.
   if(/2026\D+(?:20)?27/.test(league.meta.season))for(const team of league.teams||[]){
@@ -195,8 +199,8 @@ function connectData(raw,data){
    if(match?.dbKey&&team.code!=null)clubAliases.set(league.meta.id+'|'+team.code,match.dbKey);
   }
   for(const player of league.players||[]){
-   player.league=league.meta.id;player.statsSeason='2026/27';player._dragonsData=true;player._verifiedExternal=true;player._sourceSeason=league.meta.season;
-   if(/^dragons-(swe|fin|hun|bnxt|enbl|aba2)-/.test(player.league)&&(player.rosterPlayerId||player.nordicPlayerId)){
+   player.league=league.meta.id;player.statsSeason=league.meta.statsSeason;player._dragonsData=true;player._verifiedExternal=true;player._sourceSeason=league.meta.season;
+   if(/^dragons-(swe|fin|hun|bnxt|enbl|aba2|den|svk|aus|gbr|cebl|bul|fra|fra2|sui)-/.test(player.league)&&(player.rosterPlayerId||player.nordicPlayerId)){
     player._leagueRosterIdentity=true;
     player._strictIdentity=true;
     player.linkedEuroScoutId=null;
@@ -230,9 +234,10 @@ function connectData(raw,data){
 }
 async function apply(raw){
  if(!reader())return raw;
- if(feed)return connectData(raw,feed);
+ await window.ESPrivateFixtures?.refresh();
+ if(feed)return connectData(raw,supplement(feed));
  const cloud=async()=>{const head=await ESAccess.get('dragonsDataState/current');if(!head)return null;const id=ESAccess.field(head,'snapshot');if(!/^[a-f0-9]{32}$/.test(id||''))throw Error('Invalid statistics snapshot pointer.');return Object.assign(valid(JSON.parse(await ESAccess.readPayload('dragonsDataSnapshots',id))),{_sourceLabel:'cloud snapshot'});};
- try{const data=await cloud();if(data)return reader()?connectData(raw,data):raw;}
+ try{const data=await cloud();if(data)return reader()?connectData(raw,supplement(data)):raw;}
  catch(error){problem='Dragons Data could not load. Existing EuroScout data is unchanged.';console.warn(problem,error);}
  return raw;
 }
@@ -240,7 +245,7 @@ let refreshJob=null,lastSourceCheck=0,lastSnapshot='';
 async function refresh(){
  if(!reader()||typeof STATE==='undefined'||!STATE.data)return false;
  if(refreshJob)return refreshJob;if(Date.now()-lastSourceCheck<60000)return false;lastSourceCheck=Date.now();
- refreshJob=(async()=>{const head=await ESAccess.get('dragonsDataState/current');if(!head)return false;const id=ESAccess.field(head,'snapshot');if(!/^[a-f0-9]{32}$/.test(id||''))throw Error('Invalid statistics snapshot pointer.');if(id===lastSnapshot)return false;const data=Object.assign(valid(JSON.parse(await ESAccess.readPayload('dragonsDataSnapshots',id))),{_sourceLabel:'cloud snapshot'});if(!reader())return false;lastSnapshot=id;if(data.generated&&data.generated===feed?.generated)return false;const rostersChanged=data.plkRosters?.checked!==feed?.plkRosters?.checked||data.nordicRosters?.map(p=>p.checked).join('|')!==feed?.nordicRosters?.map(p=>p.checked).join('|')||data.leagueRosters?.map(p=>p.checked).join('|')!==feed?.leagueRosters?.map(p=>p.checked).join('|');STATE.data=connectData(STATE.data,data);if(rostersChanged){DBTEAM_LIST=null;DBTEAM_BYKEY=null;CLUBS=null;CLUB_BY_TEAMKEY=null;DOM27=null;NEXTCOMP=null;PLAYER_BY_NAME=null;}STATE._idx=null;seasonPoolCache=null;rebuildLinks();applyOverrides();finish(STATE.data);return true;})();try{return await refreshJob;}finally{refreshJob=null;}
+ refreshJob=(async()=>{const head=await ESAccess.get('dragonsDataState/current');if(!head)return false;const id=ESAccess.field(head,'snapshot');if(!/^[a-f0-9]{32}$/.test(id||''))throw Error('Invalid statistics snapshot pointer.');const changed=await window.ESPrivateFixtures?.refresh();if(id===lastSnapshot&&!changed)return false;const data=supplement(id===lastSnapshot&&feed?feed:Object.assign(valid(JSON.parse(await ESAccess.readPayload('dragonsDataSnapshots',id))),{_sourceLabel:'cloud snapshot'}));if(!reader())return false;lastSnapshot=id;if(data.generated&&data.generated===feed?.generated&&data._privateVersion===feed?._privateVersion)return false;const rostersChanged=data.plkRosters?.checked!==feed?.plkRosters?.checked||data.nordicRosters?.map(p=>p.checked).join('|')!==feed?.nordicRosters?.map(p=>p.checked).join('|')||data.leagueRosters?.map(p=>p.checked).join('|')!==feed?.leagueRosters?.map(p=>p.checked).join('|');STATE.data=connectData(STATE.data,data);if(rostersChanged){DBTEAM_LIST=null;DBTEAM_BYKEY=null;CLUBS=null;CLUB_BY_TEAMKEY=null;DOM27=null;NEXTCOMP=null;PLAYER_BY_NAME=null;}STATE._idx=null;seasonPoolCache=null;rebuildLinks();applyOverrides();finish(STATE.data);return true;})();try{return await refreshJob;}finally{refreshJob=null;}
 }
 function key(player){const ids=[player.id,player.linkedEuroScoutId,...(player._grp||[]).map(p=>p.id)].filter(Boolean);return ids.map(id=>registrations.get(id)).filter(Boolean).sort((a,b)=>b.date.localeCompare(a.date))[0]?.key||null;}
 function link(unite){for(const [left,right] of links)unite(left,right);}
@@ -255,6 +260,7 @@ function renderBadge(){
 function finish(raw){
  if(!reader())return;
  for(const league of raw.leagues||[])if(league.meta.privateOwnerFeed)for(const player of league.players||[])for(const [key,value] of Object.entries(player.dragonsTotals||{}))player['t_'+({p3m:'f3m',p3a:'f3a'}[key]||key)]=value;
+ for(const league of raw.leagues||[])for(const player of league.players||[])if(player.statisticsCoverage?.partial)for(const key of ['astto','ts','efg','ftr','r3a','pps','pts40','reb40','ast40','stl40','blk40','tov40'])player[key]=null;
  renderBadge();
 }
 window.EuroScoutDragons={apply,refresh,generated:()=>feed?.generated||'',link,key,clubKey:k=>clubAliases.get(k)||null,recordLinks:()=>links.filter(([source])=>source.startsWith('dragons-')),finish,connectData,resolve,fetchLocal,fixtures(){return reader()&&feed?feed.fixtures:[];},active(){return !!(reader()&&feed);}};

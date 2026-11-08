@@ -52,7 +52,7 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  const polishStats=context.window.EuroScoutDragons.connectData(polishBase,polishFeed).leagues.at(-1).players;
  assert.equal(polishStats[0].linkedEuroScoutId,'sweden-alex');
  assert.equal(polishStats[1].linkedEuroScoutId,null,'Unverified PLK IDs must never be linked by name alone');
- assert.match(html,/euroscout-dragons\.js\?v=20261107-aba-identities/);
+ assert.match(html,/euroscout-dragons\.js\?v=20261108-private-rosters/);
  assert.doesNotMatch(code,/Promise\.race\(\[localPromise/);
  assert.doesNotMatch(code,/data-dd-check|Check latest/);
  assert.match(code,/Update stats ↗/);

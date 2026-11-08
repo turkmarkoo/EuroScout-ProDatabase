@@ -1,7 +1,7 @@
 /* Protected 2026/27 rosters from league and federation sources. */
 (function(){
 'use strict';
-const season='2026/27', leagueIds={sbl:'dragons-swe-',fin:'dragons-fin-',hun:'dragons-hun-',bnxt:'dragons-bnxt-',enbl:'dragons-enbl-',aba2:'dragons-aba2-'};
+const season='2026/27', leagueIds={sbl:'dragons-swe-',fin:'dragons-fin-',hun:'dragons-hun-',bnxt:'dragons-bnxt-',enbl:'dragons-enbl-',aba2:'dragons-aba2-',denmark:'dragons-den-',slovakia:'dragons-svk-',nbl:'dragons-aus-',britain:'dragons-gbr-',cebl:'dragons-cebl-',bul:'dragons-bul-',lnb:'dragons-fra-',elite2:'dragons-fra2-',swiss:'dragons-sui-'};
 const secondary=new Set(['enbl','aba2']);
 let directories=[], players=new Map(), registrations=new Map();
 
@@ -26,11 +26,15 @@ function apply(raw,packs){
   registrations.get(id).push(row);
  };
  for(const pack of packs||[]){
-  const league=leagues.get(pack.id);
-  if(!Object.hasOwn(leagueIds,pack.id)||!league||pack.season!==season)continue;
+  if(!Object.hasOwn(leagueIds,pack.id)||(pack.season!==season&&!(pack.id==='cebl'&&pack.season==='2026')))continue;
+  const packSeason=pack.season;
+  let league=leagues.get(pack.id);
+  if(!league){league={meta:{id:pack.id,name:pack.name,country:pack.country,season:packSeason,rosterOnly:true},teams:[],players:[]};raw.leagues.push(league);leagues.set(pack.id,league);}
   const oldTeams=new Map(league.teams.map(team=>[team.code,team]));
   const teams=new Map(pack.teams.map(team=>{
-   const old=oldTeams.get(team.code);
+   const nameMatches=[...oldTeams.values()].filter(t=>[t.name,t.city,...t.aliases||[]].some(n=>n&&normName(n)===normName(team.name)));
+   const old=oldTeams.get(team.code)||(nameMatches.length===1?nameMatches[0]:null);
+   if(old){team={...team,code:old.code,key:pack.id+'|'+old.code};}
    const aliases=[...new Set([old?.name,...old?.aliases||[],...team.aliases||[]].filter(n=>n&&n!==team.name))];
    oldTeams.set(team.code,{...old,...team,aliases,country:pack.country,league:pack.id});
    return [team.id,{...team,aliases}];
@@ -45,15 +49,16 @@ function apply(raw,packs){
    data.get(row.id).push(row);
   }
   for(const row of pack.pastPlayers||[])if(!data.has(row.id))data.set(row.id,[row]);
-  for(const stat of pack.stats||[])if(!data.has(stat.nordicPlayerId)){
-   data.set(stat.nordicPlayerId,[{id:stat.nordicPlayerId,name:stat.name,source:pack.source,active:false}]);
+  for(const stat of pack.stats||[])if((stat.rosterPlayerId||stat.nordicPlayerId)&&!data.has(stat.rosterPlayerId||stat.nordicPlayerId)){
+   data.set(stat.rosterPlayerId||stat.nordicPlayerId,[{id:stat.rosterPlayerId||stat.nordicPlayerId,name:stat.name,source:pack.source,active:false}]);
   }
   for(const [officialId,records] of data){
    const active=records.filter(r=>r.active);
    const source=active.length===1?active[0]:records[0];
    const team=teams.get(source.teamId);
    const id=pack.id+'-official-'+officialId;
-   const direct=pack.id==='aba2'?original.get('aba-'+officialId):null;
+   const providerMatches=pack.provider==='lnb'?[...original.values()].filter(p=>p.id==='lnb-'+officialId||new RegExp('^elite2-'+String(officialId).replace(/\D/g,'')+'-\\d+$').test(p.id)):[];
+   const direct=source.linkedEuroScoutId?original.get(source.linkedEuroScoutId):pack.id==='aba2'?original.get('aba-'+officialId):providerMatches[0]||null;
    const compatibleDirect=direct&&(!source.born||!direct.born||Number(direct.born)===Number(source.born));
    const exact=names.get(normName(source.name))||[];
    const compatible=exact.filter(p=>!source.birthDate||!(p.birthDate||p.dob)||(p.birthDate||p.dob)===source.birthDate);
@@ -61,23 +66,29 @@ function apply(raw,packs){
    // An older Finnish row may lack a birth year. Require the same full name
    // and the previous official season club for that exact federation person ID.
    const prior=compatible.filter(p=>!p.born&&p.league===pack.id&&source.priorClubs?.includes(p.team));
-   const matches=sameYear.length?sameYear:prior.length===1?prior:[];
-   const ids=[...new Set([...(compatibleDirect?[direct.id]:[]),...matches.map(p=>p.id),id])];
-   const record={...source,ids,teamKey:team?.key,teamName:team?.name,league:pack.id};
+   let matches=sameYear.length?sameYear:prior.length===1?prior:[];
+   const possibleMatches=matches.map(p=>p.id);
+   if(pack._privateSupplement&&matches.length>1&&new Set(matches.map(p=>typeof gid==='function'?gid(p):p.id)).size>1){
+    const exactDates=matches.filter(p=>source.birthDate&&(p.birthDate||p.dob)===source.birthDate);
+    matches=exactDates.length===1?exactDates:[];
+   }
+   const providerIds=providerMatches.filter(p=>!source.born||!p.born||Number(source.born)===Number(p.born)).map(p=>p.id);
+   const ids=[...new Set([...(compatibleDirect?[direct.id]:[]),...providerIds,...matches.map(p=>p.id),id])];
+   const record={...source,ids,possibleMatches:matches.length?[]:possibleMatches,teamKey:team?.key,teamName:team?.name,league:pack.id};
    league.players.push({id,code:id,name:source.name,league:pack.id,team:team?.code||'',teamName:team?.name,
     born:source.born,birthDate:source.birthDate,height:source.height,weight:source.weight,country:source.country,pos:source.pos,role:source.role,
     img:source.img,jersey:active.length===1?source.number:null,_leagueRosterOnly:true,_leagueRosterIdentity:true,
-    _rosterOnly:true,_strictIdentity:true,statsScope:season,qualified:false,g:null,gameLog:[],pct:{},z:{},arch:[],
-    currentRosterSeason:active.length===1?season:null,currentRosterSource:source.source,currentRosterProfile:source.profile});
+    _rosterOnly:true,_strictIdentity:true,statsScope:packSeason,qualified:false,g:null,gameLog:[],pct:{},z:{},arch:[],
+    currentRosterSeason:active.length===1?packSeason:null,currentRosterSource:source.source,currentRosterProfile:source.profile});
    players.set(pack.id+'|'+officialId,record);
    if(active.length===1&&team){
     roster.push(record);
-    for(const id of ids)addRegistration(id,record);
+    if(packSeason===season)for(const id of ids)addRegistration(id,record);
    }
   }
   league.meta.playerCount=league.players.length;
   directories.push({...pack,teams:[...teams.values()],roster});
-  domestic[pack.id]={id:pack.id,name:pack.name,season,confirmed:true,complete:true,
+  if(packSeason===season)domestic[pack.id]={id:pack.id,name:pack.name,season,confirmed:!pack.membershipEvidence||pack.membershipEvidence==='official_roster',complete:pack.complete!==false,membershipEvidence:pack.membershipEvidence||'official_roster',
     checked:pack.checked?.slice(0,10),source:pack.source,teams:[...teams.values()].map(({key,name})=>({key,name}))};
  }
  if(directories.length)raw.domestic2627={...raw.domestic2627,season,leagues:domestic};
@@ -105,8 +116,8 @@ function link(uni){for(const row of players.values())for(const id of row.ids.sli
 function statLeagues(){
  return directories.filter(pack=>pack.stats?.length).map(pack=>({
   meta:{id:leagueIds[pack.id]+'2026',name:pack.name,season,privateOwnerFeed:true,
-   source:'Basketball Finland · official season statistics',dragonsCompetition:'FIN',playerCount:pack.stats.length},
-  players:pack.stats,teams:pack.teams,statMeta:{},games:[],
+   source:pack.source||'Official league season statistics',dragonsCompetition:leagueIds[pack.id].split('-')[1].toUpperCase(),playerCount:pack.stats.length},
+  players:pack.stats.map(p=>({...p,team:pack.teams.find(t=>t.id===p.teamId||t.id===p.team)?.code||p.team})),teams:pack.teams,statMeta:{},games:[],
  }));
 }
 window.EuroScoutLeagueRosters={apply,current,key,keys,resolve,link,statLeagues,directories:()=>directories,

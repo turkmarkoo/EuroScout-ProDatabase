@@ -52,7 +52,7 @@ const PAGES={
  offense:p=>table([row('Points per game',n(p.ppg),'ppg',p),row('Points per 40',n(p.pts40),'pts40',p),row('Field goals',pc(p.fgp),'fgp',p,p.fgma),row('2-point %',pc(p.f2p),null,p),row('3-point %',pc(p.f3p),'f3p',p,p.f3ma),row('Free throws',pc(p.ftp),'ftp',p,p.ftma),row('Effective FG%',pc(p.efg),'efg',p),row('True shooting',pc(p.ts),'ts',p),row('Points per shot',n(p.pps,2),null,p),row('Usage',pc(p.usg),'usg',p)]),
  defense:p=>table([row('Steals per game',n(p.spg),'spg',p),row('Steals per 40',n(p.stl40),'stl40',p),row('Steal %',pc(p.stlp),null,p),row('Blocks per game',n(p.bpg),'bpg',p),row('Blocks per 40',n(p.blk40),'blk40',p),row('Block %',pc(p.blkp),null,p)])+'<p class="qs-hint">Box-score defense only — steals and blocks say little about positioning or effort. That is what the Defense notes are for.</p>',
  shooting:p=>table([row('Field goals',pc(p.fgp),'fgp',p,p.fgma),row('2-point %',pc(p.f2p),null,p),row('3-point %',pc(p.f3p),'f3p',p,p.f3ma),row('Free throws',pc(p.ftp),'ftp',p,p.ftma),row('Effective FG%',pc(p.efg),'efg',p),row('True shooting',pc(p.ts),'ts',p),row('Share of shots from three',pc(p.r3a),null,p),row('Free-throw rate',n(p.ftr,2),null,p,'FTA per FGA'),row('Points per shot',n(p.pps,2),null,p)]),
- playmaking:p=>table([row('Assists per game',n(p.apg),'apg',p),row('Assists per 40',n(p.ast40),'ast40',p),row('Assist %',pc(p.astp),null,p),row('Turnovers per game',n(p.topg),'topg',p,'bar: fewer is better'),row('Turnovers per 40',n(p.tov40),null,p),row('Turnover %',pc(p.tovp),null,p),row('Assist / turnover',ratio(p.apg,p.topg),null,p)]),
+ playmaking:p=>table([row('Assists per game',n(p.apg),'apg',p),row('Assists per 40',n(p.ast40),'ast40',p),row('Assist %',pc(p.astp),null,p),row('Turnovers per game',n(p.topg),'topg',p,'bar: fewer is better'),row('Turnovers per 40',n(p.tov40),null,p),row('Turnover %',pc(p.tovp),null,p),row('Assist / turnover',(p.statisticsCoverage?.partial?'—':ratio(p.apg,p.topg)),null,p)]),
  rebounding:p=>table([row('Rebounds per game',n(p.rpg),'rpg',p),row('Rebounds per 40',n(p.reb40),'reb40',p),row('Total rebound %',pc(p.trbp),null,p)]),
  advanced:p=>table([row('PIR',n(p.pir??p.eff),p.pir==null?'eff':'pir',p,p.pir==null&&p.eff!=null?'Source rating: FIBA EFF':null),row('Usage',pc(p.usg),'usg',p),row('True shooting',pc(p.ts),'ts',p),row('Effective FG%',pc(p.efg),'efg',p),row('Points per shot',n(p.pps,2),null,p),row('Assist %',pc(p.astp),null,p),row('Turnover %',pc(p.tovp),null,p),row('Rebound %',pc(p.trbp),null,p),row('Steal %',pc(p.stlp),null,p),row('Block %',pc(p.blkp),null,p),row('Minutes per game',n(p.mpg),'mpg',p)]),
  log(p){const L=leagueOf(p),cols=(L&&L.meta&&L.meta.gameLogCols)||[],log=p.gameLog||[];if(!log.length||!cols.length)return '<p class="qs-hint">No game log for this competition.</p>';
@@ -91,7 +91,7 @@ function distinctLines(rows){
   const identity=seasonOf(row)+'|'+comp.id+'|'+key,prior=groups.get(identity);if(!prior||better(row,prior))groups.set(identity,row);}
  return [...groups.values()];
 }
-const seasonLabel=value=>{const match=String(value||'').match(/(20\d{2})\s*[/–-]\s*((?:20)?\d{2})/);return match?match[1]+'/'+match[2].slice(-2):'';};
+const seasonLabel=value=>{if(/^20\d{2}$/.test(String(value||'')))return String(value);const match=String(value||'').match(/(20\d{2})\s*[/–-]\s*((?:20)?\d{2})/);return match?match[1]+'/'+match[2].slice(-2):'';};
 function currentRosterOnly(p){
  const scope=[p.statsScope,p._rosterSeason,p._seasonLabel].map(seasonLabel).find(Boolean);
  return scope==='2026/27'||p._rosterOnly||/^bclq-(?:stat-)?/.test(String(p.id||''))||
@@ -134,12 +134,13 @@ function matchupHTML(p,club,season,competition){
  const row=club?matchupLine(p,club,season,competition):null;
  const fg=shotPair(row?.fgma),three=shotPair(row?.f3ma);
  const two=shotPair(row?.f2ma)||(fg&&three?shotPair((fg[0]-three[0])+'-'+(fg[1]-three[1])):null);
- const stat=(label,value)=>'<div class="mx-stat"><span>'+label+'</span><b>'+n(value)+'</b></div>';
+ const stat=(label,value,key)=>{const count=row?.statisticsCoverage?.metricGames?.[key],note=count!=null&&count!==row.g?' title="'+count+' source games cover this statistic; '+row.g+' appearances recorded"':'';return '<div class="mx-stat"'+note+'><span>'+label+'</span><b>'+n(value)+(note?'†':'')+'</b></div>';};
  const group=(label,values)=>'<div class="mx-stat-group" role="group" aria-label="'+label+'"><strong>'+label+'</strong>'+values.join('')+'</div>';
- const scope=row?[competitionOf(row).name,season,row.g+' GP',n(row.mpg)+' MPG',row.multiTeam?'Multiple teams':'','Per game'].filter(Boolean).join(' · '):'No '+season+' stats for this team';
+ const coverage=row&&leagueOf(row)?.meta?.sourceCoverage;
+ const scope=row?[competitionOf(row).name,season,row.g+' GP',n(row.mpg)+' MPG',row.multiTeam?'Multiple teams':'','Per game',coverage?.partial?'Partial statistics: '+coverage.acceptedGames+'/'+coverage.knownCompletedGames+' games':'',row.statisticsCoverage?.partial?'† Source coverage differs by statistic':''].filter(Boolean).join(' · '):'No '+season+' stats for this team';
  return '<section class="mx-stats" aria-label="Season stats"><div class="mx-stats-scope">'+esc(scope)+'</div><div class="mx-stat-groups">'+
-  group('Offense',[stat('PTS',row?.ppg),stat('AST',row?.apg),stat('TO',row?.topg),shotStat('2P',row?.f2p,two),shotStat('3P',row?.f3p,three),shotStat('FT',row?.ftp,shotPair(row?.ftma))])+
-  group('Defense',[stat('STL',row?.spg),stat('BLK',row?.bpg),stat('DREB',row?.drpg)])+'</div></section>';
+  group('Offense',[stat('PTS',row?.ppg,'ppg'),stat('AST',row?.apg,'apg'),stat('TO',row?.topg,'topg'),shotStat('2P',row?.f2p,two),shotStat('3P',row?.f3p,three),shotStat('FT',row?.ftp,shotPair(row?.ftma))])+
+  group('Defense',[stat('STL',row?.spg,'spg'),stat('BLK',row?.bpg,'bpg'),stat('DREB',row?.drpg,'drpg')])+'</div></section>';
 }
 function paint(){
  const host=document.getElementById('qsPanel');if(!host||!current)return;

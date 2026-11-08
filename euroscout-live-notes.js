@@ -136,7 +136,7 @@ function headerHTML(p){const lv=levelBand(p),g=statGradeOverall(p),photo=photoOf
   '<div class="mx-buttons"><button type="button" class="btn ghost sm" id="liveProfile">Open profile ↗</button><button type="button" class="btn ghost sm" id="liveNumber">Jersey #'+esc(num||'—')+'</button>'+(workspace()?'<button type="button" class="btn ghost sm" id="mxLogs">History</button>':'')+(window.ESQuickStats?'<button type="button" class="btn ghost sm" id="mxStats" title="Season statistics without leaving the matchup">📊 Stats</button>':'')+'<button type="button" class="btn primary sm" id="mxBoard" title="Add this player to one of your private Scout Boards">＋ Board</button>'+
   (a?'<span class="mx-stock" role="group" aria-label="Stock"><button type="button" class="btn ghost sm'+(stock==='up'?' on':'')+'" data-stock="up" aria-pressed="'+(stock==='up')+'" title="Stock up">▲ Up</button><button type="button" class="btn ghost sm'+(stock==='down'?' on':'')+'" data-stock="down" aria-pressed="'+(stock==='down')+'" title="Stock down">▼ Down</button></span>':'')+
   '<span class="mx-spacer"></span><button type="button" class="btn ghost sm" id="mxPrev">← Prev</button><button type="button" class="btn ghost sm" id="mxNext">Next →</button></div>'+
-  (window.ESQuickStats?.matchupHTML?.(p,liveRoster(p._liveClub)?.club,'2026/27',a?.competition)||'')+'</div>';}
+  (window.ESQuickStats?.matchupHTML?.(p,liveRoster(p._liveClub)?.club,p._liveClub?.startsWith('cebl|')?'2026':'2026/27',a?.competition)||'')+'</div>';}
 
 renderScouting=function(partial=false){
  if(!partial)resetRosters();

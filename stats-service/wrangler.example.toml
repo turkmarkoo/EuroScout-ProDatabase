@@ -1,0 +1,9 @@
+name = "euroscout-private-stats"
+main = "worker.mjs"
+compatibility_date = "2026-11-08"
+workers_dev = true
+
+[[d1_databases]]
+binding = "STATS"
+database_name = "euroscout-private-stats"
+database_id = "REPLACE_AFTER_CREATING_PRIVATE_DATABASE"

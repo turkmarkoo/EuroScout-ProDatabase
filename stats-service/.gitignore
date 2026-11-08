@@ -1,0 +1,6 @@
+*.sqlite*
+*.sql
+wrangler.toml
+.wrangler/
+node_modules/
+__pycache__/

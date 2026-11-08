@@ -1,4 +1,4 @@
-/* Owner-only schedule supplement. No statistics or persistent source cache. */
+/* Owner-only schedule and roster/stat supplement. Never persisted in the public core. */
 (function(){'use strict';
 const OWNER='markoturk.scouting@gmail.com',ALIASES={fra:'lnb',fra2:'elite2',aus:'nbl',cro:'hrv',aut:'autbsl',ita2:'seriea2',gbr:'britain',kos:'kosovo',isl:'iceland',svk:'slovakia',mne:'montenegro',bih:'bosnia',den:'denmark',sui:'swiss'};
 let feed=null,headId='',pending=null,checked=0,problem='',teamKeys=new Map();
@@ -10,6 +10,11 @@ function validate(data){
  if(data?.schema!==1||data.quality_policy!=='private_schedule_fixtures'||data.delivery!=='firebase_admin_only'||!Array.isArray(data.fixtures)||!Array.isArray(data.leagues))throw Error('Private schedule format changed.');
  if(data.leagues.some(l=>!l.meta?.privateBoardSchedule||!Array.isArray(l.players)||l.players.length||!Array.isArray(l.teams)))throw Error('Private schedule cannot contain player statistics.');
  if(data.fixtures.some(g=>!g.id||!g.comp||!g.home?.code||!g.away?.code||(g.played&&(!g.date||!Number.isFinite(g.hs)||!Number.isFinite(g.as)||g.hs===g.as))))throw Error('Invalid private schedule game.');
+ const ids=new Set(['denmark','slovakia','nbl','britain','cebl','bul','lnb','elite2','swiss']);
+ if(data.statsLeagues!=null&&(!Array.isArray(data.statsLeagues)||data.statsLeagues.some(l=>!l.meta?.privateOwnerFeed||!/^dragons-(den|svk|aus|gbr|cebl)-\d+$/.test(l.meta.id)||!Array.isArray(l.players)||!Array.isArray(l.teams)||!['2026/27','2026'].includes(l.meta.statsSeason))))throw Error('Invalid private statistics supplement.');
+ if(data.rosterPacks!=null&&(!Array.isArray(data.rosterPacks)||data.rosterPacks.some(p=>!ids.has(p.id)||(p.season!=='2026/27'&&!(p.id==='cebl'&&p.season==='2026'))||!Array.isArray(p.roster)||!Array.isArray(p.teams))))throw Error('Invalid private roster supplement.');
+ if((data.statsLeagues||[]).some(l=>l.players.some(p=>!p.id||!p.name||!Number.isFinite(p.g)||p.g<=0))||(data.rosterPacks||[]).some(p=>p.roster.some(r=>!r.id||!r.name||!r.teamId)))throw Error('Invalid private player identity.');
+ if((data.rosterPacks||[]).some(p=>p.id==='swiss'&&!p.validatedMetricAverages))throw Error('Swiss metric coverage has not been validated.');
  return data;
 }
 async function refresh(force=false){
@@ -38,6 +43,6 @@ function fixtures(){
  return feed.fixtures.filter(g=>ids.has(g.league_id)).map(g=>({...g,comp:comp(g.comp),privateSchedule:true,home:{...g.home,key:teamKeys.get(g.league_id+'|'+g.home.code)||''},away:{...g.away,key:teamKeys.get(g.league_id+'|'+g.away.code)||''}}));
 }
 function coverage(id){if(!allowed()||!feed)return null;const rows=fixtures().filter(g=>g.comp===id),l=feed.leagues.find(l=>l.meta.id===rows[0]?.league_id);return l?{...l.meta,games:rows.length,completed:rows.filter(g=>g.played).length,undated:rows.filter(g=>!g.date).length}:null;}
-window.ESPrivateFixtures={refresh,fixtures,extendTeams,validate,coverage,generated:()=>allowed()?feed?.generated||'':'',problems:()=>allowed()&&problem?[problem]:[]};
+window.ESPrivateFixtures={refresh,fixtures,extendTeams,validate,coverage,statsLeagues:()=>allowed()?feed?.statsLeagues||[]:[],rosterPacks:()=>allowed()?feed?.rosterPacks||[]:[],generated:()=>allowed()?feed?.generated||'':'',problems:()=>allowed()&&problem?[problem]:[]};
 window.addEventListener?.('es-access-role',()=>{if(!allowed()){feed=null;headId='';resetTeams();}});
 })();
