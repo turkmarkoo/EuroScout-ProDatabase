@@ -5,6 +5,14 @@ let feed=null,headId='',pending=null,checked=0,problem='',teamKeys=new Map();
 const allowed=()=>!!(window.ESAccess?.internal&&ESAccess.owner&&ESAccess.user?.email?.toLowerCase()===OWNER);
 const comp=id=>ALIASES[id]||id;
 const normal=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
+function latinFeed(data){
+ const bg=window.EuroScoutBulgarian;if(!bg)return data;
+ const teams=new Map((data.rosterPacks||[]).filter(p=>p.id==='bul').flatMap(p=>bg.pack(p).teams).map(t=>[String(t.code),t]));
+ const side=s=>s?{...s,name:teams.get(String(s.code))?.name||bg.latin(s.name)}:s;
+ return {...data,rosterPacks:(data.rosterPacks||[]).map(p=>bg.pack(p)),
+  leagues:data.leagues.map(l=>l.meta.dragonsCompetition==='BUL'?{...l,teams:l.teams.map(t=>({...t,...side(t)}))}:l),
+  fixtures:data.fixtures.map(g=>g.comp==='bul'?{...g,home:side(g.home),away:side(g.away)}:g)};
+}
 function resetTeams(){if(typeof DBTEAM_LIST!=='undefined'){DBTEAM_LIST=null;DBTEAM_BYKEY=null;CLUBS=null;CLUB_BY_TEAMKEY=null;DOM27=null;NEXTCOMP=null;}teamKeys.clear();}
 function validate(data){
  if(data?.schema!==1||data.quality_policy!=='private_schedule_fixtures'||data.delivery!=='firebase_admin_only'||!Array.isArray(data.fixtures)||!Array.isArray(data.leagues))throw Error('Private schedule format changed.');
@@ -15,7 +23,7 @@ function validate(data){
  if(data.rosterPacks!=null&&(!Array.isArray(data.rosterPacks)||data.rosterPacks.some(p=>!ids.has(p.id)||(p.season!=='2026/27'&&!(p.id==='cebl'&&p.season==='2026'))||!Array.isArray(p.roster)||!Array.isArray(p.teams))))throw Error('Invalid private roster supplement.');
  if((data.statsLeagues||[]).some(l=>l.players.some(p=>!p.id||!p.name||!Number.isFinite(p.g)||p.g<=0))||(data.rosterPacks||[]).some(p=>p.roster.some(r=>!r.id||!r.name||!r.teamId)))throw Error('Invalid private player identity.');
  if((data.rosterPacks||[]).some(p=>p.id==='swiss'&&!p.validatedMetricAverages))throw Error('Swiss metric coverage has not been validated.');
- return data;
+ return latinFeed(data);
 }
 async function refresh(force=false){
  if(!allowed()){if(feed){feed=null;headId='';resetTeams();}return false;}

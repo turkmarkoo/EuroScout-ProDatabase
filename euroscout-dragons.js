@@ -173,6 +173,7 @@ function supplement(data){
  return {...data,leagues:[...data.leagues.filter(l=>!l._privateSupplement),...(extra?.statsLeagues()||[]).map(l=>({...l,_privateSupplement:true}))],leagueRosters:[...(data.leagueRosters||[]).filter(p=>!p._privateSupplement),...(extra?.rosterPacks()||[]).map(p=>({...p,_privateSupplement:true}))],_privateVersion:extra?.generated()||''};
 }
 function connectData(raw,data){
+ if(window.EuroScoutBulgarian)Object.assign(data,window.EuroScoutBulgarian.feed(data));
  // Copy the data shell and league arrays so adding private lines cannot leak
  // into the saved core. Player records are read-only here, so cloning millions
  // of nested stat values only delays startup and wastes memory.

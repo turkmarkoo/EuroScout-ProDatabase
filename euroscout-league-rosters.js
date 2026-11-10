@@ -8,7 +8,7 @@ let directories=[], players=new Map(), registrations=new Map();
 function apply(raw,packs){
  const leagues=new Map(raw.leagues.map(l=>[l.meta.id,l]));
  const original=new Map(raw.leagues.flatMap(l=>l.players).map(p=>[p.id,p]));
- const names=new Map();
+ const names=new Map(),biographies=new Map();
  directories=[];players=new Map();registrations=new Map();
  if(!packs?.length)return;
  for(const league of raw.leagues){
@@ -16,6 +16,7 @@ function apply(raw,packs){
   if(league.meta.privateOwnerFeed)continue;
   for(const p of league.players){
    const name=normName(p.name);
+   if(!name)continue;
    if(!names.has(name))names.set(name,[]);
    names.get(name).push(p);
   }
@@ -25,7 +26,8 @@ function apply(raw,packs){
   if(!registrations.has(id))registrations.set(id,[]);
   registrations.get(id).push(row);
  };
- for(const pack of packs||[]){
+ for(const input of packs||[]){
+  const pack=window.EuroScoutBulgarian?.pack(input)||input;
   if(!Object.hasOwn(leagueIds,pack.id)||(pack.season!==season&&!(pack.id==='cebl'&&pack.season==='2026')))continue;
   const packSeason=pack.season;
   let league=leagues.get(pack.id);
@@ -57,26 +59,46 @@ function apply(raw,packs){
    const source=active.length===1?active[0]:records[0];
    const team=teams.get(source.teamId);
    const id=pack.id+'-official-'+officialId;
-   const providerMatches=pack.provider==='lba'?[...original.values()].filter(p=>p.id==='lba-'+officialId):pack.provider==='lnb'?[...original.values()].filter(p=>p.id==='lnb-'+officialId||new RegExp('^elite2-'+String(officialId).replace(/\D/g,'')+'-\\d+$').test(p.id)):[];
-   const direct=source.linkedEuroScoutId?original.get(source.linkedEuroScoutId):pack.id==='aba2'?original.get('aba-'+officialId):providerMatches[0]||null;
-   const compatibleDirect=direct&&(!source.born||!direct.born||Number(direct.born)===Number(source.born));
-   const exact=names.get(normName(source.name))||[];
+   const providerMatches=pack.id==='bul'?[...original.values()].filter(p=>p.league==='bul'&&String(p.code)===String(officialId)):pack.provider==='lba'?[...original.values()].filter(p=>p.id==='lba-'+officialId):pack.provider==='lnb'?[...original.values()].filter(p=>p.id==='lnb-'+officialId||new RegExp('^elite2-'+String(officialId).replace(/\D/g,'')+'-\\d+$').test(p.id)):[];
+   const reviewed=(source.catalogueLinks||[]).flatMap(link=>{
+    const p=original.get(link.id);
+    return p&&normName(p.name)===normName(link.name)&&normName(p.teamName)===normName(link.priorClub)?[p]:[];
+   });
+   const direct=source.linkedEuroScoutId?original.get(source.linkedEuroScoutId):pack.id==='aba2'?original.get('aba-'+officialId):providerMatches[0]||reviewed[0]||null;
+   const compatibleDirect=direct&&(!source.born||!direct.born||Number(direct.born)===Number(source.born))&&(!source.birthDate||!(direct.birthDate||direct.dob)||(direct.birthDate||direct.dob)===source.birthDate);
+   const exact=[...new Map([source.name,...source.nameAliases||[]].map(normName).filter(Boolean).flatMap(name=>names.get(name)||[]).map(p=>[p.id,p])).values()];
    const compatible=exact.filter(p=>!source.birthDate||!(p.birthDate||p.dob)||(p.birthDate||p.dob)===source.birthDate);
    const sameYear=compatible.filter(p=>source.born&&Number(p.born)===Number(source.born));
    // An older Finnish row may lack a birth year. Require the same full name
    // and the previous official season club for that exact federation person ID.
    const prior=compatible.filter(p=>!p.born&&p.league===pack.id&&source.priorClubs?.includes(p.team));
    let matches=sameYear.length?sameYear:prior.length===1?prior:[];
+   // A conflicting source DOB is not permission to join a same-year namesake.
+   // Stable federation IDs can still attach the historical Bulgarian record.
+   if(pack.id==='bul'&&source.identityReview)matches=[];
    const possibleMatches=matches.map(p=>p.id);
    if(pack._privateSupplement&&matches.length>1&&new Set(matches.map(p=>typeof gid==='function'?gid(p):p.id)).size>1){
     const exactDates=matches.filter(p=>source.birthDate&&(p.birthDate||p.dob)===source.birthDate);
     matches=exactDates.length===1?exactDates:[];
    }
-   const providerIds=providerMatches.filter(p=>!source.born||!p.born||Number(source.born)===Number(p.born)).map(p=>p.id);
+   const providerIds=providerMatches.filter(p=>(!source.born||!p.born||Number(source.born)===Number(p.born))&&(!source.birthDate||!(p.birthDate||p.dob)||(p.birthDate||p.dob)===source.birthDate)).map(p=>p.id);
    const ids=[...new Set([...(compatibleDirect?[direct.id]:[]),...providerIds,...matches.map(p=>p.id),id])];
+   if(pack.id==='bul')for(const linkedId of ids){
+    const base=original.get(linkedId);if(!base)continue;
+    const updated={...base,...biographies.get(linkedId)};
+    // Linking an older catalogue ID must not discard a published birth date
+    // or portrait. Fill gaps on a copy; later manual overrides retain priority.
+    for(const field of ['born','birthDate','height','weight','country','img','role','pos']){
+     if((updated[field]==null||updated[field]===''||updated[field]==='Unknown')&&source[field]!=null)updated[field]=source[field];
+    }
+    if(/[\u0400-\u04ff]/.test(updated.name||''))updated.name=source.name;
+    updated.nativeName=source.nativeName;updated.nameAliases=source.nameAliases;
+    biographies.set(linkedId,updated);
+   }
    const record={...source,ids,possibleMatches:matches.length?[]:possibleMatches,teamKey:team?.key,teamName:team?.name,league:pack.id};
    league.players.push({id,code:id,name:source.name,league:pack.id,team:team?.code||'',teamName:team?.name,
     born:source.born,birthDate:source.birthDate,height:source.height,weight:source.weight,country:source.country,pos:source.pos,role:source.role,
+    nativeName:source.nativeName,nameAliases:source.nameAliases,nameSource:source.nameSource,
     img:source.img,jersey:active.length===1?source.number:null,_leagueRosterOnly:true,_leagueRosterIdentity:true,
     _rosterOnly:true,_strictIdentity:true,statsScope:packSeason,qualified:false,g:null,gameLog:[],pct:{},z:{},arch:[],
     currentRosterSeason:active.length===1?packSeason:null,currentRosterSource:source.source,currentRosterProfile:source.profile});
@@ -91,6 +113,7 @@ function apply(raw,packs){
   if(packSeason===season)domestic[pack.id]={id:pack.id,name:pack.name,season,confirmed:!pack.membershipEvidence||pack.membershipEvidence==='official_roster',complete:pack.complete!==false,membershipEvidence:pack.membershipEvidence||'official_roster',
     checked:pack.checked?.slice(0,10),source:pack.source,teams:[...teams.values()].map(({key,name})=>({key,name}))};
  }
+ if(biographies.size)for(const league of raw.leagues)league.players=league.players.map(p=>biographies.get(p.id)||p);
  if(directories.length)raw.domestic2627={...raw.domestic2627,season,leagues:domestic};
 }
 function currentRows(p){
