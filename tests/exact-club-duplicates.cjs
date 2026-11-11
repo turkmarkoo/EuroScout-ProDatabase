@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8');
-const c={window:{},STATE:{data:{}},normClub:v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,''),CLUB_CODE_ALIAS_GROUPS:[],separateFrankfurtSquads:()=>false,clubMatchIndex:()=>()=>false};
+const c={window:{},STATE:{data:{}},normClub:v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,''),CLUB_CODE_ALIAS_GROUPS:[],FRENCH_CLUB_KEYS:[],separateFrankfurtSquads:()=>false,clubMatchIndex:()=>()=>false};
 c.DBTEAM_LIST=[
  {key:'nbl|ADE',lg:'nbl',name:'Adelaide 36ers',country:'Australia',logo:'logo.svg'},
  {key:'nbl|ADE2',lg:'nbl',name:'Adelaide 36ers',country:'Australia'},

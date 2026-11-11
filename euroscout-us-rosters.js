@@ -46,7 +46,7 @@ function apply(raw){
  // Correct the linked person's imported bio without making that old league a current membership.
  for(const L of raw.leagues)if(SUPPORTED.has(L.meta.id))for(const p of L.players){const rows=byId.get(p.id)||[],r=rows.find(r=>r.league===p.league)||rows[0];if(r)updateBio(p,r);}
 }
-function keys(p){return [...new Set(records(p).map(r=>typeof canonKey==='function'?canonKey(r.league+'|'+r.team):r.league+'|'+r.team))];}
+function keys(p){return [...new Set(records(p).filter(r=>!window.EuroScoutLeagueRosters?.supersededUSRoster(p,r)).map(r=>typeof canonKey==='function'?canonKey(r.league+'|'+r.team):r.league+'|'+r.team))];}
 function key(p){return keys(p)[0]||null;}
 function ncaa(p){const r=records(p).find(r=>r.league==='ncaam');if(!r)return null;return {classYear:r.academicYear||'Unknown',classLabel:r.academicYear||'Year not published',classOrder:r.classOrder,
  classRaw:r.academicYearRaw,team:r.teamName,teamCode:r.team,teamId:r.teamProviderId,jersey:r.jersey,source:r.source,profile:r.profile,checkedAt:r.checkedAt};}

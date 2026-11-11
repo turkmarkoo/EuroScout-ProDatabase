@@ -130,6 +130,10 @@ function current(p,club){
  return clubs.size===1?[...clubs.values()][0]:null;
 }
 function key(p){const team=current(p)?.teamKey;return team?canonKey(team):null;}
+function supersededUSRoster(p,usRow){
+ return currentRows(p).some(row=>row.league==='lnb'&&row.verifiedClubSource&&
+  row.supersededUSRosterId===usRow.id&&row.observedAt&&usRow.checkedAt&&row.observedAt>=usRow.checkedAt);
+}
 function keys(p){return [...new Set(currentRows(p).map(row=>canonKey(row.teamKey)))];}
 function resolve(league,id){
  const code=Object.keys(leagueIds).find(key=>league.startsWith(leagueIds[key]));
@@ -143,7 +147,7 @@ function statLeagues(){
   players:pack.stats.map(p=>({...p,team:pack.teams.find(t=>t.id===p.teamId||t.id===p.team)?.code||p.team})),teams:pack.teams,statMeta:{},games:[],
  }));
 }
-window.EuroScoutLeagueRosters={apply,current,key,keys,resolve,link,statLeagues,directories:()=>directories,
+window.EuroScoutLeagueRosters={apply,current,key,keys,supersededUSRoster,resolve,link,statLeagues,directories:()=>directories,
  checked:()=>directories.map(p=>p.checked).join('|')};
 })();
 

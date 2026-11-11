@@ -59,6 +59,7 @@ const clubs = vm.createContext({
   STATE: {data: {}},
   normClub: value => String(value || '').toLowerCase(),
   separateFrankfurtSquads: () => false,
+  FRENCH_CLUB_KEYS: [],
   clubMatchIndex: () => () => false,
   DBTEAM_LIST: [
     ['lba|BDBT', 'Bertram Derthona Tortona', 'lba'],
