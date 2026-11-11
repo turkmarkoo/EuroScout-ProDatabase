@@ -56,7 +56,7 @@ function esAfterRender(){$('#homeLogo').onclick=()=>goView('dashboard');const ac
 const esRenderBase=render;render=function(){if(STATE.view==='dashboard')renderDashboard();else esRenderBase();esAfterRender();};
 function esScoutEnhance(){const s=STATE.scout;const head=$('#app .scouthead');if(!head)return;
   const full=scoutPool();const mm=(typeof next26Get==='function')?next26Get():{};const mb=(typeof next26bGet==='function')?next26bGet():{};
-  const freeCount=full.filter(p=>(typeof marketCandidate==='function')&&marketCandidate(p,mm,mb)).length;
+  const freeCount=full.filter(p=>(typeof marketAvailable==='function')&&marketAvailable(p,mm,mb)).length;
   let latest=null;full.forEach(p=>{const u=recOf(p).updated_at;if(u&&(!latest||u>latest))latest=u;});
   const freshTxt=(()=>{if(!latest)return 'No notes yet';const days=Math.floor((Date.now()-new Date(latest).getTime())/86400000);
     if(days<=0)return 'Updated today';if(days===1)return 'Updated yesterday';if(days<30)return 'Updated '+days+' days ago';return 'Updated over a month ago';})();

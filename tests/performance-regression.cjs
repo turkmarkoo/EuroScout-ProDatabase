@@ -50,7 +50,7 @@ async function checkExtraPacks(){
  // Indexed research must retain original file order, merged identities, and birth-year rules.
  const market=read('euroscout-market.js'),review=JSON.parse(read('data/free-agent-review.json'));
  const ctx={review,gid:p=>p.groupId||p.id};vm.createContext(ctx);
- vm.runInContext(market.slice(market.indexOf('let indexedReview'),market.indexOf('let searchedReview')),ctx);
+ vm.runInContext(market.slice(market.indexOf('let indexedReview'),market.indexOf('function currentSeasonAppearance')),ctx);
  const original=(p,rv)=>{const ids=new Set([p.id,ctx.gid(p),...(p._grp||[]).map(x=>x.id)]);return(rv.items||[]).find(t=>(t.ids||[]).some(id=>ids.has(id))&&(!t.born||!p.born||+t.born===+p.born));};
  let checks=0;for(const item of review.items)for(const id of item.ids||[])for(const born of [null,item.born,1900]){const p={id:'unmatched',groupId:id,born,_grp:[{id}]};assert.equal(ctx.auditFor(p),original(p,review));checks++;}
  ctx.review={items:[{ids:['b'],born:2000},{ids:['a'],born:2000},{ids:['a'],born:1999}]};
