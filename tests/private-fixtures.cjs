@@ -14,6 +14,22 @@ vm.createContext(context);vm.runInContext(fs.readFileSync('euroscout-private-fix
  assert.throws(()=>api.validate({...payload,rosterPacks:[{id:'unreviewed',season:'2026/27',teams:[],roster:[]}]}));
  assert.equal(await api.refresh(true),true);assert.equal(api.fixtures().length,3);assert.equal(teams.length,2);assert.equal(api.fixtures()[0].home.key,'bul|A');
  assert.equal(api.coverage('bul').undated,2);assert.equal(api.coverage('bul').completed,1);
+ const savedLeague=payload.leagues[0],savedFixtures=payload.fixtures;
+ payload.leagues[0]={...savedLeague,meta:{...savedLeague.meta,id:'private-cze',name:'Czech NBL',dragonsCompetition:'CZE'},
+  teams:[{code:'dragons-team-43',name:'PUMPA Basket Brno',country:'Czechia'}]};
+ payload.fixtures=[{...game('cze-1','2026-11-04','cze'),home:{code:'dragons-team-43',name:'PUMPA Basket Brno'}}];
+ const czech={...context,window:{...context.window},ESAccess:{...context.ESAccess,field:()=> 'b'.repeat(32)}};
+ czech.window.ESAccess=czech.ESAccess;
+ vm.runInNewContext(fs.readFileSync('euroscout-private-fixtures.js','utf8'),czech);
+ const cz=czech.window.ESPrivateFixtures;
+ await cz.refresh(true);
+ const brno={key:'cze|BRN',name:'PUMPA Basket Brno',country:'Czechia'},club={key:'cze|BRN'};
+ cz.extendTeams([brno]);
+ const teamMap=new Map([[brno.key,brno]]),clubMap=new Map([[brno.key,club]]);
+ cz.linkTeamAliases(teamMap,clubMap);
+ assert.equal(teamMap.get('cze|dragons-team-43'),brno);
+ assert.equal(clubMap.get('cze|dragons-team-43'),club);
+ payload.leagues[0]=savedLeague;payload.fixtures=savedFixtures;
  fail=true;await api.refresh(true);assert.equal(api.fixtures().length,3,'last good schedule retained');assert.equal(api.problems().length,1);
  main=[game('new','2026-11-08')];assert.equal(api.fixtures().length,0,'regular statistics feed takes precedence for whole competition');
  main=[];owner=false;await api.refresh(true);assert.equal(api.fixtures().length,0);assert.equal(api.generated(),'');

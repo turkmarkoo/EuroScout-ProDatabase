@@ -44,6 +44,19 @@ function extendTeams(out){
   }
  }
 }
+// Saved Czech sessions can use the fixture's team code from before the
+// roster was linked to its existing catalogue club.
+function linkTeamAliases(teamMap,clubMap){
+ for(const league of missing()){
+  if(league.meta.dragonsCompetition!=='CZE')continue;
+  for(const team of league.teams){
+   const original='cze|'+team.code,key=teamKeys.get(league.meta.id+'|'+team.code);
+   if(!key||key===original||teamMap.has(original)||!teamMap.has(key)||!clubMap.has(key))continue;
+   teamMap.set(original,teamMap.get(key));
+   clubMap.set(original,clubMap.get(key));
+  }
+ }
+}
 function fixtures(){
  if(!allowed()||!feed)return [];
  if(typeof allDbTeams==='function')allDbTeams();
@@ -51,6 +64,6 @@ function fixtures(){
  return feed.fixtures.filter(g=>ids.has(g.league_id)).map(g=>({...g,comp:comp(g.comp),privateSchedule:true,home:{...g.home,key:teamKeys.get(g.league_id+'|'+g.home.code)||''},away:{...g.away,key:teamKeys.get(g.league_id+'|'+g.away.code)||''}}));
 }
 function coverage(id){if(!allowed()||!feed)return null;const rows=fixtures().filter(g=>g.comp===id),l=feed.leagues.find(l=>l.meta.id===rows[0]?.league_id);return l?{...l.meta,games:rows.length,completed:rows.filter(g=>g.played).length,undated:rows.filter(g=>!g.date).length}:null;}
-window.ESPrivateFixtures={refresh,fixtures,extendTeams,validate,coverage,statsLeagues:()=>allowed()?feed?.statsLeagues||[]:[],rosterPacks:()=>allowed()?feed?.rosterPacks||[]:[],generated:()=>allowed()?feed?.generated||'':'',problems:()=>allowed()&&problem?[problem]:[]};
+window.ESPrivateFixtures={refresh,fixtures,extendTeams,linkTeamAliases,validate,coverage,statsLeagues:()=>allowed()?feed?.statsLeagues||[]:[],rosterPacks:()=>allowed()?feed?.rosterPacks||[]:[],generated:()=>allowed()?feed?.generated||'':'',problems:()=>allowed()&&problem?[problem]:[]};
 window.addEventListener?.('es-access-role',()=>{if(!allowed()){feed=null;headId='';resetTeams();}});
 })();
