@@ -30,7 +30,6 @@ assert(teams.some(team => team.key === 'vtb|ZEN' && team.aliases.includes('Zenit
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const picker = fs.readFileSync(path.join(root, 'euroscout-edit-player-v2.js'), 'utf8');
 assert.match(html, /if\(long===short\+"spor"\)return false/);
-assert.match(html, /if\(k===STATUS_FREE&&registered\)return canonKey\(registered\)/);
 assert.match(html, /current-contract-updates-2026\.js\?v=20261007-vtb-bursa/);
 assert.match(picker, /const score=c=>/);
 assert.match(picker, /const key=searchFold\(c\.name\)\.replace/);

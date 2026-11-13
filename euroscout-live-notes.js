@@ -29,6 +29,10 @@ function officialRosterRow(p){const leagueRow=window.EuroScoutLeagueRosters?.cur
 function shirt(p){const v=storedShirt(p);if(v!=null)return v;const official=officialRosterRow(p);if(official?.number!=null)return String(official.number);const r=window.EuroScoutExpansion?.record(p);return r&&canonKey('directory|'+r.club)===p._liveClub&&r.jersey!=null?String(r.jersey):'';}
 function jerseyOrder(a,b){const rank=p=>{const n=shirt(p);return n==='00'?-2:n==='0'?-1:/^\d{1,2}$/.test(n)?Number(n):1000};return rank(a)-rank(b)||a.name.localeCompare(b.name);}
 function resetRosters(){clubIndex=null;rosters.clear();}
+window.addEventListener('euroscout:roster-assignment-updated',resetRosters);
+window.addEventListener('storage',event=>{
+ if(event.key===NEXT26_KEY||event.key===NEXT26B_KEY||event.key===AUTO_APPLIED_KEY)resetRosters();
+});
 let rosterDirectoriesPending=false,rosterDirectoriesFailed=false,rosterRefreshTimer=null,matchupPointerDown=false,matchupInteractionUntil=0;
 document.addEventListener('pointerdown',e=>{if(e.target.closest?.('.liveScouting')){matchupPointerDown=true;matchupInteractionUntil=performance.now()+300;}},true);
 window.addEventListener('blur',()=>{matchupPointerDown=false;});
@@ -66,7 +70,7 @@ function sameRosterPerson(a,b){const ai=rosterIdentityIds(a),bi=rosterIdentityId
 function addClubPlayer(index,seen,key,p){key=canonKey(key);if(!key||!p)return;const id=gid(p)||p.id;if(!id)return;if(!seen.has(key))seen.set(key,{ids:new Set(),players:[]});const bucket=seen.get(key);if(bucket.ids.has(id))return;if(bucket.players.some(x=>sameRosterPerson(x,p))){bucket.ids.add(id);return;}bucket.ids.add(id);bucket.players.push(p);if(!index.has(key))index.set(key,[]);index.get(key).push(p);}
 function buildClubIndex(){
  const index=new Map(),seen=new Map(),m=next26Get(),mb=next26bGet(),auto=autoAppliedGet(),pool=assignPool(),directories=officialDirectories();
- const manualKeys=p=>[gid(p),p.id,...(p._grp||[]).map(x=>x.id)].some(id=>m[id]&&!auto[id])?effective26keys(p,m,mb):null;
+ const manualKeys=p=>manual26Key(p,m,auto)?effective26keys(p,m,mb):null;
  const currentDomesticKeys=p=>{const key=window.EuroScoutLeagueRosters?.key(p)||window.EuroScoutPLK?.key(p);return key?[key]:null;};
  const currentBBLKeys=p=>{const key=window.EuroScoutBBL?.key(p);return key?[canonKey(key)]:null;};
  const matchupKeys=(p,fallback)=>manualKeys(p)??[...new Set([...(currentDomesticKeys(p)||currentBBLKeys(p)||fallback),...(window.EuroScoutLeagueRosters?.keys(p)||[])])];

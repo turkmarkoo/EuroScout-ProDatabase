@@ -58,9 +58,9 @@ function evidence(p,m,mb){
  m=m||next26Get();
  const assignment=effective26(p,m);
  if(assignment===STATUS_RETIRED)return {status:'retired',label:'Retired',note:'Recorded career status',checked:'',url:''};
+ if(assignment===STATUS_FREE)return {status:'available',label:'Marked available',note:'Recorded in the 2026/27 roster editor',checked:'',url:''};
  const assigned=effective26keys(p,m,mb||next26bGet(),assignment);
- // The market can surface a roster conflict without writing to the assignment map.
- const activeKey=assigned[0]||window.EuroScoutUSARosters?.key(p);
+ const activeKey=assigned[0];
  if(activeKey)return {status:'signed',label:'On roster',club:clubByKey(activeKey)?.name||activeKey,
   note:'2026/27 club assignment',checked:'',url:''};
  const audit=auditFor(p);
@@ -79,7 +79,6 @@ function evidence(p,m,mb){
  const appearance=currentSeasonAppearance(p);
  if(appearance&&appearance.date>=evidenceDate(finding))return {...appearance,status:'signed',label:'Played this season',
   checked:'',url:'',note:'Latest recorded 2026/27 appearance. Contract term unknown.'};
- if(assignment===STATUS_FREE)return {status:'available',label:'Marked available',note:'Recorded in the 2026/27 roster editor',checked:'',url:''};
  const manual=EuroScoutMarketRecords.get(p);
  if(manual.verified&&manual.availability==='Under Contract')return {status:'signed',label:'Under contract',
   note:'Manually verified availability record',checked:manual.checkedAt||'',url:safeURL(manual.sourceURL)};

@@ -49,9 +49,14 @@ review = undefined;
 
 assignments[p.id] = 'free';
 assert.equal(context.evidence(p).status, 'available');
+assert.equal(context.evidence(current).status, 'available', 'earlier appearances are historical after a manual status change');
 context.window.EuroScoutUSARosters = {key: () => 'league|club'};
-assert.equal(context.evidence(p).club, 'Current Club');
+assert.equal(context.evidence(p).club, undefined);
 assert.equal(assignments[p.id], 'free', 'availability review leaves the manual assignment intact');
+news = [{status:'signed',date:'2026-11-12',to:'Other Club'}];
+assert.equal(context.evidence(current).label, 'Marked available');
+assignments[p.id] = 'league|club';
+assert.equal(context.evidence(p).club, 'Current Club');
 
 const html = fs.readFileSync('index.html', 'utf8');
 const clubs = vm.createContext({

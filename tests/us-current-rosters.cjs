@@ -21,7 +21,7 @@ const html=fs.readFileSync('index.html','utf8');for(const m of html.matchAll(/<s
  const noCountry=raw.leagues.flatMap(l=>l.players).find(p=>p.id===college.find(r=>data.newPlayerIds.includes(r.id)&&r.birthPlace?.country)?.id);assert.equal(noCountry.country,null,'birthplace must not invent citizenship');
  const fresh=data.newPlayerIds[0];assert.deepEqual(Array.from(c.window.EuroScoutUSARosters.preferredIds([fresh,'saved-profile'])),['saved-profile']);
  assert.equal(raw.leagues.find(l=>l.meta.id==='nba').meta.statsSeason,'2025-26');
- const assignmentCode=html.slice(html.indexOf('function effective26(p,m){'),html.indexOf('\nfunction set26(',html.indexOf('function effective26(p,m){')));
+ const assignmentCode=html.slice(html.indexOf('function manual26Key('),html.indexOf('\nfunction set26(',html.indexOf('function effective26(p,m){')));
  const keysCode=html.slice(html.indexOf('function effective26keys('),html.indexOf('// set/clear the secondary',html.indexOf('function effective26keys(')));
  const manual={window:{EuroScoutUSARosters:{key:()=> 'nba|PHI',keys:()=>['nba|PHI','gleague|DEL']}},gid:p=>p.id,next26Get:()=>manual.assign,readAssignmentMap:()=>manual.automated,canonKey:x=>x,isStatus:x=>String(x).startsWith('__'),STATUS_FREE:'__free_agent',AUTO_APPLIED_KEY:'auto',effective26b:()=>null,assign:{saved:'__free_agent'},automated:{}};
  vm.createContext(manual);vm.runInContext(assignmentCode+"\n"+keysCode,manual);const p={id:'saved'};

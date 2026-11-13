@@ -25,11 +25,24 @@ function open(id){if(!Store.canEdit())return;cleanupEditor();window.EuroScoutOpt
  function refreshRoles(){const choices=PlayerScouting.rolesForPosition($('#ep2Position').value);for(const id of ['ep2PrimaryRole','ep2SecondaryRole']){const control=$('#'+id),current=control.value;control.replaceChildren(new Option('Not set',''),...choices.map(r=>new Option(r.name,r.name)));if(current&&!choices.some(r=>r.name===current)){const kept=new Option(current+' · current assignment',current);kept.disabled=true;kept.hidden=true;control.append(kept);}control.value=current;window.EuroScoutOptionSearch?.syncSelect(control);}}
  $('#ep2Position').onchange=refreshRoles;refreshRoles();overlay.querySelectorAll('select').forEach(s=>window.EuroScoutOptionSearch?.mountSelect(s));
 
- function updateClub(c){club=c;$('#ep2ClubPreview').innerHTML=clubSummary(c);$('#ep2League').value=primary(c)?.name||'';$('#ep2ClubSearch').value=c?.name||'';$('#ep2ClubOptions').hidden=true;}
+ function updateClub(c){club=c;paintClub(c);}
+ function paintClub(c,status=''){
+  const search=$('#ep2ClubSearch'),preview=$('#ep2ClubPreview'),summary=$('.ep2-summary-club'),league=primary(c)?.name||'';
+  preview.innerHTML=status?'<div class="ep2-club-empty">No current club · '+h(status)+'</div>':clubSummary(c);
+  $('#ep2League').value=league;
+  search.value=c?.name||'';
+  search.disabled=$('#ep2AddClub').disabled=!!status;
+  $('#ep2ClubOptions').hidden=true;
+  const badge=summary.querySelector(':scope > div');
+  while(summary.firstElementChild!==badge)summary.firstElementChild.remove();
+  if(c)badge.insertAdjacentHTML('beforebegin',clubBadge(c,44));
+  badge.querySelector('strong').textContent=c?.name||'No current club';
+  badge.querySelector('span').textContent=status||league||'2026/27 team not assigned';
+ }
  $('#ep2AddClub').onclick=()=>{const query=v('#ep2ClubSearch');EuroScoutClubs.addForm(key=>{const added=clubByKey(canonKey(key));if(added)updateClub(added);$('#ep2AddClub')?.focus();});window.EuroScoutCountryPicker?.mount(document.querySelector('#clubCreateOverlay input[name=country]'),{countries:COUNTRY_LIST});const input=document.querySelector('#clubCreateOverlay input[name=club]');if(input){input.value=query;input.dispatchEvent(new Event('input',{bubbles:true}));}};
  function findClub(query){const q=searchFold(query.trim());if(q.length<2)return [];const score=c=>((c.teams||[]).some(t=>!t.directoryOnly)?100:0)+(c.country?10:0)+((c.teams||[]).some(t=>t.logo)?5:0)+(c.teams||[]).length,unique=new Map();for(const c of allClubs().filter(c=>searchFold([c.name,c.country,...(c.teams||[]).flatMap(t=>[t.name,...(t.searchAliases||[])])].join(' ')).includes(q))){const key=searchFold(c.name).replace(/[^a-z0-9]/g,'');const old=unique.get(key);if(!old||score(c)>score(old))unique.set(key,c);}return [...unique.values()].slice(0,25);}
  function suggestions(){const list=$('#ep2ClubOptions'),q=$('#ep2ClubSearch').value;const found=findClub(q);list.innerHTML=found.map((c,i)=>'<button type="button" data-club-index="'+i+'">'+clubBadge(c,28)+'<span><b>'+h(c.name)+'</b><small>'+h(c.country||'—')+' · '+h(primary(c)?.name||'League unverified')+'</small></span></button>').join('')||'<span>No matching club in the registry.</span>';list.hidden=q.trim().length<2;list.querySelectorAll('[data-club-index]').forEach(b=>{const choose=()=>updateClub(found[Number(b.dataset.clubIndex)]);b.onmousedown=e=>{e.preventDefault();choose();};b.onclick=choose;});}
- $('#ep2ClubSearch').oninput=()=>{club=null;$('#ep2League').value='';$('#ep2ClubPreview').innerHTML=clubSummary(null);suggestions();};$('#ep2ClubSearch').onfocus=suggestions;$('#ep2ClubSearch').onblur=()=>setTimeout(()=>{$('#ep2ClubOptions').hidden=true;},160);
+ $('#ep2ClubSearch').oninput=()=>{const query=$('#ep2ClubSearch').value;updateClub(null);$('#ep2ClubSearch').value=query;suggestions();};$('#ep2ClubSearch').onfocus=suggestions;$('#ep2ClubSearch').onblur=()=>setTimeout(()=>{$('#ep2ClubOptions').hidden=true;},160);
  $('#ep2ClubSearch').onkeydown=e=>{if(e.key==='Enter'){const first=$('[data-club-index="0"]');if(first){e.preventDefault();first.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));}}};
  function agents(){if(!agentChoices){const map=agentMap();agentChoices=agentList().map(name=>({value:name,label:name,detail:normAgency(map[name]||''),agency:normAgency(map[name]||'')}));}return agentChoices;}
  function connectAgency(){agentTouched=true;const name=v('#ep2Agent'),match=agents().find(x=>searchFold(x.value)===searchFold(name));if(match?.agency)$('#ep2Agency').value=match.agency;}
@@ -42,7 +55,12 @@ function open(id){if(!Store.canEdit())return;cleanupEditor();window.EuroScoutOpt
  $('#ep2Profile').onclick=()=>{close();openProfile(id);};
  $('#ep2ClubPreview').onclick=e=>{if(!e.target.closest('#ep2ClubProfile')||!club)return;const t=club.teams?.[0];if(t){close();openTeamIn(t.lg,t.code);}};
  const statusSelect=$('#ep2Status'),contractInput=$('#ep2Contract');
- const syncCareerStatus=()=>{const withoutClub=statusSelect.value==='Retired'||statusSelect.value==='Free agent';contractInput.disabled=withoutClub;if(withoutClub)contractInput.value='';};
+ const syncCareerStatus=()=>{
+  const status=statusSelect.value,withoutClub=status==='Retired'||status==='Free agent';
+  contractInput.disabled=withoutClub;
+  if(withoutClub)contractInput.value='';
+  paintClub(withoutClub?null:club,withoutClub?status:'');
+ };
  statusSelect.onchange=syncCareerStatus;syncCareerStatus();
  const estimatedLevel=$('#ep2Level');window.ESPlayerScouting?.markAutomaticLevel(estimatedLevel);estimatedLevel.onchange=()=>{window.ESPlayerScouting?.markAutomaticLevel(estimatedLevel);window.EuroScoutOptionSearch?.syncSelect(estimatedLevel);};window.EuroScoutOptionSearch?.syncSelect(estimatedLevel);
  $('#ep2Save').onclick=async()=>{if($('#ep2Save').disabled)return;const name=v('#ep2Name'),birthYear=v('#ep2Birth'),position=v('#ep2Position'),country=v('#ep2Country');
