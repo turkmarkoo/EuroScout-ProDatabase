@@ -130,7 +130,7 @@ function resolve(source,directory,raw){
   if(!id)return null;
   return {id,ids:row.ids,player:directory.byId.get(id),row,officialId:'pol:'+row.id,source:row.profile};
  }
- if(/^dragons-(ita|swe|fin|hun|bnxt|enbl|aba2|den|svk|aus|gbr|cebl|bul|fra|fra2|sui)-/.test(source.league||'')&&(source.rosterPlayerId||source.nordicPlayerId)){
+ if(/^dragons-(ita|swe|fin|hun|bnxt|enbl|aba2|den|svk|aus|gbr|cebl|bul|fra|fra2|sui|cze)-/.test(source.league||'')&&(source.rosterPlayerId||source.nordicPlayerId)){
   const row=window.EuroScoutLeagueRosters?.resolve(source.league,source.rosterPlayerId||source.nordicPlayerId);
   if(source.born&&row?.born&&Number(source.born)!==Number(row.born))return null;
   const id=row?.ids.find(candidate=>directory.byId.has(candidate));
@@ -202,7 +202,7 @@ function connectData(raw,data){
   }
   for(const player of league.players||[]){
    player.league=league.meta.id;player.statsSeason=league.meta.statsSeason;player._dragonsData=true;player._verifiedExternal=true;player._sourceSeason=league.meta.season;
-   if(/^dragons-(ita|swe|fin|hun|bnxt|enbl|aba2|den|svk|aus|gbr|cebl|bul|fra|fra2|sui)-/.test(player.league)&&(player.rosterPlayerId||player.nordicPlayerId)){
+   if(/^dragons-(ita|swe|fin|hun|bnxt|enbl|aba2|den|svk|aus|gbr|cebl|bul|fra|fra2|sui|cze)-/.test(player.league)&&(player.rosterPlayerId||player.nordicPlayerId)){
     player._leagueRosterIdentity=true;
     player._strictIdentity=true;
     player.linkedEuroScoutId=null;

@@ -19,8 +19,12 @@ function validate(data){
  if(data.leagues.some(l=>!l.meta?.privateBoardSchedule||!Array.isArray(l.players)||l.players.length||!Array.isArray(l.teams)))throw Error('Private schedule cannot contain player statistics.');
  if(data.fixtures.some(g=>!g.id||!g.comp||!g.home?.code||!g.away?.code||(g.played&&(!g.date||!Number.isFinite(g.hs)||!Number.isFinite(g.as)||g.hs===g.as))))throw Error('Invalid private schedule game.');
  const ids=new Set(['lba','denmark','slovakia','nbl','britain','cebl','bul','lnb','elite2','swiss','cze']);
- if(data.statsLeagues!=null&&(!Array.isArray(data.statsLeagues)||data.statsLeagues.some(l=>!l.meta?.privateOwnerFeed||!/^dragons-(den|svk|aus|gbr|cebl)-\d+$/.test(l.meta.id)||!Array.isArray(l.players)||!Array.isArray(l.teams)||!['2026/27','2026'].includes(l.meta.statsSeason))))throw Error('Invalid private statistics supplement.');
+ if(data.statsLeagues!=null&&(!Array.isArray(data.statsLeagues)||data.statsLeagues.some(l=>!l.meta?.privateOwnerFeed||!/^dragons-(den|svk|aus|gbr|cebl|cze)-\d+$/.test(l.meta.id)||!Array.isArray(l.players)||!Array.isArray(l.teams)||!['2026/27','2026'].includes(l.meta.statsSeason))))throw Error('Invalid private statistics supplement.');
  if(data.rosterPacks!=null&&(!Array.isArray(data.rosterPacks)||data.rosterPacks.some(p=>!ids.has(p.id)||(p.season!=='2026/27'&&!(p.id==='cebl'&&p.season==='2026'))||!Array.isArray(p.roster)||!Array.isArray(p.teams))))throw Error('Invalid private roster supplement.');
+ if((data.statsLeagues||[]).some(l=>l.meta.id.startsWith('dragons-cze-')&&(
+  !Array.isArray(l.meta.gameLogCols)||!l.meta.gameLogCols.includes('date')||
+  l.players.some(p=>!/^\d+$/.test(String(p.rosterPlayerId||''))||!Array.isArray(p.gameLog)||p.gameLog.length!==p.g)
+ )))throw Error('Invalid Czech game logs.');
  if((data.statsLeagues||[]).some(l=>l.players.some(p=>!p.id||!p.name||!Number.isFinite(p.g)||p.g<=0))||(data.rosterPacks||[]).some(p=>p.roster.some(r=>!r.id||!r.name||!r.teamId)))throw Error('Invalid private player identity.');
  if((data.rosterPacks||[]).some(p=>p.id==='swiss'&&!p.validatedMetricAverages))throw Error('Swiss metric coverage has not been validated.');
  return latinFeed(data);
