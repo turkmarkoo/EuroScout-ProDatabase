@@ -2712,6 +2712,7 @@ function applyOverrides(onlyPlayers){
     window.EuroScoutAgencyResearch?.apply(p,b);
     if(p.agent&&window.EuroScoutMergeCenter)p.agent=EuroScoutMergeCenter.canonicalAgent(p.agent);
     p.country=EuroScoutCountries.canonical(p.country);
+    p.name=window.EuroScoutIdentityBio?.displayName(p,p.name)||p.name;
     p._ext=extFor(p)||null;
   }));
   if(!onlyPlayers&&Store.canEdit()&&window.ESRecordMerge)mergeGroupRecords(true);
@@ -2827,13 +2828,13 @@ async function saveRec(p,patch,options){
 function mergeGroupRecords(verifiedOnly=false){
  const seen=new Set();
  const recordPlayers=verifiedOnly?allPlayersFlat():allPlayersEvery().filter(p=>!isOtherLeague(leagueOf(p).meta)||isRosterDatabaseLeague(leagueOf(p).meta));
- recordPlayers.filter(p=>!verifiedOnly||window.EuroScoutIdentityBio?.personKey(p)).forEach(p=>{
+ recordPlayers.filter(p=>!verifiedOnly||window.EuroScoutIdentityBio?.personKey(p)?.startsWith('marcus-foster-')).forEach(p=>{
   const g=gid(p);if(!g||seen.has(g))return;seen.add(g);
   const ids=recordIds(p),manual=!!window.EuroScoutMergeCenter?.canonicalPlayer(ids),base={...Store.get(g)};
   const repairKey=window.EuroScoutIdentityBio?.personKey(p),repairVersion='distinct-fosters-20261104-v1';
   // A bad historical cross-link left two canonical records for the Bonn
   // player. Recover them once, only inside his verified identity partition.
-  const recoverNotes=!!repairKey&&base._identityNotesRepair!==repairVersion;
+  const recoverNotes=repairKey?.startsWith('marcus-foster-')&&base._identityNotesRepair!==repairVersion;
   const recs=(manual&&!recoverNotes?[Store.get(g)]:ids.map(id=>Store.get(id))).filter(Boolean);
   let dirty=false;
   for(const r of recs){
@@ -5020,7 +5021,7 @@ function ebNorm(s){return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,""
 function ebKey(p){return p?ebNorm(p.name)+"|"+(p.born||""):"";}
 function effectiveReport(p){const rec=recOf(p);const rep=parseReport(rec.report);
   if(!(rec.report&&String(rec.report).trim())){const s=(window.EUROSCOUT_NOTE_SEED||{})[ebKey(p)];if(s)Object.keys(s).forEach(k=>{rep[k]=s[k];});}
-  return rep;}
+  return window.EuroScoutIdentityBio?.reviewReport(p,rep)||rep;}
 function effRating(p){const r=recOf(p);if(r&&r.rating)return r.rating;return (window.EUROSCOUT_RATING_SEED||{})[ebKey(p)]||0;}
 /* One-time migration: write imported Notion ratings + notes into the user's own account
    (so they persist, sync across devices, and behave like ratings you set yourself).
@@ -7772,7 +7773,7 @@ Object.assign(window,{STATE,render,hideModal,openProfile,closeDrawer,drawerJump,
 <script src="euroscout-team-workspace.js?v=20260922-1"></script>
 <link rel="stylesheet" href="euroscout-teams-2627.css?v=20260921-entry-dialog">
 <script src="euroscout-teams-2627.js?v=20260921-roster-fix"></script>
-<link rel="stylesheet" href="euroscout-merge-center.css?v=20260921-1"><script src="euroscout-identity-bio.js?v=20261104-distinct-fosters-v1"></script><script src="euroscout-merge-center.js?v=20261106-players-performance"></script>
+<link rel="stylesheet" href="euroscout-merge-center.css?v=20260921-1"><script src="euroscout-identity-bio.js?v=20261113-todorovic-identity"></script><script src="euroscout-merge-center.js?v=20261106-players-performance"></script>
 <link rel="stylesheet" href="euroscout-agencies-v2.css?v=20261001-agent-edit"><script src="euroscout-agencies-v2.js?v=20261001-agent-edit"></script><script src="global-command-palette.js?v=20260922-performance"></script><link rel="stylesheet" href="euroscout-manual-players.css?v=20261019-create-player-club-v1"><script src="euroscout-manual-players.js?v=20261019-create-player-club-v1"></script><script src="euroscout-command-palette.js?v=20261106-apostrophe-search"></script><script src="data/acb-verified-identities-20261008.js?v=20261008-full-player-identity-v11"></script><script src="euroscout-plk-rosters.js?v=20261106-plk-rosters"></script><script src="euroscout-league-rosters.js?v=20261111-french-rosters"></script><script src="euroscout-dragons.js?v=20261110-latin-identities"></script><link rel="stylesheet" href="euroscout-stats.css?v=20261108-hosted"><script src="euroscout-stats.js?v=20261108-hosted"></script><script src="euroscout-stats-integration.js?v=20261108-hosted"></script><script>esSetup();boot().catch(function(error){console.error('EuroScout initialization failed',error);document.getElementById('app').textContent='EuroScout could not finish loading. Please reload.';}).finally(function(){var root=document.documentElement;root.classList.remove('es-preload');root.classList.add('es-ready');setTimeout(function(){document.getElementById('esSplash')?.remove();},300);});</script>
 <script src="data/011-clients.js?v=20260907-13"></script><script src="euroscout-011.js?v=20260908-1"></script><script src="euroscout-option-search.js?v=20261108-all-leagues"></script><script src="euroscout-export.js?v=20261009-tags-stats-v14"></script><script src="euroscout-agent-identities.js?v=20261015-bbl-save-v1"></script><script src="euroscout-club-search.js?v=36"></script><script src="hub-notebook-observations.js?v=39"></script><link rel="stylesheet" href="euroscout-sessions.css?v=20261107-coverage-2"><script src="mt-shortcuts.js?v=20260920-1"></script><script src="euroscout-workspace.js?v=20260920-1"></script><script src="data/fixtures-2627.js?v=20261009-matchup-safe-v12"></script><script src="data/bbl-cup-fixtures-2026.js?v=20261105-cup-search-v1"></script><script src="euroscout-private-fixtures.js?v=20261110-latin-identities"></script><script src="euroscout-fixtures.js?v=20261108-all-leagues"></script><script src="euroscout-scouting-history.js?v=20260921-1"></script><script src="euroscout-competition-coverage.js?v=20261108-all-leagues"></script><script src="euroscout-sessions.js?v=20261108-all-leagues"></script><link rel="stylesheet" href="euroscout-live-notes.css?v=20261106-matchup-stats"><link rel="stylesheet" href="team-selection-workspace.css?v=20260930-1"><link rel="stylesheet" href="euroscout-quickstats.css?v=20261009-tags-stats-v14"><script src="data/signal-origins.js?v=20261009-participation-v2"></script><script src="euroscout-signals.js?v=20261009-auto-rookie-bio-v17"></script><script src="euroscout-quickstats.js?v=20261108-calendar-seasons"></script><script src="data/competition-assets.js?v=20261007-picker-leagues"></script><script src="team-selection-workspace-20261007d.js?v=20261106-priority"></script><script src="euroscout-live-notes.js?v=20261113-manual-availability"></script><script src="euroscout-shortcuts.js?v=20260920-1"></script><script src="euroscout-matchup-link.js?v=20260919-2"></script><script src="euroscout-player-scouting.js?v=20261106-players-performance"></script><link rel="stylesheet" href="euroscout-profile-controls.css?v=20261010-position-roles-v3"><script src="euroscout-dossier.js?v=20261011-notebook-live-v2"></script>
 <script src="euroscout-hub-player.js?v=20261021-confirmed-player-v5-release"></script>
