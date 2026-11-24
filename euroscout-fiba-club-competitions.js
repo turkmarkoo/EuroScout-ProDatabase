@@ -37,11 +37,14 @@ if(!Object.values(data.competitions).some(c=>c.checked)&&(!base.checked||String(
 // Accepted box scores can use a club's legal name rather than its sponsor.
 // Keep these verified aliases outside the refreshed statistics pack so later
 // imports resolve to the same club without adding overlapping games together.
-const fecClubAliases={
- IRA:['Iraklis BC','Gymnastikos Syllogos Agias Iraklis KAE'],
- GIR:['FIATC Girona','Club Basquet Girona','Club Bàsquet Girona','Bàsquet Girona']
+const fibaClubAliases={
+ fec:{
+  IRA:['Iraklis BC','Gymnastikos Syllogos Agias Iraklis KAE'],
+  GIR:['FIATC Girona','Club Basquet Girona','Club Bàsquet Girona','Bàsquet Girona']
+ },
+ bcl:{FCP:['FC Porto','Futebol Clube do Porto']}
 };
-for(const team of data.teams)if(team.competition==='fec'&&fecClubAliases[team.officialCode])team.aliases=[...new Set([...(team.aliases||[]),...fecClubAliases[team.officialCode]])];
+for(const team of data.teams){const aliases=fibaClubAliases[team.competition]?.[team.officialCode];if(aliases)team.aliases=[...new Set([...(team.aliases||[]),...aliases])];}
 
 const directory=window.EUROSCOUT_CLUB_DIRECTORY||(window.EUROSCOUT_CLUB_DIRECTORY=[]);
 for(const team of data.teams.filter(t=>t.key.startsWith('directory|'))){
