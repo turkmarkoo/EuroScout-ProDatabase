@@ -241,6 +241,11 @@ async function apply(raw){
  const cloud=async()=>{const head=await ESAccess.get('dragonsDataState/current');if(!head)return null;const id=ESAccess.field(head,'snapshot');if(!/^[a-f0-9]{32}$/.test(id||''))throw Error('Invalid statistics snapshot pointer.');return Object.assign(valid(JSON.parse(await ESAccess.readPayload('dragonsDataSnapshots',id))),{_sourceLabel:'cloud snapshot'});};
  try{const data=await cloud();if(data)return reader()?connectData(raw,supplement(data)):raw;}
  catch(error){problem='Dragons Data could not load. Existing EuroScout data is unchanged.';console.warn(problem,error);}
+ if(window.EUROSCOUT_ESTLAT_ROSTERS){
+  const result={...raw,leagues:(raw.leagues||[]).map(league=>({...league,players:[...(league.players||[])],teams:[...(league.teams||[])]}))};
+  window.EuroScoutLeagueRosters?.apply(result,[]);
+  return result;
+ }
  return raw;
 }
 let refreshJob=null,lastSourceCheck=0,lastSnapshot='';
