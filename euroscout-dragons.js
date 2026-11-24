@@ -1,6 +1,6 @@
 /* DragonsHub statistics. Never cache or copy this feed into scouting snapshots. */
 (function(){'use strict';
-let feed=null,problem='',links=[],registrations=new Map(),clubAliases=new Map();
+let feed=null,problem='',links=[],registrations=new Map(),clubAliases=new Map(),verifiedClubPairs=new Map();
 const clean=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const usFixtureCompetitions=new Set(['nba','gleague','ncaam']);
 const reader=()=>window.ESAccess?.internal&&!!ESAccess.user;
@@ -60,22 +60,33 @@ function directTeamMatch(source,directory){
 }
 function teamMatch(source,directory){
  const code=clean(source.team),name=clean(source.teamName);
+ for(const value of [code,name]){const key=source.league+'|'+value;if(value&&directory.feedTeams?.has(key))return directory.feedTeams.get(key);}
  const mapped=directory.feedTeams?.get(code)||directory.feedTeams?.get(name);return mapped||directTeamMatch(source,directory);
 }
 function feedTeamDirectory(data,directory){
- const mapped=new Map();
- const add=(side,officialCode,league)=>{
+ const mapped=new Map(),official=new Set();mapped.official=official;
+ const add=(side,officialCode,league,fixture)=>{
   if(!side)return;
   if(typeof side==='string')side={name:side};
   const code=side.code??side.id??side.key??side.teamId??side.team, name=side.name??side.teamName??side.clubName??side.label;
-  const hinted=officialCode&&directory.teams.filter(team=>clean(team.officialCode)===clean(officialCode));
-  const match=hinted?.length===1?hinted[0]:directTeamMatch({team:code,teamName:name,league},directory);if(!match)return;
-  for(const value of [code,name])if(clean(value))mapped.set(clean(value),match);
+  // FIBA codes are meaningful only inside their competition and official URL.
+  // AEK Athens and AEK Larnaca, for example, must never share a code match.
+  const trusted=/^https:\/\/(?:www\.)?(?:fiba\.basketball|championsleague\.basketball)\//.test(fixture?.source_url||'');
+  const fiba=trusted&&officialCode&&(window.EUROSCOUT_FIBA_CLUB_2026?.teams||[]).filter(t=>t.competition===fixture.comp&&t.officialCode===officialCode);
+  const verified=fiba?.length===1&&directory.teams.find(t=>t.dbKey===(fiba[0].currentKey||fiba[0].key));
+  const hinted=officialCode&&!['bcl','fec'].includes(fixture?.comp)&&directory.teams.filter(team=>clean(team.officialCode)===clean(officialCode));
+  const match=verified||(hinted?.length===1?hinted[0]:directTeamMatch({team:code,teamName:name,league},directory));if(!match)return;
+  for(const value of [code,name])if(clean(value)){
+   const key=league?league+'|'+clean(value):clean(value);
+   if(official.has(key)){if(verified&&mapped.get(key)?.dbKey!==match.dbKey)mapped.set(key,null);continue;}
+   if(verified||!mapped.has(key))mapped.set(key,match);
+   if(verified)official.add(key);
+  }
  };
  for(const fixture of data.fixtures||[]){
   if(usFixtureCompetitions.has(fixture.comp))continue;
   const slug=String(fixture.source_url||'').split('/').filter(Boolean).pop()||'',codes=/^\d+-([A-Za-z0-9]+)-([A-Za-z0-9]+)$/.exec(slug);
-  add(fixture.home,codes?.[1],fixture.league_id);add(fixture.away,codes?.[2],fixture.league_id);
+  add(fixture.home,codes?.[1],fixture.league_id,fixture);add(fixture.away,codes?.[2],fixture.league_id,fixture);
   for(const key of ['homeTeam','awayTeam','teamA','teamB','a','b'])add(fixture?.[key]);
   for(const side of fixture?.teams||fixture?.participants||[])add(side);
  }
@@ -182,13 +193,13 @@ function connectData(raw,data){
  window.EuroScoutPLK?.apply(result,data.plkRosters);
  window.EuroScoutLeagueRosters?.apply(result,[...(data.nordicRosters||[]),...(data.leagueRosters||[])]);
  const sourceLeagues=[...data.leagues,...(window.EuroScoutLeagueRosters?.statLeagues()||[])];
- const directory=officialDirectory(),resolved=[];links=[];registrations=new Map();clubAliases=new Map();
+ const directory=officialDirectory(),resolved=[];links=[];registrations=new Map();clubAliases=new Map();verifiedClubPairs=new Map();
  prepareDirectory(directory,result);
  directory.feedTeams=feedTeamDirectory(data,directory);
  for(const fixture of data.fixtures||[])for(const key of ['home','away','homeTeam','awayTeam','teamA','teamB','a','b']){
   if(usFixtureCompetitions.has(fixture.comp))continue;
   const side=fixture?.[key];if(!side||typeof side==='string'||side.key)continue;const code=side.code??side.id??side.key??side.teamId??side.team,name=side.name??side.teamName??side.clubName??side.label;
-  const team=directory.feedTeams.get(clean(code))||directory.feedTeams.get(clean(name));if(team?.dbKey)side.key=team.dbKey;
+  const team=teamMatch({team:code,teamName:name,league:fixture.league_id},directory);if(team?.dbKey)side.key=team.dbKey;
  }
  const ids=new Set(sourceLeagues.map(league=>league.meta.id));
  result.leagues=result.leagues.filter(league=>!ids.has(league.meta.id));
@@ -197,8 +208,8 @@ function connectData(raw,data){
   // Saved games retain provider team IDs. Resolve them to the same verified
   // destination used by manual assignments and official roster registrations.
   if(/2026\D+(?:20)?27/.test(league.meta.season))for(const team of league.teams||[]){
-   const match=directTeamMatch({team:team.code,teamName:team.name,league:league.meta.id},directory);
-   if(match?.dbKey&&team.code!=null)clubAliases.set(league.meta.id+'|'+team.code,match.dbKey);
+   const match=teamMatch({team:team.code,teamName:team.name,league:league.meta.id},directory);
+   if(match?.dbKey&&team.code!=null){const key=league.meta.id+'|'+team.code;clubAliases.set(key,match.dbKey);if(directory.feedTeams.official.has(league.meta.id+'|'+clean(team.code)))verifiedClubPairs.set(key,match.dbKey);}
   }
   for(const player of league.players||[]){
    player.league=league.meta.id;player.statsSeason=league.meta.statsSeason;player._dragonsData=true;player._verifiedExternal=true;player._sourceSeason=league.meta.season;
@@ -252,7 +263,7 @@ let refreshJob=null,lastSourceCheck=0,lastSnapshot='';
 async function refresh(){
  if(!reader()||typeof STATE==='undefined'||!STATE.data)return false;
  if(refreshJob)return refreshJob;if(Date.now()-lastSourceCheck<60000)return false;lastSourceCheck=Date.now();
- refreshJob=(async()=>{const head=await ESAccess.get('dragonsDataState/current');if(!head)return false;const id=ESAccess.field(head,'snapshot');if(!/^[a-f0-9]{32}$/.test(id||''))throw Error('Invalid statistics snapshot pointer.');const changed=await window.ESPrivateFixtures?.refresh();if(id===lastSnapshot&&!changed)return false;const data=supplement(id===lastSnapshot&&feed?feed:Object.assign(valid(JSON.parse(await ESAccess.readPayload('dragonsDataSnapshots',id))),{_sourceLabel:'cloud snapshot'}));if(!reader())return false;lastSnapshot=id;if(data.generated&&data.generated===feed?.generated&&data._privateVersion===feed?._privateVersion)return false;const rostersChanged=data.plkRosters?.checked!==feed?.plkRosters?.checked||data.nordicRosters?.map(p=>p.checked).join('|')!==feed?.nordicRosters?.map(p=>p.checked).join('|')||data.leagueRosters?.map(p=>p.checked).join('|')!==feed?.leagueRosters?.map(p=>p.checked).join('|');STATE.data=connectData(STATE.data,data);if(rostersChanged){DBTEAM_LIST=null;DBTEAM_BYKEY=null;CLUBS=null;CLUB_BY_TEAMKEY=null;DOM27=null;NEXTCOMP=null;PLAYER_BY_NAME=null;}STATE._idx=null;seasonPoolCache=null;rebuildLinks();applyOverrides();finish(STATE.data);return true;})();try{return await refreshJob;}finally{refreshJob=null;}
+ refreshJob=(async()=>{const head=await ESAccess.get('dragonsDataState/current');if(!head)return false;const id=ESAccess.field(head,'snapshot');if(!/^[a-f0-9]{32}$/.test(id||''))throw Error('Invalid statistics snapshot pointer.');const changed=await window.ESPrivateFixtures?.refresh();if(id===lastSnapshot&&!changed)return false;const data=supplement(id===lastSnapshot&&feed?feed:Object.assign(valid(JSON.parse(await ESAccess.readPayload('dragonsDataSnapshots',id))),{_sourceLabel:'cloud snapshot'}));if(!reader())return false;lastSnapshot=id;if(data.generated&&data.generated===feed?.generated&&data._privateVersion===feed?._privateVersion)return false;const rostersChanged=data.plkRosters?.checked!==feed?.plkRosters?.checked||data.nordicRosters?.map(p=>p.checked).join('|')!==feed?.nordicRosters?.map(p=>p.checked).join('|')||data.leagueRosters?.map(p=>p.checked).join('|')!==feed?.leagueRosters?.map(p=>p.checked).join('|');const previousClubPairs=JSON.stringify([...verifiedClubPairs]);STATE.data=connectData(STATE.data,data);if(rostersChanged||previousClubPairs!==JSON.stringify([...verifiedClubPairs])){DBTEAM_LIST=null;DBTEAM_BYKEY=null;CLUBS=null;CLUB_BY_TEAMKEY=null;DOM27=null;NEXTCOMP=null;PLAYER_BY_NAME=null;}STATE._idx=null;seasonPoolCache=null;rebuildLinks();applyOverrides();finish(STATE.data);return true;})();try{return await refreshJob;}finally{refreshJob=null;}
 }
 function key(player){const ids=[player.id,player.linkedEuroScoutId,...(player._grp||[]).map(p=>p.id)].filter(Boolean);return ids.map(id=>registrations.get(id)).filter(Boolean).sort((a,b)=>b.date.localeCompare(a.date))[0]?.key||null;}
 function link(unite){for(const [left,right] of links)unite(left,right);}
@@ -270,5 +281,5 @@ function finish(raw){
  for(const league of raw.leagues||[])for(const player of league.players||[])if(player.statisticsCoverage?.partial)for(const key of ['astto','ts','efg','ftr','r3a','pps','pts40','reb40','ast40','stl40','blk40','tov40'])player[key]=null;
  renderBadge();
 }
-window.EuroScoutDragons={apply,refresh,generated:()=>feed?.generated||'',link,key,clubKey:k=>clubAliases.get(k)||null,recordLinks:()=>links.filter(([source])=>source.startsWith('dragons-')),finish,connectData,resolve,fetchLocal,fixtures(){return reader()&&feed?feed.fixtures:[];},active(){return !!(reader()&&feed);}};
+window.EuroScoutDragons={apply,refresh,generated:()=>feed?.generated||'',link,key,clubKey:k=>clubAliases.get(k)||null,clubPairs:()=>[...verifiedClubPairs],recordLinks:()=>links.filter(([source])=>source.startsWith('dragons-')),finish,connectData,resolve,fetchLocal,fixtures(){return reader()&&feed?feed.fixtures:[];},active(){return !!(reader()&&feed);}};
 })();

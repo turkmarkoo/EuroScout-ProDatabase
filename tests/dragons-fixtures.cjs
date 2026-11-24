@@ -89,6 +89,6 @@ assert.equal(fixtures.between('ncaam|DUKE', 'ncaam|UNC').length, 2, 'distinct pr
 assert.equal(fixtures.all().find(g => g.id === 'ncaam-fixture-5').away.key, '', 'do not guess an out-of-catalogue opponent');
 const html = fs.readFileSync('index.html', 'utf8');
 assert.match(html, /data\/fixtures-2627\.js\?v=20261009-matchup-safe-v12/);
-assert.match(html, /euroscout-fixtures\.js\?v=20261108-all-leagues/);
+assert.match(html, /euroscout-fixtures\.js\?v=20261124-fiba-identities/);
 assert.match(html, /euroscout-sessions\.js\?v=20261108-all-leagues/);
 console.log('DragonsData FIBA Europe Cup fixtures resolve to canonical club IDs.');

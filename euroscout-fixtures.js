@@ -60,7 +60,7 @@ function fromFile(){
 // Official FIBA game URLs supply competition-scoped team codes. Resolve those
 // before a feed's company name or old competition alias.
 function officialFixtureKey(g,side){
- const source=String(g.source_url||'');if(!/^https:\/\/(?:www\.)?fiba\.basketball\//.test(source))return '';
+ const source=String(g.source_url||'');if(!/^https:\/\/(?:www\.)?(?:fiba\.basketball|championsleague\.basketball)\//.test(source))return '';
  const codes=source.split('/').filter(Boolean).at(-1)?.match(/^\d+-([A-Za-z0-9]+)-([A-Za-z0-9]+)$/);if(!codes)return '';
  const code=codes[side==='home'?1:2],teams=window.EUROSCOUT_FIBA_CLUB_2026?.teams||[];
  const matches=teams.filter(t=>t.competition===g.comp&&String(t.officialCode||t.code)===code).map(t=>canonKey(t.currentKey||t.key));
