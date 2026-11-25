@@ -37,3 +37,5 @@ assert.match(api.matchupHTML(official,clubs[0],'2026/27'),/>TO<\/span><b>—/);
 c.personLines=()=>[formerClub,olderSeason];
 assert.match(api.matchupHTML(official,clubs[0],'2026/27'),/No 2026\/27 stats for this team/);
 console.log('PASS matchup scope, shooting totals and percentages, and real zero vs unavailable.');
+c.personLines=()=>[{...activeLine,league:'bclq'}];
+assert.match(api.matchupHTML(official,clubs[0],'2026/27',{id:'fec',name:'FIBA Europe Cup'}),/No 2026\/27 stats for this team in FIBA Europe Cup/,'Never substitute another competition when the requested sample is absent');

@@ -29,7 +29,7 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
   {meta:{id:'dragons-lnb-26',name:'Betclic Elite',season:'2026/27',privateOwnerFeed:true},players:[{id:'dragons-lnb-grasshoff',name:'Bastien Grasshoff',team:'dd-lem',teamName:'Le Mans',g:2,ppg:6,gameLog:[]}]}
  ]};
  const access={internal:true,user:{email:'markoturk.scouting@gmail.com'}},events=[];
- const context={window:{ESAccess:access,EUROSCOUT_EUROCUP_ROSTERS:directory,EUROSCOUT_FIBA_CLUB_2026:{teams:[{id:'szolnok',key:'hun|NHS',code:'NHS',officialCode:'OLAJ',name:'NHSZ-Szolnoki Olajbanyasz',aliases:[]},{id:'zastal',key:'plk|OZZ',code:'OZZ',officialCode:'ZIE',name:'Zastal Zielona Gora',aliases:[]}],roster:[]},dispatchEvent:event=>events.push(event.type)},ESAccess:access,structuredClone,console,Event:class Event{constructor(type){this.type=type;}}};vm.runInNewContext(code,context);
+ const context={window:{ESAccess:access,EUROSCOUT_EUROCUP_ROSTERS:directory,EUROSCOUT_FIBA_CLUB_2026:{teams:[{id:'szolnok',competition:'fec',key:'hun|NHS',code:'NHS',officialCode:'OLAJ',name:'NHSZ-Szolnoki Olajbanyasz',aliases:[]},{id:'zastal',competition:'fec',key:'plk|OZZ',code:'OZZ',officialCode:'ZIE',name:'Zastal Zielona Gora',aliases:[]}],roster:[]},dispatchEvent:event=>events.push(event.type)},ESAccess:access,structuredClone,console,Event:class Event{constructor(type){this.type=type;}}};vm.runInNewContext(code,context);
  const connected=context.window.EuroScoutDragons.connectData({leagues:[{meta:{id:'lnb'},players:[{id:'lnb-9352',name:'Bastien Grasshoff',league:'lnb'}]}]},live);
  const statLines=connected.leagues.filter(league=>league.meta.privateOwnerFeed).flatMap(league=>league.players);
  assert.equal(statLines.length,2);
@@ -52,7 +52,7 @@ function setup(email='markoturk.scouting@gmail.com',internal=true){let calls=0;c
  const polishStats=context.window.EuroScoutDragons.connectData(polishBase,polishFeed).leagues.at(-1).players;
  assert.equal(polishStats[0].linkedEuroScoutId,'sweden-alex');
  assert.equal(polishStats[1].linkedEuroScoutId,null,'Unverified PLK IDs must never be linked by name alone');
- assert.match(html,/euroscout-dragons\.js\?v=20261110-latin-identities/);
+ assert.match(html,/euroscout-dragons\.js\?v=20261125-person-competition-stats/);
  assert.doesNotMatch(code,/Promise\.race\(\[localPromise/);
  assert.doesNotMatch(code,/data-dd-check|Check latest/);
  assert.match(code,/Update stats ↗/);

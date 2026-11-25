@@ -6,7 +6,7 @@
 'use strict';
 const TABS=[['overview','Overview'],['offense','Offense'],['defense','Defense'],['shooting','Shooting'],['playmaking','Playmaking'],['rebounding','Rebounding'],['advanced','Advanced'],['log','Game log']];
 const LOWER_IS_BETTER=new Set(['topg','tov40','tovp']);
-let tab='overview',current=null,line=null,seasonChoice='',loading=false,loadError='',loadToken=0;
+let tab='overview',current=null,line=null,seasonChoice='',requestedScope=null,loading=false,loadError='',loadToken=0;
 const percentilePools=new Map();
 const n=(v,d)=>v==null||v===''||Number.isNaN(Number(v))?'—':Number(v).toFixed(d==null?1:d);
 const pc=v=>v==null||v===''?'—':n(v,1)+'%';
@@ -66,6 +66,7 @@ const PAGES={
 
 function linesOf(p){const rows=typeof personLines==='function'?personLines(p):allPlayersEvery().filter(x=>gid(x)===gid(p));return rows.filter(x=>x.league!=='sl').sort((a,b)=>(b.min||0)-(a.min||0));}
 function competitionOf(p){
+ if(p._requestedCompetition)return p._requestedCompetition;
  const meta=leagueOf(p)?.meta||{id:p.league,name:p.league},provider=String(p.league||'').match(/^dragons-([^-]+)-/i)?.[1];
  const id=({ec:'eurocup',el:'euroleague',ita:'lba',otp:'slo',gre:'gbl',pol:'plk',fra:'lnb',swe:'sbl'})[provider]||provider||meta.id;
  return window.ESTeamSelection?.competitionIdentity?.({...meta,id})||{id,name:String(meta.name||id).replace(/20\d{2}\s*[/-]\s*(?:20)?\d{2}/g,'').trim()};
@@ -115,7 +116,7 @@ function matchupLine(p,club,season,competition){
   const identity=competitionOf(row);
   return (target.id&&identity.id===target.id)||(target.name&&teamName(identity.name)===teamName(target.name));
  }):[];
- return (matched.length?matched:rows).sort((a,b)=>Number(b.g)-Number(a.g)||Number(!!b._dragonsData)-Number(!!a._dragonsData))[0];
+ return (target?matched:rows).sort((a,b)=>Number(b.g)-Number(a.g)||Number(!!b._dragonsData)-Number(!!a._dragonsData))[0];
 }
 function shotPair(value){
  const match=String(value??'').match(/^\s*(\d+)\s*[-–/]\s*(\d+)\s*$/);
@@ -137,20 +138,28 @@ function matchupHTML(p,club,season,competition){
  const stat=(label,value,key)=>{const count=row?.statisticsCoverage?.metricGames?.[key],note=count!=null&&count!==row.g?' title="'+count+' source games cover this statistic; '+row.g+' appearances recorded"':'';return '<div class="mx-stat"'+note+'><span>'+label+'</span><b>'+n(value)+(note?'†':'')+'</b></div>';};
  const group=(label,values)=>'<div class="mx-stat-group" role="group" aria-label="'+label+'"><strong>'+label+'</strong>'+values.join('')+'</div>';
  const coverage=row&&leagueOf(row)?.meta?.sourceCoverage;
- const scope=row?[competitionOf(row).name,season,row.g+' GP',n(row.mpg)+' MPG',row.multiTeam?'Multiple teams':'','Per game',coverage?.partial?'Partial statistics: '+coverage.acceptedGames+'/'+coverage.knownCompletedGames+' games':'',row.statisticsCoverage?.partial?'† Source coverage differs by statistic':''].filter(Boolean).join(' · '):'No '+season+' stats for this team';
+ const scope=row?[competitionOf(row).name,season,row.g+' GP',n(row.mpg)+' MPG',row.multiTeam?'Multiple teams':'','Per game',coverage?.partial?'Partial statistics: '+coverage.acceptedGames+'/'+coverage.knownCompletedGames+' games':'',row.statisticsCoverage?.partial?'† Source coverage differs by statistic':''].filter(Boolean).join(' · '):'No '+season+' stats for this team'+(competition?.name?' in '+competition.name:' in the selected competition');
  return '<section class="mx-stats" aria-label="Season stats"><div class="mx-stats-scope">'+esc(scope)+'</div><div class="mx-stat-groups">'+
   group('Offense',[stat('PTS',row?.ppg,'ppg'),stat('AST',row?.apg,'apg'),stat('TO',row?.topg,'topg'),shotStat('2P',row?.f2p,two),shotStat('3P',row?.f3p,three),shotStat('FT',row?.ftp,shotPair(row?.ftma))])+
   group('Defense',[stat('STL',row?.spg,'spg'),stat('BLK',row?.bpg,'bpg'),stat('DREB',row?.drpg,'drpg')])+'</div></section>';
 }
 function paint(){
  const host=document.getElementById('qsPanel');if(!host||!current)return;
- const all=linesOf(current),seasons=[...new Set(all.map(seasonOf))].sort((a,b)=>(parseInt(b,10)||0)-(parseInt(a,10)||0)||b.localeCompare(a));
+ const all=linesOf(current),seasons=[...new Set([...all.map(seasonOf),...(requestedScope?[requestedScope.season]:[])])].sort((a,b)=>(parseInt(b,10)||0)-(parseInt(a,10)||0)||b.localeCompare(a));
  if(!seasonChoice||!seasons.includes(seasonChoice))seasonChoice=seasons[0]||'Season unknown';
  const seasonLines=all.filter(x=>seasonOf(x)===seasonChoice),playedLines=seasonLines.filter(x=>Number(x.g)>0);
  // Current-roster profiles carry identity and photos but no box score. Once a
  // DragonsData line exists, keep that empty roster shell out of the selector.
  const shown=distinctLines(playedLines.length?playedLines:seasonLines);
- if(!line||!shown.includes(line))line=shown.find(x=>competitionOf(x).id===competitionOf(line||current).id)||shown[0]||current;
+ if(requestedScope&&seasonChoice===requestedScope.season&&!matchupLine(current,requestedScope.club,seasonChoice,requestedScope.competition)){
+  const competition=window.ESTeamSelection?.competitionIdentity?.(requestedScope.competition)||requestedScope.competition;
+  shown.unshift({id:'qs-unavailable',league:competition.id,season:seasonChoice,teamName:requestedScope.club.name,g:null,_requestedCompetition:competition});
+ }
+ const preferred=line?competitionOf(line):requestedScope&&seasonChoice===requestedScope.season?(window.ESTeamSelection?.competitionIdentity?.(requestedScope.competition)||requestedScope.competition):competitionOf(current);
+ if(!line||!shown.includes(line)){
+  const scoped=requestedScope&&seasonChoice===requestedScope.season;
+  line=shown.find(x=>competitionOf(x).id===preferred.id&&(!scoped||x._requestedCompetition||canonKey(clubOf(x)?.key||'')===canonKey(requestedScope.club.key)))||shown[0]||current;
+ }
  const L=leagueOf(line);
  host.innerHTML='<header class="qs-head"><div><h2>'+esc(current.name)+'</h2><div class="qs-filters"><label>Season<select id="qsSeason" aria-label="Statistics season">'+seasons.map(s=>'<option'+(s===seasonChoice?' selected':'')+'>'+esc(s)+'</option>').join('')+'</select></label><label>Competition'+(shown.length>1?'<select id="qsLine" aria-label="Competition">'+shown.map((x,i)=>'<option value="'+i+'"'+(x===line?' selected':'')+'>'+esc(competitionOf(x).name+' · '+clubNameOf(x)+' · '+(x.g||0)+' g')+'</option>').join('')+'</select>':'<span class="qs-single">'+esc(competitionOf(line).name+' · '+clubNameOf(line))+'</span>')+'</label></div></div>'+
   '<a class="btn ghost sm" href="'+escAttr(eurobasketURL(current))+'" target="_blank" rel="noopener">Eurobasket ↗</a><button type="button" class="qs-x" id="qsClose" aria-label="Close stats">✕</button></header>'+
@@ -165,12 +174,12 @@ function refreshOfficialStats(p){
  EuroScoutKzsPro.loadStats(p).then(()=>{if(token!==loadToken)return;loading=false;line=null;percentilePools.clear();paint();}).catch(error=>{if(token!==loadToken)return;loading=false;loadError='Official KZS statistics could not be loaded. Please try again.';console.warn(loadError,error);paint();});
 }
 function open(p,matchup){
- if(!p)return;loadToken++;current=player(p.id)||p;line=matchup?.club?matchupLine(p,matchup.club,'2026/27',matchup.competition):null;seasonChoice='';loading=false;loadError='';percentilePools.clear();
+ if(!p)return;loadToken++;current=player(p.id)||p;requestedScope=matchup?.club&&matchup?.competition?{club:matchup.club,competition:matchup.competition,season:matchup.season||'2026/27'}:null;line=matchup?.club?matchupLine(p,matchup.club,requestedScope?.season||'2026/27',matchup.competition):null;seasonChoice=requestedScope?.season||'';loading=false;loadError='';percentilePools.clear();
  let mask=document.getElementById('qsMask');
  if(!mask){mask=document.createElement('div');mask.id='qsMask';mask.className='qs-mask';mask.innerHTML='<aside id="qsPanel" class="qs-panel" role="dialog" aria-modal="true" aria-label="Quick stats"></aside>';mask.addEventListener('mousedown',e=>{if(e.target===mask)close();});document.body.appendChild(mask);requestAnimationFrame(()=>mask.classList.add('open'));}
  paint();refreshOfficialStats(current);
 }
-function close(){const m=document.getElementById('qsMask');if(m)m.remove();current=null;loading=false;loadError='';loadToken++;}
+function close(){const m=document.getElementById('qsMask');if(m)m.remove();current=null;requestedScope=null;loading=false;loadError='';loadToken++;}
 const isOpen=()=>!!document.getElementById('qsMask');
 document.addEventListener('keydown',e=>{if(!isOpen()||document.getElementById('mtscMask'))return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return;}if(/^[1-8]$/.test(e.key)&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();tab=TABS[+e.key-1][0];paint();}},true);
 window.ESQuickStats={open,close,isOpen,seasonOf,distinctLines,competitionOf,clubNameOf,matchupHTML,follow(p){if(isOpen()&&p){loadToken++;current=player(p.id)||p;line=null;seasonChoice='';loading=false;loadError='';percentilePools.clear();paint();refreshOfficialStats(current);}}};

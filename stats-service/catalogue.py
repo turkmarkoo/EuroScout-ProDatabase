@@ -77,6 +77,9 @@ def build(con,sources,countries):
                 canonical=p.get('_canonicalPersonId') or p.get('linkedEuroScoutId') or p['id']
                 person=source.get('canonicalStatsIds',{}).get(py+'|'+comp+'|'+str(canonical),canonical)
                 key=py+'|'+comp+'|'+str(person)
+                # Keep the existing current-club ID while exposing former club
+                # samples separately. Their games must not inflate current stats.
+                if p.get('clubStintHistorical'):key+='|club:'+team_id
                 metrics={k:numeric(p.get(k)) for k in METRICS}
                 for field,src in TOTALS.items():
                     exact=numeric(p.get('dragonsTotals',{}).get(src))

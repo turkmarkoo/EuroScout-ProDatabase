@@ -13,6 +13,15 @@ class QueryTests(unittest.TestCase):
     def test_season_and_cross_competition(self):
         rows=self.q(q='One Player',qualified=0)['rows'];self.assertEqual(len(rows),2);self.assertEqual({r['metrics']['ppg'] for r in rows},{11,20});self.assertEqual(self.q(season='2025/26')['rows'][0]['metrics']['ppg'],99)
     def test_same_names_are_separate(self):self.assertEqual(self.q(q='Marcus Foster')['total'],2)
+    def test_former_club_sample_does_not_overwrite_current_club(self):
+        def line(id,team,g,ppg,old=False):return {'id':id,'name':'Transferred Player','team':team,'teamName':team,'g':g,'ppg':ppg,'_canonicalPersonId':'person','clubStintHistorical':old}
+        def source(rows):return {'leagues':[{'meta':{'id':'bcl','name':'BCL','season':'2026/27'},'teams':[],'players':rows}]}
+        current=line('current','New',1,6);former=line('former','Old',2,15,True)
+        build(self.c,[source([current])],[]);old_id=self.q(qualified=0)['rows'][0]['id']
+        for rows in [[current,former],[former,current]]:
+            build(self.c,[source(rows)],[]);result=self.q(qualified=0)['rows'];self.assertEqual(len(result),2)
+            latest=next(r for r in result if r['team']=='New');self.assertEqual(latest['id'],old_id)
+            self.assertEqual(latest['metrics']['ppg'],6);self.assertEqual(self.q(qualified=0,teams=['bcl|Old'])['rows'][0]['metrics']['ppg'],15)
     def test_verified_native_canonical_id_precedes_older_link_alias(self):
         source={'leagues':[{'meta':{'id':'bclq','name':'Qualifiers','season':'2026/27'},'teams':[],'players':[{'id':'native','name':'Player','team':'A','born':2001,'g':2,'ppg':10,'_canonicalPersonId':'verified-person'},{'id':'provider','linkedEuroScoutId':'native','name':'Player','team':'A','born':2001,'g':2,'ppg':12,'_canonicalPersonId':'verified-person'}]}]}
         build(self.c,[source],[]);rows=self.q(qualified=0)['rows'];self.assertEqual(len(rows),1);self.assertEqual(rows[0]['personId'],'verified-person');self.assertEqual(rows[0]['metrics']['ppg'],12)

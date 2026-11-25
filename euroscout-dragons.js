@@ -102,6 +102,10 @@ function abbreviationMatches(shortName,fullName){
 function nameKeys(value){const parts=nameTokens(value);if(parts.length<2)return[];return [...new Set([parts[0][0]+'|'+parts.slice(1).join(' '),parts[0][0]+'|'+parts.at(-1)])];}
 function prepareDirectory(directory,raw){
  directory.byId=new Map(allPlayers(raw).filter(p=>!p._dragonsData).map(p=>[p.id,p]));directory.teamCache=new Map();
+ directory.fibaPlayers=new Map();
+ const addFiba=(id,item)=>{id=String(id??'');if(!/^\d+$/.test(id))return;if(!directory.fibaPlayers.has(id))directory.fibaPlayers.set(id,[]);directory.fibaPlayers.get(id).push(item);};
+ for(const item of directory.players)addFiba(item.row?.fibaId,item);
+ for(const player of directory.byId.values())addFiba(player.fibaId??player._officialFIBA?.personId,{ids:[player.id],row:player});
  directory.plkPlayers=new Map((window.EuroScoutPLK?.directory()?.roster||[]).map(row=>[String(row.id),row]));
  for(const league of raw.leagues||[]){if(league.meta?.privateOwnerFeed||league.meta?.exhibition)continue;for(const team of league.teams||[]){
   const existing=directory.teams.find(t=>t.dbKey===league.meta.id+'|'+team.code);if(existing)continue;
@@ -126,6 +130,28 @@ function verifiedProfile(source,directory){
 }
 function resolve(source,directory,raw){
  if(!directory.nameIndex)prepareDirectory(directory,raw);
+ // Provider person IDs survive initials, nicknames and suffixes. They identify
+ // the person only: each statistics line keeps its own source club and season.
+ if(/^dragons-(bcl|bclq|fec)-/.test(source.league||'')&&/^\d+$/.test(String(source.fibaPlayerId||''))){
+  const candidates=directory.fibaPlayers.get(String(source.fibaPlayerId))||[];
+  if(candidates.length){
+   const years=new Set(candidates.map(c=>Number(c.row?.born||String(c.row?.dob||'').slice(0,4))).filter(Boolean));
+   const born=Number(source.born||source.birthYear||0);
+   if(years.size>1||born&&years.size&&!years.has(born))return null;
+   const ids=[...new Set(candidates.flatMap(c=>c.ids||[]))],id=ids.find(id=>directory.byId.has(id));
+   if(!id)return null;
+   const player=directory.byId.get(id),row=candidates.find(c=>c.ids?.includes(id))?.row||player;
+   return {id,ids,player,row:{...row,birthDate:row.birthDate||row.dob},team:teamMatch(source,directory),officialId:'fiba:'+source.fibaPlayerId,source:row.profile||row.source};
+  }
+ }
+ if(/^dragons-acb-/.test(source.league||'')&&/^\d+$/.test(String(source.acbPlayerId||''))){
+  const player=directory.byId.get('acb-'+source.acbPlayerId),born=Number(source.born||source.birthYear||0);
+  if(player){
+   if(born&&player.born&&born!==Number(player.born))return null;
+   const official=directory.players.find(item=>item.ids.includes(player.id)),row=official?.row;
+   return{id:player.id,ids:official?.ids||[player.id],player,row,team:teamMatch(source,directory),officialId:'acb:'+source.acbPlayerId,source:row?.profile||'https://acb.com/es/liga/jugadores/'+source.acbPlayerId};
+  }
+ }
  if(/^dragons-aba-/.test(source.league||'')&&/^\d+$/.test(String(source.abaPlayerId||''))){
   const id='aba-'+source.abaPlayerId,base=directory.byId.get(id);
   if(base){
@@ -176,6 +202,7 @@ function resolve(source,directory,raw){
  // A lone initial is never sufficient when several full identities fit.
  if(candidates.length!==1)return null;const item=candidates[0];if(nameTokens(source.name)[0]?.length===1&&!team&&!item.born)return null;
  const rows=item.rows.filter(Boolean),height=Number(source.height||0);if(height&&rows.some(row=>row.height&&Math.abs(Number(row.height)-height)>5))return null;
+ if(source.fibaPlayerId&&rows.some(row=>row.fibaId&&String(row.fibaId)!==String(source.fibaPlayerId)))return null;
  const row={};for(const field of ['name','born','birthDate','height','weight','age','country','nationality','img','role','position','pos']){const value=rows.map(r=>r[field]).find(v=>v!=null&&v!==''&&v!=='Unknown');if(value!=null)row[field]=value;}
  row.name=item.name;const id=item.ids.find(id=>byId.has(id))||item.ids[0];return id?{id,ids:item.ids,player:byId.get(id),row,team}:null;
 }
@@ -238,6 +265,18 @@ function connectData(raw,data){
    league.players=league.players.filter(p=>p.linkedEuroScoutId);
    league.meta.playerCount=league.players.length;
    league.meta.qualifiedCount=league.players.length;
+  }
+  // The collector explicitly splits a verified database person into club
+  // stints. Preserve that person's links even when no native profile exists.
+  const stints=new Map();
+  for(const p of league.players||[])if(p.clubStint&&Number.isInteger(p.dragonsPlayerId)){
+   if(!stints.has(p.dragonsPlayerId))stints.set(p.dragonsPlayerId,[]);stints.get(p.dragonsPlayerId).push(p);
+  }
+  for(const rows of stints.values()){
+   if(new Set(rows.map(p=>p.born).filter(Boolean)).size>1)continue;
+   const fields=['fibaPlayerId','acbPlayerId','nbaPlayerId','espnAthleteId','rosterPlayerId'];
+   if(fields.some(field=>new Set(rows.map(p=>p[field]).filter(Boolean)).size>1))continue;
+   const latest=rows.find(p=>!p.clubStintHistorical);if(latest)for(const row of rows)if(row!==latest)links.push([row.id,latest.id]);
   }
   result.leagues.push(league);
  }
