@@ -3,6 +3,7 @@
 (function(root){'use strict';
 // Verified identities for records previously cross-linked by imported aliases.
 const distinctPeople=[
+ {key:'robert-lee-bonham-2002',linkAliases:true,ids:['cze-9','cze-official-138828','fiba-bcl-398976','fiba-stat-bcl-398976','dragons-bcl-123-player-3309','dragons-cze-5-player-15337-team-41'],birthDate:'2002-04-14',source:'https://www.nbl.basketball/hrac/138828'},
  {key:'marcus-foster-2002',ids:['bbl-2004437','bbl-2001733','enbl-97','fiba-bcl-400006','fiba-stat-bcl-400006','dragons-bbl-329-player-1116'],birthDate:'2002-01-06',height:196,source:'https://www.telekom-baskets-bonn.de/presse/newsarchiv/mehr-als-ein-ersatz-marcus-foster-bleibt-in-bonn'},
  {key:'marcus-foster-1995',ids:['eurocup-010386','jbl-31','dragons-ec-97-player-1116','dragons-gre-335-player-4504'],birthDate:'1995-06-03',height:191,source:'https://www.paokbc.gr/en/news/team/3564-marcus-foster-joins-paok-on-a-two-year-deal'},
  {key:'stefan-todorovic-2002',ids:['aba-5708','slo-kzs-108676','gl-445','dragons-aba-1-player-5381','dragons-otp-331-player-1470'],name:'Stefan Todorovi\u0107',birthDate:'2002-12-04',source:'https://www.aba-liga.com/player/5708/26/1/stefan-todorovic/'},
@@ -11,6 +12,9 @@ const distinctPeople=[
 const distinctIds=new Map(distinctPeople.flatMap(p=>p.ids.map(id=>[id,p])));
 function personKey(value){return distinctIds.get(typeof value==='string'?value:value?.id)?.key||value?._identityPersonKey||'';}
 function separated(a,b){const A=personKey(a),B=personKey(b);return !!(A&&B&&A!==B);}
+// Reviewed provider IDs join the domestic/full-name and BCL/nickname records.
+// Never infer an alias from a matching surname. Keep every record ID for notes.
+function link(uni){for(const person of distinctPeople.filter(p=>p.linkAliases))for(const id of person.ids.slice(1))uni(person.ids[0],id);}
 function correctDistinct(raw){for(const L of raw?.leagues||[])for(const p of L.players||[]){const known=distinctIds.get(p.id);if(!known)continue;p.born=Number(known.birthDate.slice(0,4));p.birthDate=known.birthDate;p.dob=known.birthDate;p._identityPersonKey=known.key;p._identityBioSource=known.source;p._strictIdentity=true;
  if(known.name)p.name=known.name;
  const official=known.key==='marcus-foster-2002'?root.EUROSCOUT_BBL_ROSTERS?.roster?.find(r=>r.id==='2004437'):null;if(official?.img)p.img=official.img;
@@ -92,5 +96,5 @@ function reviewReport(player, report){
  }
  return reviewed;
 }
-root.EuroScoutIdentityBio={apply,people,resolve,verified,personKey,separated,correctDistinct,displayName,reviewReport};
+root.EuroScoutIdentityBio={apply,people,resolve,verified,personKey,separated,correctDistinct,displayName,reviewReport,link};
 })(window);
