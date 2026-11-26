@@ -8,13 +8,26 @@ const distinctPeople=[
  {key:'marcus-foster-1995',ids:['eurocup-010386','jbl-31','dragons-ec-97-player-1116','dragons-gre-335-player-4504'],birthDate:'1995-06-03',height:191,source:'https://www.paokbc.gr/en/news/team/3564-marcus-foster-joins-paok-on-a-two-year-deal'},
  {key:'stefan-todorovic-2002',ids:['aba-5708','slo-kzs-108676','gl-445','dragons-aba-1-player-5381','dragons-otp-331-player-1470'],name:'Stefan Todorovi\u0107',birthDate:'2002-12-04',source:'https://www.aba-liga.com/player/5708/26/1/stefan-todorovic/'},
  {key:'stefan-filipovic-1998',ids:['hun-A69342','hun-official-A69342','dragons-hun-9-player-174'],birthDate:'1998-02-05',source:'https://www.fiba.basketball/en/players/236098-stefan-filipovic'}
-];
+,...(root.EUROSCOUT_FIBA_ROSTER_UPDATES?.reviewedIdentities||[])];
 const distinctIds=new Map(distinctPeople.flatMap(p=>p.ids.map(id=>[id,p])));
-function personKey(value){return distinctIds.get(typeof value==='string'?value:value?.id)?.key||value?._identityPersonKey||'';}
+const fibaId=value=>String(typeof value==='string'?value.match(/^(?:fiba-(?:stat-)?(?:bcl|fec)|bclq(?:-stat)?)-(\d+)$/)?.[1]||'':value?.fibaId||value?.fibaPlayerId||value?._officialFIBA?.personId||fibaId(value?.id||''));
+const distinctFiba=new Map(distinctPeople.flatMap(p=>p.ids.map(fibaId).filter(Boolean).map(id=>[id,p])));
+function personKey(value){const fid=fibaId(value);return distinctIds.get(typeof value==='string'?value:value?.id)?.key||distinctFiba.get(fid)?.key||value?._identityPersonKey||(fid?'fiba-person-'+fid:'');}
 function separated(a,b){const A=personKey(a),B=personKey(b);return !!(A&&B&&A!==B);}
 // Reviewed provider IDs join the domestic/full-name and BCL/nickname records.
 // Never infer an alias from a matching surname. Keep every record ID for notes.
-function link(uni){for(const person of distinctPeople.filter(p=>p.linkAliases))for(const id of person.ids.slice(1))uni(person.ids[0],id);}
+function link(uni,raw){
+ for(const person of distinctPeople.filter(p=>p.linkAliases))for(const id of person.ids.slice(1))uni(person.ids[0],id);
+ const rows=(raw?.leagues||[]).flatMap(l=>l.players||[]),byFiba=new Map(),byBio=new Map();
+ const name=s=>String(s||'').replace(/[\u0110\u0111]/g,'d').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+(jr|sr|ii|iii|iv)$/,'');
+ const birth=p=>/^\d{4}-\d{2}-\d{2}$/.test(p.birthDate||p.dob||'')?p.birthDate||p.dob:'';
+ for(const p of rows){const fid=fibaId(p);if(fid){if(!byFiba.has(fid))byFiba.set(fid,[]);byFiba.get(fid).push(p);}const date=birth(p);if(date){const key=name(p.name)+'|'+date;if(!byBio.has(key))byBio.set(key,[]);byBio.get(key).push(p);}}
+ for(const group of byFiba.values()){
+  if(new Set(group.map(p=>p.born).filter(Boolean)).size>1||new Set(group.map(birth).filter(Boolean)).size>1)continue;
+  for(const p of group.slice(1))uni(group[0].id,p.id);
+  for(const official of group){const date=birth(official);if(!date)continue;for(const other of byBio.get(name(official.name)+'|'+date)||[]){if(other.height&&official.height&&Math.abs(other.height-official.height)>7)continue;uni(official.id,other.id);}}
+ }
+}
 function correctDistinct(raw){for(const L of raw?.leagues||[])for(const p of L.players||[]){const known=distinctIds.get(p.id);if(!known)continue;p.born=Number(known.birthDate.slice(0,4));p.birthDate=known.birthDate;p.dob=known.birthDate;p._identityPersonKey=known.key;p._identityBioSource=known.source;p._strictIdentity=true;
  if(known.name)p.name=known.name;
  const official=known.key==='marcus-foster-2002'?root.EUROSCOUT_BBL_ROSTERS?.roster?.find(r=>r.id==='2004437'):null;if(official?.img)p.img=official.img;

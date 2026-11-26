@@ -1,7 +1,7 @@
 /* DragonsHub statistics. Never cache or copy this feed into scouting snapshots. */
 (function(){'use strict';
 let feed=null,problem='',links=[],registrations=new Map(),clubAliases=new Map(),verifiedClubPairs=new Map();
-const clean=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const clean=value=>String(value||'').replace(/[\u0110\u0111]/g,'d').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const usFixtureCompetitions=new Set(['nba','gleague','ncaam']);
 const reader=()=>window.ESAccess?.internal&&!!ESAccess.user;
 const allPlayers=raw=>(raw.leagues||[]).flatMap(league=>league.players||[]);
@@ -143,6 +143,12 @@ function resolve(source,directory,raw){
    const player=directory.byId.get(id),row=candidates.find(c=>c.ids?.includes(id))?.row||player;
    return {id,ids,player,row:{...row,birthDate:row.birthDate||row.dob},team:teamMatch(source,directory),officialId:'fiba:'+source.fibaPlayerId,source:row.profile||row.source};
   }
+  // New signings can play before the bundled registration list is refreshed.
+  // Keep their accepted appearance under its own stable source ID instead of
+  // guessing a same-name catalogue person or dropping them from Matchup.
+  const team=teamMatch(source,directory),verifiedTeam=directory.feedTeams?.official?.has(source.league+'|'+clean(source.team));
+  if(team&&verifiedTeam)return{id:source.id,ids:[source.id],row:{},team,officialId:'fiba:'+source.fibaPlayerId,source:'Accepted official game appearance'};
+  return null;
  }
  if(/^dragons-acb-/.test(source.league||'')&&/^\d+$/.test(String(source.acbPlayerId||''))){
   const player=directory.byId.get('acb-'+source.acbPlayerId),born=Number(source.born||source.birthYear||0);
@@ -279,6 +285,21 @@ function connectData(raw,data){
    const latest=rows.find(p=>!p.clubStintHistorical);if(latest)for(const row of rows)if(row!==latest)links.push([row.id,latest.id]);
   }
   result.leagues.push(league);
+ }
+ // A collector person can have a domestic line and a FIBA line even when the
+ // domestic roster omits DOB. Require the same verified club, compatible full
+ // name and bio, plus one unambiguous FIBA ID; a reused provider ID alone is not
+ // sufficient (the two Marcus Fosters are a known counterexample).
+ const fibaTeams=window.EUROSCOUT_FIBA_CLUB_2026?.teams||[],clubIdentity=key=>fibaTeams.find(t=>[t.currentKey,t.key,t.canonicalKey].includes(key))?.key||key;
+ const personFeeds=new Map();for(const p of allPlayers(result))if(p._dragonsData&&Number.isInteger(p.dragonsPlayerId)){if(!personFeeds.has(p.dragonsPlayerId))personFeeds.set(p.dragonsPlayerId,[]);personFeeds.get(p.dragonsPlayerId).push(p);}
+ for(const group of personFeeds.values()){
+  const official=group.filter(p=>p.fibaPlayerId&&p.linkedEuroScoutId),fids=new Set(official.map(p=>String(p.fibaPlayerId)));if(fids.size!==1)continue;
+  for(const source of official)for(const other of group){
+   if(source===other||!source._sourceTeamKey||clubIdentity(source._sourceTeamKey)!==clubIdentity(other._sourceTeamKey))continue;
+   if(nameTokens(source.name).join(' ')!==nameTokens(other.name).join(' ')||window.EuroScoutIdentityBio?.separated(source,other))continue;
+   if(source.born&&other.born&&Number(source.born)!==Number(other.born)||source.birthDate&&other.birthDate&&source.birthDate!==other.birthDate||source.height&&other.height&&Math.abs(source.height-other.height)>7)continue;
+   links.push([source.id,other.id]);
+  }
  }
  feed=data;feed.resolvedPlayers=resolved.length;feed.unresolvedPlayers=sourceLeagues.reduce((n,league)=>n+(league.players||[]).length,0)-resolved.length;
  window.dispatchEvent?.(new Event('euroscout-dragons'));

@@ -66,7 +66,7 @@ function rosterBirth(p){return String(p?.born||p?.birthYear||String(p?.birthdate
 function rosterNumber(p){const n=p?.jersey??p?.number??officialRosterRow(p)?.number;return n==null?'':String(n).trim();}
 function rosterIdentityIds(p){const row=officialRosterRow(p),raw=[p?.id,gid(p),...(p?._grp||[]).map(x=>x.id),...(row?.ids||[])].filter(Boolean),ids=new Set(raw);for(const id of raw){const match=String(id).match(/^(?:fiba-(?:fec|bcl)|bclq(?:-stat)?)-(\d+)$/);if(match)ids.add('fiba-person:'+match[1]);}return ids;}
 function compatibleRosterName(a,b){const at=rosterNameTokens(a),bt=rosterNameTokens(b);if(at.length<2||bt.length<2)return false;if(at.join(' ')===bt.join(' '))return true;if(at[0]!==bt[0]||at.at(-1)!==bt.at(-1))return false;const subset=(short,long)=>{let i=0;for(const token of long)if(token===short[i])i++;return i===short.length;};return subset(at,bt)||subset(bt,at);}
-function sameRosterPerson(a,b){const ai=rosterIdentityIds(a),bi=rosterIdentityIds(b);if([...ai].some(id=>bi.has(id)))return true;if(!compatibleRosterName(a,b))return false;const ab=rosterBirth(a),bb=rosterBirth(b);if(ab&&bb)return ab===bb;const exact=rosterBaseName(a)===rosterBaseName(b);if(exact&&!ab&&!bb)return true;const aj=rosterNumber(a),bj=rosterNumber(b);return !!(aj&&bj&&aj===bj);}
+function sameRosterPerson(a,b){const ai=rosterIdentityIds(a),bi=rosterIdentityIds(b);if([...ai].some(id=>bi.has(id)))return true;const ad=a.birthDate||a.dob,bd=b.birthDate||b.dob;if(ad&&bd&&ad!==bd)return false;if(!compatibleRosterName(a,b))return false;const ab=rosterBirth(a),bb=rosterBirth(b);if(ab&&bb)return ab===bb;const exact=rosterBaseName(a)===rosterBaseName(b);if(exact&&!ab&&!bb)return true;const aj=rosterNumber(a),bj=rosterNumber(b);return !!(aj&&bj&&aj===bj);}
 function addClubPlayer(index,seen,key,p){key=canonKey(key);if(!key||!p)return;const id=gid(p)||p.id;if(!id)return;if(!seen.has(key))seen.set(key,{ids:new Set(),players:[]});const bucket=seen.get(key);if(bucket.ids.has(id))return;if(bucket.players.some(x=>sameRosterPerson(x,p))){bucket.ids.add(id);return;}bucket.ids.add(id);bucket.players.push(p);if(!index.has(key))index.set(key,[]);index.get(key).push(p);}
 function buildClubIndex(){
  const index=new Map(),seen=new Map(),m=next26Get(),mb=next26bGet(),auto=autoAppliedGet(),pool=assignPool(),directories=officialDirectories();
@@ -85,7 +85,9 @@ function buildClubIndex(){
   for(const row of directory.roster||[]){const keys=teams.get(row.teamId||row.teamCode);if(!keys?.size)continue;const ids=row.ids||[row.id],p=ids.map(id=>byId.get(id)).find(Boolean);if(!p)continue;officialRows.push({keys,p});for(const id of [...ids,p.id,gid(p),...(p._grp||[]).map(x=>x.id)])for(const key of keys)mark(id,key);}
  }
  for(const p of pool){const registered=new Set();for(const id of [p.id,gid(p),...(p._grp||[]).map(x=>x.id)])for(const key of officialKeys.get(id)||[])registered.add(key);for(const key of matchupKeys(p,registered.size?registered:effective26keys(p,m,mb)))addClubPlayer(index,seen,key,p);}
- for(const {keys,p} of officialRows)for(const key of matchupKeys(p,keys))addClubPlayer(index,seen,key,p);
+ // An international registration is valid in that competition's Matchup even
+ // if a domestic directory still points at another club. Keep manual choices.
+ for(const {keys,p} of officialRows){const international=[...keys].some(k=>/^(?:bcl26|fec26)\|/.test(k)),destinations=international?(manualKeys(p)??keys):matchupKeys(p,keys);for(const key of destinations)addClubPlayer(index,seen,key,p);}
  return index;
 }
 function liveRoster(key){if(!key)return null;key=canonKey(key);if(rosters.has(key))return rosters.get(key);const club=allClubs().find(c=>c.key===key)||window.ESTeamSelection?.teamForKey?.(key);if(!club)return null;
